@@ -1,0 +1,1262 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  :root{
+    --font:-apple-system,"Segoe UI",Roboto,system-ui,sans-serif;
+    --mono:"SF Mono","Cascadia Code","Segoe UI Mono",ui-monospace,monospace;
+    --bg:#f6f7f9;--surface:#ffffff;--surface-2:#f1f3f5;--surface-3:#eaedf0;
+    --border:#e4e7eb;--border-strong:#d3d8de;
+    --text:#1a1d21;--text-muted:#5b636e;--text-subtle:#8a929c;
+    --accent:#2f6feb;--accent-hover:#235cc8;--accent-soft:#e9f0fd;--on-accent:#ffffff;
+    --score-green:#1f9d57;--score-green-soft:#e4f4ea;
+    --score-amber:#c7891b;--score-amber-soft:#f8efdc;
+    --score-orange:#d9661f;--score-orange-soft:#fbe9dc;
+    --score-gray:#8a929c;--score-gray-soft:#eef0f2;
+    --success:#1f9d57;--success-soft:#e4f4ea;
+    --warning:#c7891b;--warning-soft:#f8efdc;
+    --error:#d24545;--error-soft:#fae7e7;
+    --info:#2f6feb;--info-soft:#e9f0fd;
+    --r-sm:4px;--r-md:6px;--r-lg:10px;--r-pill:999px;
+    --sh-1:0 1px 2px rgba(16,24,40,.06);--sh-2:0 4px 14px rgba(16,24,40,.10);--sh-3:0 16px 40px rgba(16,24,40,.18);
+    --dur-fast:120ms;--dur:200ms;--dur-slow:360ms;--ease:cubic-bezier(.2,.6,.2,1);
+  }
+  [data-theme="dark"]{
+    --bg:#0e1116;--surface:#161b22;--surface-2:#1b2229;--surface-3:#212a33;
+    --border:#283039;--border-strong:#39434f;
+    --text:#e6e9ee;--text-muted:#9aa3ad;--text-subtle:#6b7480;
+    --accent:#5b8cf6;--accent-hover:#7aa3f8;--accent-soft:#16243d;--on-accent:#0e1116;
+    --score-green:#46c483;--score-green-soft:#13301f;
+    --score-amber:#e0a93f;--score-amber-soft:#322611;
+    --score-orange:#ec8a4b;--score-orange-soft:#33200f;
+    --score-gray:#6b7480;--score-gray-soft:#1f262e;
+    --success:#46c483;--success-soft:#13301f;
+    --warning:#e0a93f;--warning-soft:#322611;
+    --error:#ef6b6b;--error-soft:#331717;
+    --info:#5b8cf6;--info-soft:#16243d;
+    --sh-1:0 1px 2px rgba(0,0,0,.4);--sh-2:0 4px 14px rgba(0,0,0,.5);--sh-3:0 16px 40px rgba(0,0,0,.6);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;}
+  ::selection{background:var(--accent-soft);}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r-sm);}
+  input,textarea,button,select{font-family:inherit;}
+  ::-webkit-scrollbar{width:11px;height:11px;}
+  ::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:999px;border:3px solid var(--surface);}
+  ::-webkit-scrollbar-track{background:transparent;}
+  @keyframes jh-pulse{0%{transform:scale(1);opacity:.55;}70%{transform:scale(2);opacity:0;}100%{opacity:0;}}
+  @keyframes jh-spin{to{transform:rotate(360deg);}}
+  @keyframes jh-fade{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:none;}}
+  @media (prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;}}
+</style>
+</helmet>
+<div data-theme="{{ theme }}" style="min-height:100vh;display:flex;background:var(--bg);color:var(--text);font-family:var(--font);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased;">
+
+  <!-- ===== LEFT NAV ===== -->
+  <nav aria-label="Primary" style="width:240px;flex:none;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:18px 14px;gap:4px;position:sticky;top:0;height:100vh;">
+    <div style="display:flex;align-items:center;gap:10px;padding:6px 8px 18px;">
+      <div style="width:30px;height:30px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;color:var(--on-accent);flex:none;">
+        <svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.5" cy="8.5" r="5.5"></circle><path d="M13 13l4 4"></path></svg>
+      </div>
+      <div>
+        <div style="font-weight:600;font-size:14px;letter-spacing:-.01em;">JobHunter</div>
+        <div style="font-size:11px;color:var(--text-subtle);">Desktop · v1.1</div>
+      </div>
+    </div>
+
+    <button onClick="{{ goCriteria }}" aria-current="{{ ariaCriteria }}" style="{{ navCriteriaStyle }}" style-hover="background:var(--surface-2);">
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h12v12H4z"></path><path d="M7 8h6M7 11h4"></path></svg>
+      <span>Criteria</span>
+    </button>
+    <button onClick="{{ goResults }}" aria-current="{{ ariaResults }}" style="{{ navResultsStyle }}" style-hover="background:var(--surface-2);">
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h14M3 10h14M3 15h14"></path></svg>
+      <span>Results</span>
+      <span style="{{ resultsCountStyle }}">{{ keptCount }}</span>
+    </button>
+    <button onClick="{{ goSettings }}" aria-current="{{ ariaSettings }}" style="{{ navSettingsStyle }}" style-hover="background:var(--surface-2);">
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="2.6"></circle><path d="M10 2.5v2M10 15.5v2M2.5 10h2M15.5 10h2M4.7 4.7l1.4 1.4M13.9 13.9l1.4 1.4M15.3 4.7l-1.4 1.4M6.1 13.9l-1.4 1.4"></path></svg>
+      <span>Settings</span>
+    </button>
+
+    <div style="margin-top:auto;display:flex;flex-direction:column;gap:8px;padding-top:14px;border-top:1px solid var(--border);">
+      <button onClick="{{ toggleTheme }}" aria-label="Toggle colour theme" style="display:flex;align-items:center;gap:9px;padding:9px 10px;border:1px solid var(--border);background:var(--surface);color:var(--text-muted);border-radius:var(--r-md);font-size:12px;font-weight:500;cursor:pointer;" style-hover="background:var(--surface-2);color:var(--text);">
+        <span style="display:flex;">{{ themeIcon }}</span>
+        <span>{{ themeLabel }}</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ===== MAIN ===== -->
+  <main style="flex:1;min-width:0;display:flex;flex-direction:column;">
+
+    <!-- HEADER -->
+    <header style="height:56px;flex:none;border-bottom:1px solid var(--border);background:var(--surface);display:flex;align-items:center;gap:14px;padding:0 24px;position:sticky;top:0;z-index:5;">
+      <div style="font-weight:600;font-size:15px;letter-spacing:-.01em;">{{ screenTitle }}</div>
+      <div style="flex:1;"></div>
+      <span aria-live="polite" style="{{ runPillStyle }}">
+        <span style="{{ runDotStyle }}">{{ runSpinner }}</span>
+        <span style="{{ runLabelStyle }}">{{ runLabel }}</span>
+        <span style="{{ runTimerStyle }}">{{ runTimer }}</span>
+      </span>
+      <span title="Active AI provider" style="display:inline-flex;align-items:center;gap:7px;padding:5px 11px;background:var(--accent-soft);color:var(--accent);border-radius:var(--r-pill);font-size:12px;font-weight:600;">
+        <svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2.5l2 4.4 4.8.5-3.6 3.2 1 4.7L10 13l-4.2 2.3 1-4.7L3.2 7.4 8 6.9z"></path></svg>
+        {{ providerName }}
+      </span>
+    </header>
+
+    <div style="flex:1;overflow:auto;">
+      <div style="max-width:1180px;margin:0 auto;padding:28px 24px 64px;">
+
+        <!-- ============ CRITERIA SCREEN ============ -->
+        <sc-if value="{{ isCriteria }}" hint-placeholder-val="{{ true }}">
+        <section data-screen-label="Criteria">
+          <p style="margin:0 0 20px;color:var(--text-muted);font-size:13px;max-width:620px;">Describe your background once. JobHunter turns it into structured search criteria you can fine-tune before running.</p>
+
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh-1);padding:20px;">
+            <label for="jh-profile" style="display:block;font-weight:600;font-size:13px;margin-bottom:8px;">Your profile</label>
+            <textarea id="jh-profile" value="{{ profile }}" onInput="{{ onProfile }}" placeholder="e.g. Senior .NET / DevOps engineer, 8 yrs. C#, Kubernetes, GCP, CI/CD, Azure DevOps. Led squads at Vodafone & Accenture. Cairo, open to remote…" style="width:100%;min-height:120px;resize:vertical;padding:12px 14px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);color:var(--text);font-size:14px;line-height:1.55;" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);"></textarea>
+
+            <div style="display:flex;align-items:center;gap:12px;margin-top:14px;flex-wrap:wrap;">
+              <button onClick="{{ generate }}" disabled="{{ genBusy }}" style="{{ generateBtnStyle }}" style-hover="background:var(--accent-hover);">
+                <span style="{{ genSpinnerStyle }}"></span>
+                <svg style="{{ genIconStyle }}" width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2.5l1.6 3.6 3.9.4-2.9 2.6.8 3.8L10 11.5 6.6 13.4l.8-3.8L4.5 7l3.9-.4z"></path></svg>
+                <span>{{ generateBtnLabel }}</span>
+              </button>
+
+              <div title="PDF / Word / image profiles — coming soon" style="position:relative;display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border:1px dashed var(--border-strong);border-radius:var(--r-md);color:var(--text-subtle);font-size:12px;font-weight:500;cursor:not-allowed;background:var(--surface-2);">
+                <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13V4M6.5 7.5L10 4l3.5 3.5M4 15h12"></path></svg>
+                Upload file
+                <span style="font-size:10px;font-weight:600;padding:2px 6px;background:var(--surface-3);border-radius:var(--r-pill);">Soon</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- GENERATING skeleton -->
+          <sc-if value="{{ isGenerating }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-top:20px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:20px;">
+            <div style="height:13px;width:160px;background:var(--surface-3);border-radius:4px;margin-bottom:16px;"></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <div style="height:28px;width:80px;background:var(--surface-2);border-radius:var(--r-pill);"></div>
+              <div style="height:28px;width:110px;background:var(--surface-2);border-radius:var(--r-pill);"></div>
+              <div style="height:28px;width:66px;background:var(--surface-2);border-radius:var(--r-pill);"></div>
+              <div style="height:28px;width:94px;background:var(--surface-2);border-radius:var(--r-pill);"></div>
+            </div>
+            <div style="margin-top:14px;font-size:12px;color:var(--text-subtle);display:flex;align-items:center;gap:8px;">
+              <span style="width:13px;height:13px;border:2px solid var(--border-strong);border-top-color:var(--accent);border-radius:50%;display:inline-block;animation:jh-spin .7s linear infinite;"></span>
+              Asking {{ providerName }} to extract search criteria…
+            </div>
+          </div>
+          </sc-if>
+
+          <!-- GENERATED criteria panel -->
+          <sc-if value="{{ showPanel }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-top:20px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh-1);padding:20px;animation:jh-fade var(--dur) var(--ease);">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px;">
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="var(--success)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"></path></svg>
+              <span style="font-weight:600;">Generated criteria</span>
+              <span style="font-size:11px;color:var(--text-subtle);">Click any chip to edit · review before running</span>
+            </div>
+
+            <div style="display:grid;grid-template-columns:140px 1fr;gap:18px 20px;align-items:start;">
+
+              <div style="font-size:12px;font-weight:600;color:var(--text-muted);padding-top:6px;">Titles</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <sc-for list="{{ titlesView }}" as="c" hint-placeholder-count="3">
+                  <span style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-pill);font-size:12px;font-weight:500;">{{ c.text }}</span>
+                </sc-for>
+              </div>
+
+              <div style="font-size:12px;font-weight:600;color:var(--text-muted);padding-top:6px;">Keywords</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                <sc-for list="{{ keywordsView }}" as="c" hint-placeholder-count="5">
+                  <span style="{{ c.wrapStyle }}">
+                    <sc-if value="{{ c.editing }}" hint-placeholder-val="{{ false }}">
+                      <input value="{{ editValue }}" onInput="{{ onEditValue }}" onKeyDown="{{ onChipKey }}" onBlur="{{ commitChip }}" aria-label="Edit keyword" style="border:none;background:transparent;color:var(--text);font-size:12px;font-weight:500;width:90px;outline:none;"></input>
+                    </sc-if>
+                    <sc-if value="{{ c.notEditing }}" hint-placeholder-val="{{ true }}">
+                      <button onClick="{{ c.edit }}" style="border:none;background:transparent;color:var(--accent);font-size:12px;font-weight:500;cursor:text;padding:0;">{{ c.text }}</button>
+                      <button onClick="{{ c.remove }}" aria-label="Remove keyword" style="border:none;background:transparent;color:var(--text-subtle);cursor:pointer;display:flex;padding:0;line-height:0;" style-hover="color:var(--error);">
+                        <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 5l10 10M15 5L5 15"></path></svg>
+                      </button>
+                    </sc-if>
+                  </span>
+                </sc-for>
+                <button onClick="{{ addChip }}" style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border:1px dashed var(--border-strong);background:transparent;color:var(--text-muted);border-radius:var(--r-pill);font-size:12px;font-weight:500;cursor:pointer;" style-hover="border-color:var(--accent);color:var(--accent);">
+                  <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 4v12M4 10h12"></path></svg>Add
+                </button>
+              </div>
+
+              <div style="font-size:12px;font-weight:600;color:var(--text-muted);padding-top:6px;">Exclude</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <sc-for list="{{ excludeView }}" as="c" hint-placeholder-count="2">
+                  <span style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px;background:var(--error-soft);border:1px solid var(--error-soft);border-radius:var(--r-pill);font-size:12px;font-weight:500;color:var(--error);">
+                    <svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 5l10 10M15 5L5 15"></path></svg>
+                    {{ c.text }}
+                  </span>
+                </sc-for>
+              </div>
+
+              <div style="font-size:12px;font-weight:600;color:var(--text-muted);padding-top:6px;">Seniority</div>
+              <div style="display:flex;gap:16px;flex-wrap:wrap;">
+                <sc-for list="{{ seniorityView }}" as="s" hint-placeholder-count="4">
+                  <label style="display:inline-flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
+                    <input type="checkbox" checked="{{ s.on }}" onChange="{{ s.toggle }}" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;"></input>
+                    {{ s.label }}
+                  </label>
+                </sc-for>
+              </div>
+
+              <div style="font-size:12px;font-weight:600;color:var(--text-muted);padding-top:6px;">Locations</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <sc-for list="{{ locationsView }}" as="c" hint-placeholder-count="3">
+                  <span style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-pill);font-size:12px;font-weight:500;">
+                    <svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="var(--text-subtle)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 17s5-4.4 5-8a5 5 0 10-10 0c0 3.6 5 8 5 8z"></path><circle cx="10" cy="9" r="1.8"></circle></svg>
+                    {{ c.text }}
+                  </span>
+                </sc-for>
+              </div>
+
+              <div style="font-size:12px;font-weight:600;color:var(--text-muted);padding-top:6px;">Min score</div>
+              <div style="display:flex;align-items:center;gap:14px;max-width:340px;">
+                <input type="range" min="0" max="100" step="5" value="{{ threshold }}" onInput="{{ onThreshold }}" aria-label="Minimum score threshold" style="flex:1;accent-color:var(--accent);cursor:pointer;"></input>
+                <span style="font-family:var(--mono);font-weight:600;font-size:13px;min-width:30px;text-align:right;">{{ threshold }}</span>
+              </div>
+            </div>
+
+            <!-- REFINE -->
+            <div style="margin-top:20px;padding-top:18px;border-top:1px solid var(--border);">
+              <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:10px;">Refine conversationally</div>
+              <sc-for list="{{ refineTurns }}" as="t" hint-placeholder-count="0">
+                <div style="{{ t.style }}">{{ t.text }}</div>
+              </sc-for>
+              <div style="display:flex;gap:8px;margin-top:8px;">
+                <input value="{{ refineText }}" onInput="{{ onRefine }}" onKeyDown="{{ onRefineKey }}" placeholder="e.g. focus more on platform engineering, drop Azure…" style="flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);color:var(--text);font-size:13px;" style-focus="border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);"></input>
+                <button onClick="{{ sendRefine }}" style="padding:9px 14px;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:var(--r-md);font-size:13px;font-weight:500;cursor:pointer;" style-hover="background:var(--surface-2);">Send</button>
+              </div>
+            </div>
+
+            <!-- ACTIONS -->
+            <div style="display:flex;align-items:center;gap:10px;margin-top:20px;padding-top:18px;border-top:1px solid var(--border);">
+              <button onClick="{{ runSearch }}" disabled="{{ running }}" style="{{ runBtnStyle }}" style-hover="background:var(--accent-hover);">
+                <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4l10 6-10 6z"></path></svg>
+                {{ runBtnLabel }}
+              </button>
+              <button onClick="{{ saveCriteria }}" style="padding:10px 16px;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:var(--r-md);font-size:13px;font-weight:600;cursor:pointer;" style-hover="background:var(--surface-2);">Save criteria</button>
+              <span aria-live="polite" style="{{ savedMsgStyle }}">{{ savedMsg }}</span>
+            </div>
+          </div>
+          </sc-if>
+        </section>
+        </sc-if>
+
+        <!-- ============ RESULTS SCREEN ============ -->
+        <sc-if value="{{ isResults }}" hint-placeholder-val="{{ false }}">
+        <section data-screen-label="Results">
+
+          <!-- EMPTY -->
+          <sc-if value="{{ resultsEmpty }}" hint-placeholder-val="{{ false }}">
+          <div style="text-align:center;padding:80px 20px;">
+            <div style="width:56px;height:56px;border-radius:50%;background:var(--surface-2);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;color:var(--text-subtle);">
+              <svg width="26" height="26" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.5" cy="8.5" r="5.5"></circle><path d="M13 13l4 4"></path></svg>
+            </div>
+            <div style="font-weight:600;font-size:15px;margin-bottom:6px;">No results yet</div>
+            <div style="color:var(--text-muted);font-size:13px;margin-bottom:18px;">Run a search to watch the live pipeline stream its status, then populate ranked results.</div>
+            <div style="display:flex;gap:10px;justify-content:center;">
+              <button onClick="{{ runSearch }}" style="display:inline-flex;align-items:center;gap:8px;padding:10px 18px;background:var(--accent);color:var(--on-accent);border:none;border-radius:var(--r-md);font-size:13px;font-weight:600;cursor:pointer;" style-hover="background:var(--accent-hover);">
+                <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4l10 6-10 6z"></path></svg>
+                Run search
+              </button>
+              <button onClick="{{ goCriteria }}" style="padding:10px 16px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--r-md);font-size:13px;font-weight:600;cursor:pointer;" style-hover="background:var(--surface-2);">Edit criteria</button>
+            </div>
+          </div>
+          </sc-if>
+
+          <!-- PIPELINE (running or done recap) -->
+          <sc-if value="{{ showPipeline }}" hint-placeholder-val="{{ false }}">
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh-1);padding:22px 24px;">
+            <!-- pipeline header -->
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:24px;">
+              <span style="font-weight:600;font-size:14px;">Pipeline</span>
+              <span style="font-size:12px;color:var(--text-subtle);font-family:var(--mono);">{{ positionLabel }}</span>
+              <div style="flex:1;"></div>
+              <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted);font-family:var(--mono);">
+                <svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7.5"></circle><path d="M10 6v4l2.5 1.5"></path></svg>
+                {{ runTimerInline }}
+              </span>
+              <div style="display:inline-flex;border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;">
+                <button onClick="{{ setSuccess }}" style="{{ tabSuccessStyle }}">Success</button>
+                <button onClick="{{ setPartial }}" style="{{ tabPartialStyle }}">Partial failure</button>
+              </div>
+              <button onClick="{{ replay }}" aria-label="Replay pipeline" style="display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border:1px solid var(--border);background:var(--surface);color:var(--text-muted);border-radius:var(--r-md);font-size:12px;font-weight:500;cursor:pointer;" style-hover="background:var(--surface-2);color:var(--text);">
+                <svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 6.5A6.5 6.5 0 103 10"></path><path d="M15.5 3v3.5H12"></path></svg>
+                Replay
+              </button>
+            </div>
+
+            <!-- prominent live status banner -->
+            <div aria-live="polite" style="{{ bannerStyle }}">
+              <span style="{{ bannerDotStyle }}"></span>
+              <span style="{{ bannerTimeStyle }}">{{ bannerTime }}</span>
+              <span style="flex:1;font-weight:600;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ bannerText }}</span>
+            </div>
+
+            <!-- timeline (fixed layout, no shift) -->
+            <div style="display:flex;align-items:flex-start;">
+              <sc-for list="{{ stagesView }}" as="st" hint-placeholder-count="5">
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;position:relative;min-width:0;">
+                  <!-- connector to right -->
+                  <div style="{{ st.trackStyle }}"><div style="{{ st.fillStyle }}"></div></div>
+                  <!-- node -->
+                  <div style="position:relative;width:44px;height:44px;">
+                    <div style="{{ st.pulseStyle }}"></div>
+                    <div style="{{ st.nodeStyle }}">
+                      <sc-if value="{{ st.showCheck }}" hint-placeholder-val="{{ false }}"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 10.5l3.2 3.2L15 6"></path></svg></sc-if>
+                      <sc-if value="{{ st.showWarn }}" hint-placeholder-val="{{ false }}"><svg width="19" height="19" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3l7.5 13H2.5z"></path><path d="M10 8v3.5M10 14h.01"></path></svg></sc-if>
+                      <sc-if value="{{ st.showNum }}" hint-placeholder-val="{{ true }}"><span style="font-weight:600;font-size:15px;font-family:var(--mono);">{{ st.num }}</span></sc-if>
+                    </div>
+                  </div>
+                  <div style="{{ st.labelStyle }}">{{ st.label }}</div>
+                  <div style="{{ st.metricStyle }}">{{ st.metricText }}</div>
+                </div>
+              </sc-for>
+            </div>
+
+            <!-- detail region (reserved height; swaps in place) -->
+            <div style="margin-top:22px;min-height:118px;border-top:1px solid var(--border);padding-top:18px;">
+
+              <!-- search connector sub-rows -->
+              <sc-if value="{{ showConnectors }}" hint-placeholder-val="{{ false }}">
+              <div>
+                <div style="font-size:11px;font-weight:600;color:var(--text-subtle);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px;">Search connectors</div>
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                  <sc-for list="{{ connectorsView }}" as="cn" hint-placeholder-count="2">
+                    <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;background:var(--surface-2);border-radius:var(--r-md);">
+                      <span style="{{ cn.dotStyle }}"></span>
+                      <span style="font-weight:500;font-size:13px;min-width:74px;">{{ cn.name }}</span>
+                      <span style="{{ cn.jobsStyle }}">{{ cn.jobsText }}</span>
+                      <div style="flex:1;"></div>
+                      <span style="{{ cn.reasonStyle }}">{{ cn.reason }}</span>
+                      <span style="{{ cn.badgeStyle }}">{{ cn.badgeText }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+              </sc-if>
+
+              <!-- score determinate bar -->
+              <sc-if value="{{ showScoreBar }}" hint-placeholder-val="{{ false }}">
+              <div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                  <span style="font-size:11px;font-weight:600;color:var(--text-subtle);text-transform:uppercase;letter-spacing:.04em;">Scoring</span>
+                  <span style="font-family:var(--mono);font-size:12px;color:var(--text-muted);">{{ scoreBatchText }} · {{ scoreScoredText }}</span>
+                </div>
+                <div style="height:8px;background:var(--surface-3);border-radius:var(--r-pill);overflow:hidden;">
+                  <div style="{{ scoreFillStyle }}"></div>
+                </div>
+              </div>
+              </sc-if>
+
+              <sc-if value="{{ showIdleDetail }}" hint-placeholder-val="{{ true }}">
+              <div style="font-size:12px;color:var(--text-subtle);display:flex;align-items:center;gap:8px;">{{ idleDetailText }}</div>
+              </sc-if>
+            </div>
+
+            <!-- live activity feed -->
+            <div style="margin-top:18px;border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;">
+              <button onClick="{{ toggleLog }}" aria-expanded="{{ logOpenAria }}" style="width:100%;display:flex;align-items:center;gap:9px;padding:10px 14px;background:var(--surface-2);border:none;color:var(--text);font-size:12px;font-weight:600;cursor:pointer;text-align:left;">
+                <svg style="{{ logChevronStyle }}" width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8l4 4 4-4"></path></svg>
+                Live activity
+                <span style="{{ logLiveStyle }}">LIVE</span>
+                <span style="flex:1;"></span>
+                <span style="font-family:var(--mono);font-weight:500;color:var(--text-subtle);">{{ logCountText }}</span>
+              </button>
+              <sc-if value="{{ logOpen }}" hint-placeholder-val="{{ true }}">
+              <div ref="{{ logRef }}" aria-live="polite" aria-label="Live activity log" style="max-height:228px;overflow:auto;padding:9px 15px 12px;font-family:var(--mono);font-size:12px;line-height:1.5;background:var(--surface);border-top:1px solid var(--border);">
+                <sc-for list="{{ logView }}" as="l" hint-placeholder-count="0">
+                  <div style="{{ l.rowStyle }}">
+                    <span style="{{ l.dotStyle }}"></span>
+                    <span style="{{ l.tStyle }}">{{ l.t }}</span>
+                    <span style="{{ l.style }}">{{ l.text }}</span>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ logRunning }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;gap:11px;align-items:center;padding:4px 0;color:var(--text-subtle);">
+                  <span style="width:6px;height:6px;border-radius:50%;flex:none;background:var(--accent);animation:jh-pulse 1.1s var(--ease) infinite;"></span>
+                  <span style="font-style:italic;">working…</span>
+                </div>
+                </sc-if>
+              </div>
+              </sc-if>
+            </div>
+          </div>
+          </sc-if>
+
+          <!-- SUMMARY CARD -->
+          <sc-if value="{{ showSummary }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-top:18px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh-2);padding:20px 24px;animation:jh-fade var(--dur) var(--ease);">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+              <svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="var(--success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7.5"></circle><path d="M6.5 10.5l2.3 2.3L14 7.5"></path></svg>
+              <span style="font-weight:600;font-size:14px;">Run complete</span>
+              <span style="font-family:var(--mono);font-size:12px;color:var(--text-subtle);">finished in {{ summaryDuration }}</span>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;">
+              <div style="background:var(--surface-2);border-radius:var(--r-md);padding:14px;">
+                <div style="font-family:var(--mono);font-size:26px;font-weight:600;line-height:1;">{{ summaryFound }}</div>
+                <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">Found</div>
+              </div>
+              <div style="background:var(--surface-2);border-radius:var(--r-md);padding:14px;">
+                <div style="font-family:var(--mono);font-size:26px;font-weight:600;line-height:1;">{{ summaryScored }}</div>
+                <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">Scored</div>
+              </div>
+              <div style="background:var(--score-green-soft);border-radius:var(--r-md);padding:14px;">
+                <div style="font-family:var(--mono);font-size:26px;font-weight:600;line-height:1;color:var(--score-green);">{{ summaryKept }}</div>
+                <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">Kept ≥ {{ threshold }}</div>
+              </div>
+              <div style="background:var(--surface-2);border-radius:var(--r-md);padding:14px;">
+                <div style="font-family:var(--mono);font-size:26px;font-weight:600;line-height:1;">{{ summaryFiles }}</div>
+                <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">Export files</div>
+              </div>
+            </div>
+            <div style="margin-top:14px;display:flex;flex-direction:column;gap:6px;">
+              <sc-for list="{{ summaryPaths }}" as="p" hint-placeholder-count="2">
+                <div style="display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px;color:var(--text-muted);">
+                  <svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="var(--text-subtle)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h6l4 4v10H5z"></path><path d="M11 3v4h4"></path></svg>
+                  {{ p.text }}
+                </div>
+              </sc-for>
+            </div>
+            <sc-if value="{{ hasWarnings }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:14px;display:flex;align-items:flex-start;gap:9px;padding:11px 13px;background:var(--warning-soft);border-radius:var(--r-md);color:var(--warning);font-size:12px;font-weight:500;">
+              <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:1px;"><path d="M10 3l7.5 13H2.5z"></path><path d="M10 8v3.5M10 14h.01"></path></svg>
+              <span>{{ summaryWarning }}</span>
+            </div>
+            </sc-if>
+          </div>
+          </sc-if>
+
+          <!-- FILTER BAR + TABLE -->
+          <sc-if value="{{ showTable }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-top:18px;">
+            <!-- filter bar -->
+            <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:12px 16px;margin-bottom:14px;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="font-size:12px;color:var(--text-muted);font-weight:500;">Source</span>
+                <select value="{{ filterSource }}" onChange="{{ onFilterSource }}" style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);color:var(--text);font-size:12px;cursor:pointer;">
+                  <option value="all">All</option>
+                  <option value="linkedin">LinkedIn</option>
+                  <option value="indeed">Indeed</option>
+                </select>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span style="font-size:12px;color:var(--text-muted);font-weight:500;">Min score</span>
+                <input type="range" min="0" max="100" step="1" value="{{ filterMinScore }}" onInput="{{ onFilterScore }}" aria-label="Minimum score filter" style="width:120px;accent-color:var(--accent);cursor:pointer;"></input>
+                <span style="font-family:var(--mono);font-size:12px;font-weight:600;min-width:24px;">{{ filterMinScore }}</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="font-size:12px;color:var(--text-muted);font-weight:500;">Date</span>
+                <input type="date" value="{{ filterFrom }}" onInput="{{ onFilterFrom }}" aria-label="From date" style="padding:6px 8px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);color:var(--text);font-size:12px;"></input>
+                <span style="color:var(--text-subtle);">→</span>
+                <input type="date" value="{{ filterTo }}" onInput="{{ onFilterTo }}" aria-label="To date" style="padding:6px 8px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);color:var(--text);font-size:12px;"></input>
+              </div>
+              <div style="flex:1;"></div>
+              <button onClick="{{ rerun }}" style="display:inline-flex;align-items:center;gap:7px;padding:8px 13px;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:var(--r-md);font-size:12px;font-weight:600;cursor:pointer;" style-hover="background:var(--surface-2);">
+                <svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 6.5A6.5 6.5 0 103 10"></path><path d="M15.5 3v3.5H12"></path></svg>Re-run
+              </button>
+              <button onClick="{{ exportResults }}" style="display:inline-flex;align-items:center;gap:7px;padding:8px 13px;background:var(--accent);color:var(--on-accent);border:none;border-radius:var(--r-md);font-size:12px;font-weight:600;cursor:pointer;" style-hover="background:var(--accent-hover);">
+                <svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3v9M6.5 8.5L10 12l3.5-3.5M4 16h12"></path></svg>Export
+              </button>
+            </div>
+
+            <!-- table -->
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--sh-1);">
+              <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                <thead>
+                  <tr style="background:var(--surface-2);">
+                    <th onClick="{{ sortScore }}" style="{{ thScore }}">Score {{ arrowScore }}</th>
+                    <th onClick="{{ sortTitle }}" style="{{ thText }}">Title {{ arrowTitle }}</th>
+                    <th onClick="{{ sortCompany }}" style="{{ thText }}">Company {{ arrowCompany }}</th>
+                    <th onClick="{{ sortLocation }}" style="{{ thText }}">Location {{ arrowLocation }}</th>
+                    <th onClick="{{ sortSource }}" style="{{ thText }}">Source {{ arrowSource }}</th>
+                    <th onClick="{{ sortDate }}" style="{{ thText }}">Date {{ arrowDate }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <sc-for list="{{ jobsView }}" as="j" hint-placeholder-count="5">
+                    <tr onClick="{{ j.select }}" style="{{ j.rowStyle }}" style-hover="background:var(--surface-2);">
+                      <td style="padding:11px 16px;border-top:1px solid var(--border);"><span style="{{ j.scoreStyle }}">{{ j.score }}</span></td>
+                      <td style="padding:11px 16px;border-top:1px solid var(--border);font-weight:500;">{{ j.title }}</td>
+                      <td style="padding:11px 16px;border-top:1px solid var(--border);color:var(--text-muted);">{{ j.company }}</td>
+                      <td style="padding:11px 16px;border-top:1px solid var(--border);color:var(--text-muted);">{{ j.location }}</td>
+                      <td style="padding:11px 16px;border-top:1px solid var(--border);"><span style="{{ j.sourceStyle }}">{{ j.sourceLabel }}</span></td>
+                      <td style="padding:11px 16px;border-top:1px solid var(--border);color:var(--text-muted);font-family:var(--mono);font-size:12px;">{{ j.date }}</td>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+
+              <!-- hidden / below threshold row -->
+              <div style="border-top:1px solid var(--border);padding:11px 16px;display:flex;align-items:center;gap:10px;background:var(--surface-2);">
+                <span style="font-size:12px;color:var(--text-subtle);">{{ hiddenLabel }}</span>
+                <button onClick="{{ toggleHidden }}" style="font-size:12px;font-weight:600;color:var(--accent);background:none;border:none;cursor:pointer;padding:0;">{{ hiddenToggleLabel }}</button>
+              </div>
+              <sc-if value="{{ showHidden }}" hint-placeholder-val="{{ false }}">
+              <table style="width:100%;border-collapse:collapse;font-size:13px;opacity:.62;">
+                <tbody>
+                  <sc-for list="{{ hiddenView }}" as="j" hint-placeholder-count="1">
+                    <tr onClick="{{ j.select }}" style="cursor:pointer;">
+                      <td style="padding:11px 16px;border-top:1px solid var(--border);"><span style="{{ j.scoreStyle }}">{{ j.score }}</span></td>
+                      <td style="padding:11px 16px;border-top:1px solid var(--border);font-weight:500;">{{ j.title }}</td>
+                      <td style="padding:11px 16px;border-top:1px solid var(--border);color:var(--text-muted);">{{ j.company }}</td>
+                      <td style="padding:11px 16px;border-top:1px solid var(--border);color:var(--text-muted);">{{ j.location }}</td>
+                      <td style="padding:11px 16px;border-top:1px solid var(--border);"><span style="{{ j.sourceStyle }}">{{ j.sourceLabel }}</span></td>
+                      <td style="padding:11px 16px;border-top:1px solid var(--border);color:var(--text-muted);font-family:var(--mono);font-size:12px;">{{ j.date }}</td>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+              </sc-if>
+            </div>
+          </div>
+          </sc-if>
+        </section>
+        </sc-if>
+
+        <!-- ============ SETTINGS SCREEN ============ -->
+        <sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+        <section data-screen-label="Settings" style="max-width:760px;">
+
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh-1);padding:20px;margin-bottom:18px;">
+            <div style="font-weight:600;font-size:14px;margin-bottom:4px;">AI provider</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">The model that turns your profile into criteria and scores results.</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px;">
+              <sc-for list="{{ providersView }}" as="p" hint-placeholder-count="3">
+                <button onClick="{{ p.select }}" style="{{ p.cardStyle }}">
+                  <span style="font-weight:600;font-size:13px;">{{ p.name }}</span>
+                  <span style="font-size:11px;color:var(--text-muted);">{{ p.desc }}</span>
+                </button>
+              </sc-for>
+            </div>
+
+            <label style="display:block;font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:7px;">API key</label>
+            <div style="display:flex;gap:8px;margin-bottom:7px;">
+              <input value="{{ apiKeyDisplay }}" readOnly="{{ true }}" type="text" aria-label="API key" style="flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface-2);color:var(--text);font-family:var(--mono);font-size:13px;letter-spacing:.04em;"></input>
+              <button onClick="{{ toggleKey }}" style="padding:9px 13px;border:1px solid var(--border);background:var(--surface);color:var(--text-muted);border-radius:var(--r-md);font-size:12px;font-weight:600;cursor:pointer;" style-hover="background:var(--surface-2);color:var(--text);">{{ keyToggleLabel }}</button>
+            </div>
+            <div style="font-size:11px;color:var(--text-subtle);display:flex;align-items:center;gap:6px;margin-bottom:18px;">
+              <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9V6.5a5 5 0 0110 0V9"></path><rect x="3.5" y="9" width="13" height="8" rx="2"></rect></svg>
+              Stored in the OS secure store — never shown in plain text or written to disk.
+            </div>
+
+            <div style="display:flex;align-items:center;gap:12px;padding:13px 15px;background:var(--surface-2);border-radius:var(--r-md);">
+              <svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="var(--accent)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2.5l2 4.4 4.8.5-3.6 3.2 1 4.7L10 13l-4.2 2.3 1-4.7L3.2 7.4 8 6.9z"></path></svg>
+              <div style="flex:1;">
+                <div style="font-weight:600;font-size:13px;">Gemini OAuth</div>
+                <div style="font-size:11px;color:var(--text-muted);">Connect a Google account for higher rate limits.</div>
+              </div>
+              <span style="{{ googleBadgeStyle }}">{{ googleBadgeText }}</span>
+              <button onClick="{{ connectGoogle }}" style="padding:8px 13px;background:var(--accent);color:var(--on-accent);border:none;border-radius:var(--r-md);font-size:12px;font-weight:600;cursor:pointer;" style-hover="background:var(--accent-hover);">{{ googleBtnLabel }}</button>
+            </div>
+          </div>
+
+          <!-- connectors -->
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh-1);padding:20px;margin-bottom:18px;">
+            <div style="font-weight:600;font-size:14px;margin-bottom:4px;">Connectors</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Enable boards and tune request pacing to stay within rate limits.</div>
+            <div style="display:flex;flex-direction:column;gap:12px;">
+              <sc-for list="{{ connectorsSettingsView }}" as="c" hint-placeholder-count="3">
+                <div style="border:1px solid var(--border);border-radius:var(--r-md);padding:14px;">
+                  <div style="display:flex;align-items:center;gap:12px;">
+                    <span style="font-weight:600;font-size:13px;flex:1;">{{ c.name }}</span>
+                    <button onClick="{{ c.toggle }}" role="switch" aria-checked="{{ c.onAria }}" aria-label="{{ c.name }}" style="{{ c.switchStyle }}"><span style="{{ c.knobStyle }}"></span></button>
+                  </div>
+                  <sc-if value="{{ c.on }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;align-items:center;gap:14px;margin-top:13px;flex-wrap:wrap;">
+                    <span style="font-size:11px;color:var(--text-muted);min-width:74px;">Delay min</span>
+                    <input type="range" min="0" max="10" step="1" value="{{ c.dmin }}" onInput="{{ c.setMin }}" aria-label="Minimum delay seconds" style="width:130px;accent-color:var(--accent);cursor:pointer;"></input>
+                    <span style="font-family:var(--mono);font-size:12px;font-weight:600;">{{ c.dminLabel }}</span>
+                    <span style="font-size:11px;color:var(--text-muted);min-width:74px;margin-left:8px;">Delay max</span>
+                    <input type="range" min="0" max="15" step="1" value="{{ c.dmax }}" onInput="{{ c.setMax }}" aria-label="Maximum delay seconds" style="width:130px;accent-color:var(--accent);cursor:pointer;"></input>
+                    <span style="font-family:var(--mono);font-size:12px;font-weight:600;">{{ c.dmaxLabel }}</span>
+                  </div>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <!-- max results + auth -->
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh-1);padding:20px;">
+            <div style="font-weight:600;font-size:14px;margin-bottom:16px;">Search & authentication</div>
+            <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;max-width:420px;">
+              <span style="font-size:13px;font-weight:500;min-width:96px;">Max results</span>
+              <input type="range" min="10" max="100" step="10" value="{{ maxResults }}" onInput="{{ onMaxResults }}" aria-label="Maximum results" style="flex:1;accent-color:var(--accent);cursor:pointer;"></input>
+              <span style="font-family:var(--mono);font-size:13px;font-weight:600;min-width:30px;text-align:right;">{{ maxResults }}</span>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface-2);border-radius:var(--r-md);">
+                <span style="{{ liDotStyle }}"></span>
+                <div style="flex:1;">
+                  <div style="font-weight:600;font-size:13px;">LinkedIn session</div>
+                  <div style="font-size:11px;color:var(--text-muted);">{{ liStatusText }}</div>
+                </div>
+                <span style="{{ liBadgeStyle }}">{{ liBadgeText }}</span>
+                <button onClick="{{ linkedinAuth }}" style="padding:8px 13px;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:var(--r-md);font-size:12px;font-weight:600;cursor:pointer;" style-hover="background:var(--surface-3);">{{ liBtnLabel }}</button>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface-2);border-radius:var(--r-md);">
+                <span style="{{ googleDot2Style }}"></span>
+                <div style="flex:1;">
+                  <div style="font-weight:600;font-size:13px;">Google OAuth</div>
+                  <div style="font-size:11px;color:var(--text-muted);">{{ googleStatusText }}</div>
+                </div>
+                <span style="{{ googleBadge2Style }}">{{ googleBadge2Text }}</span>
+              </div>
+            </div>
+          </div>
+        </section>
+        </sc-if>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- ===== DETAIL SIDE-PANEL ===== -->
+  <sc-if value="{{ panelOpen }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ closePanel }}" style="position:fixed;inset:0;background:rgba(16,24,40,.35);z-index:40;animation:jh-fade var(--dur-fast) var(--ease);"></div>
+  </sc-if>
+  <aside aria-label="Job detail" style="{{ panelStyle }}">
+    <sc-if value="{{ panelOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-direction:column;height:100%;">
+      <div style="display:flex;align-items:flex-start;gap:12px;padding:20px 22px;border-bottom:1px solid var(--border);">
+        <span style="{{ detailScoreStyle }}">{{ detailScore }}</span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:600;font-size:16px;letter-spacing:-.01em;">{{ detailTitle }}</div>
+          <div style="font-size:13px;color:var(--text-muted);margin-top:3px;">{{ detailCompany }} · {{ detailLocation }}</div>
+        </div>
+        <button onClick="{{ closePanel }}" aria-label="Close" style="border:none;background:var(--surface-2);color:var(--text-muted);width:30px;height:30px;border-radius:var(--r-md);cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none;" style-hover="background:var(--surface-3);color:var(--text);">
+          <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M5 5l10 10M15 5L5 15"></path></svg>
+        </button>
+      </div>
+      <div style="flex:1;overflow:auto;padding:20px 22px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
+          <span style="{{ detailSourceStyle }}">{{ detailSourceLabel }}</span>
+          <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:var(--surface-2);border-radius:var(--r-pill);font-size:12px;color:var(--text-muted);font-family:var(--mono);">{{ detailDate }}</span>
+          <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:var(--surface-2);border-radius:var(--r-pill);font-size:12px;color:var(--text-muted);">{{ detailSalary }}</span>
+        </div>
+
+        <div style="font-size:11px;font-weight:600;color:var(--text-subtle);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;">Why it matched</div>
+        <div style="display:flex;gap:10px;padding:13px 15px;background:var(--accent-soft);border-radius:var(--r-md);margin-bottom:20px;">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:1px;"><path d="M10 2.5l1.6 3.6 3.9.4-2.9 2.6.8 3.8L10 11.5 6.6 13.4l.8-3.8L4.5 7l3.9-.4z"></path></svg>
+          <span style="font-size:13px;line-height:1.55;color:var(--text);">{{ detailReason }}</span>
+        </div>
+
+        <div style="font-size:11px;font-weight:600;color:var(--text-subtle);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;">Red flags</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;">
+          <sc-for list="{{ detailFlags }}" as="f" hint-placeholder-count="1">
+            <div style="display:flex;gap:9px;align-items:flex-start;padding:10px 13px;background:var(--warning-soft);border-radius:var(--r-md);font-size:13px;color:var(--warning);">
+              <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:1px;"><path d="M10 3l7.5 13H2.5z"></path><path d="M10 8v3.5M10 14h.01"></path></svg>
+              <span>{{ f.text }}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="font-size:11px;font-weight:600;color:var(--text-subtle);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;">Description</div>
+        <p style="font-size:13px;line-height:1.6;color:var(--text-muted);margin:0;">{{ detailDescription }}</p>
+      </div>
+      <div style="padding:16px 22px;border-top:1px solid var(--border);">
+        <button style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:11px;background:var(--accent);color:var(--on-accent);border:none;border-radius:var(--r-md);font-size:13px;font-weight:600;cursor:pointer;" style-hover="background:var(--accent-hover);">
+          <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4H5a1 1 0 00-1 1v10a1 1 0 001 1h10a1 1 0 001-1v-3"></path><path d="M12 4h4v4M16 4l-7 7"></path></svg>
+          Open original posting
+        </button>
+      </div>
+    </div>
+    </sc-if>
+  </aside>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;100%&quot;,&quot;height&quot;:&quot;100%&quot;}}">
+class Component extends DCLogic {
+  logRef = React.createRef();
+
+  freshStages(){
+    return [
+      {id:'profile',status:'pending',metric:null,label:null,warn:false},
+      {id:'criteria',status:'pending',metric:null,label:null,warn:false},
+      {id:'search',status:'pending',metric:null,label:null,warn:false},
+      {id:'score',status:'pending',metric:null,label:null,warn:false},
+      {id:'export',status:'pending',metric:null,label:null,warn:false}
+    ];
+  }
+  freshConnectors(){
+    return [
+      {id:'linkedin',name:'LinkedIn',status:'pending',jobs:0,reason:null},
+      {id:'indeed',name:'Indeed',status:'pending',jobs:0,reason:null}
+    ];
+  }
+
+  state = {
+    theme:'light',
+    screen:'criteria',
+    runState:'idle',
+    variant:'success',
+    everRun:false,
+    profile:"Senior .NET / DevOps engineer, 8 yrs experience. C#, Kubernetes, GCP, CI/CD, Azure DevOps. Led squads at Vodafone & Accenture. Based in Cairo, open to remote.",
+    genState:'empty',
+    titles:["Senior .NET Developer","DevOps Lead","Squad Lead"],
+    keywords:["C#","Kubernetes","GCP","CI/CD","Azure DevOps"],
+    exclude:["unpaid","internship"],
+    seniority:{junior:false,mid:false,senior:true,lead:true},
+    locations:["Cairo","Remote","Egypt"],
+    threshold:40,
+    editingChip:-1,
+    editValue:'',
+    refineText:'',
+    refineTurns:[],
+    savedMsg:'',
+    stages:this.freshStages(),
+    connectors:this.freshConnectors(),
+    scoreProg:{current:0,total:6,scored:0},
+    elapsed:0,
+    logOpen:false,
+    log:[],
+    summary:null,
+    sortKey:'score',
+    sortDir:'desc',
+    filterSource:'all',
+    filterMinScore:0,
+    filterFrom:'',
+    filterTo:'',
+    selectedId:null,
+    showHidden:false,
+    keyVisible:false,
+    provider:'gemini',
+    connEnabled:{linkedin:true,indeed:true,glassdoor:false},
+    connDelay:{linkedin:[2,6],indeed:[3,8],glassdoor:[5,12]},
+    maxResults:50,
+    liStatus:'connected',
+    googleStatus:'disconnected'
+  };
+
+  jobs = [
+    {id:'j1',score:94,title:'Senior DevOps Lead',company:'Accenture Egypt',location:'Cairo (Hybrid)',source:'linkedin',date:'2026-06-15',salary:'Salary not listed',reason:'Strong match on Kubernetes, GCP, and CI/CD leadership; seniority aligns with your lead-level targets.',flags:['No salary listed'],desc:'Lead the platform engineering squad owning multi-cluster Kubernetes on GCP, CI/CD pipelines and release automation. Mentor 6 engineers, define SLOs, and partner with delivery leads across the Cairo hub.'},
+    {id:'j2',score:91,title:'.NET Squad Lead',company:'Vodafone Egypt',location:'Cairo',source:'linkedin',date:'2026-06-14',salary:'Salary not listed',reason:'Direct hit on C# / .NET squad leadership and Azure DevOps; location and seniority match exactly.',flags:['On-site 4 days/week'],desc:'Own a cross-functional .NET squad delivering customer-facing services. C#, Azure DevOps, CI/CD and a heavy emphasis on engineering coaching and delivery cadence.'},
+    {id:'j3',score:88,title:'Cloud Engineer (GCP)',company:'IBM Egypt',location:'Remote',source:'indeed',date:'2026-06-13',salary:'EGP 60k–85k / mo',reason:'Excellent GCP and Kubernetes overlap; remote-friendly. Slightly below your lead-level focus.',flags:[],desc:'Design and operate GCP landing zones, GKE workloads and Terraform modules. Strong CI/CD culture, remote-first team.'},
+    {id:'j4',score:67,title:'Backend Engineer',company:'Fawry',location:'Cairo',source:'indeed',date:'2026-06-12',salary:'EGP 45k–60k / mo',reason:'Good C# and CI/CD overlap but role is IC-level, not the lead scope you target.',flags:['No leadership scope','Below target seniority'],desc:'Build and maintain high-throughput payment services in C#/.NET. Kubernetes exposure a plus; CI/CD via GitHub Actions.'},
+    {id:'j5',score:52,title:'.NET Developer',company:'Startup X',location:'Cairo (Onsite)',source:'linkedin',date:'2026-06-10',salary:'Equity + base',reason:'Keyword overlap on .NET only; missing cloud/DevOps scope and seniority is mid-level.',flags:['Early-stage / equity-heavy','Onsite only','No DevOps scope'],desc:'Full-stack .NET developer for an early-stage product team. Wear many hats, ship fast, onsite in Cairo.'},
+    {id:'j6',score:33,title:'Junior Developer',company:'Tech Co',location:'Cairo',source:'indeed',date:'2026-06-09',salary:'EGP 18k–25k / mo',reason:'Below threshold — junior role with little overlap on your senior/lead criteria.',flags:['Junior level','Below score threshold'],desc:'Entry-level developer role supporting internal tools. Training provided.'},
+  ];
+
+  componentWillUnmount(){ this.clearTimers(); }
+  clearTimers(){
+    if(this._tick) clearInterval(this._tick);
+    (this._timeouts||[]).forEach(t=>clearTimeout(t));
+    this._timeouts=[];
+  }
+  componentDidUpdate(){
+    if(this.logRef.current){ this.logRef.current.scrollTop = this.logRef.current.scrollHeight; }
+  }
+  reduced(){ try{ return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){ return false; } }
+
+  // ---------- nav / theme ----------
+  toggleTheme=()=>this.setState(s=>({theme:s.theme==='light'?'dark':'light'}));
+  goCriteria=()=>this.setState({screen:'criteria'});
+  goResults=()=>this.setState({screen:'results'});
+  goSettings=()=>this.setState({screen:'settings'});
+
+  // ---------- criteria ----------
+  onProfile=e=>this.setState({profile:e.target.value});
+  generate=()=>{
+    if(this.state.genState==='generating') return;
+    this.setState({genState:'generating'});
+    const t=setTimeout(()=>this.setState({genState:'generated'}), this.reduced()?200:1300);
+    (this._timeouts=this._timeouts||[]).push(t);
+  };
+  onThreshold=e=>this.setState({threshold:Number(e.target.value)});
+  editChip=(i)=>this.setState(s=>({editingChip:i,editValue:s.keywords[i]}));
+  onEditValue=e=>this.setState({editValue:e.target.value});
+  commitChip=()=>this.setState(s=>{
+    if(s.editingChip<0) return {};
+    const kw=s.keywords.slice();
+    const v=(s.editValue||'').trim();
+    if(v) kw[s.editingChip]=v; else kw.splice(s.editingChip,1);
+    return {keywords:kw,editingChip:-1,editValue:''};
+  });
+  onChipKey=e=>{ if(e.key==='Enter'){ e.target.blur(); } else if(e.key==='Escape'){ this.setState({editingChip:-1,editValue:''}); } };
+  removeChip=(i)=>this.setState(s=>{ const kw=s.keywords.slice(); kw.splice(i,1); return {keywords:kw}; });
+  addChip=()=>this.setState(s=>({keywords:[...s.keywords,'new keyword'],editingChip:s.keywords.length,editValue:'new keyword'}));
+  toggleSeniority=(k)=>this.setState(s=>({seniority:{...s.seniority,[k]:!s.seniority[k]}}));
+  onRefine=e=>this.setState({refineText:e.target.value});
+  onRefineKey=e=>{ if(e.key==='Enter') this.sendRefine(); };
+  sendRefine=()=>this.setState(s=>{
+    const v=(s.refineText||'').trim(); if(!v) return {};
+    return {genState:'refining',refineText:'',refineTurns:[...s.refineTurns,
+      {role:'user',text:v},
+      {role:'ai',text:'Updated criteria — adjusted keywords and weighting to match.'}]};
+  });
+  saveCriteria=()=>{
+    this.setState({savedMsg:'Criteria saved'});
+    const t=setTimeout(()=>this.setState({savedMsg:''}),2200);
+    (this._timeouts=this._timeouts||[]).push(t);
+  };
+
+  // ---------- pipeline ----------
+  steps(){
+    if(this.state.variant==='partial'){
+      return [
+        {log:'Run started — initializing pipeline',lvl:'info',stage:{id:'profile',status:'done'}},
+        {log:'Analyzing your profile with Gemini…',lvl:'info',stage:{id:'criteria',status:'active',label:'Generating criteria'}},
+        {log:'Extracting titles, keywords & seniority…',lvl:'info'},
+        {log:'Criteria generated · 5 keywords, 3 titles',lvl:'ok',stage:{id:'criteria',status:'done',metric:{keywords:5}},next:{id:'search',status:'active'}},
+        {log:'Connecting to LinkedIn…',lvl:'info',conn:{id:'linkedin',status:'active'}},
+        {log:'Searching LinkedIn for "Senior .NET Developer"…',lvl:'info'},
+        {log:'LinkedIn returned 47 jobs',lvl:'ok',conn:{id:'linkedin',status:'done',jobs:47}},
+        {log:'Connecting to Indeed…',lvl:'info',conn2:{id:'indeed',status:'active'}},
+        {log:'Indeed connector failed — auth expired',lvl:'warn',conn:{id:'indeed',status:'failed',jobs:0,reason:'auth expired'}},
+        {log:'Non-blocking: continuing with LinkedIn results only',lvl:'warn'},
+        {log:'Search finished with warnings · 47 jobs',lvl:'warn',stage:{id:'search',status:'done',warn:true,metric:{jobs:47}},next:{id:'score',status:'active'},score:{current:1,total:4,scored:0}},
+        {log:'Scoring batch 1 / 4 with Gemini…',lvl:'info',score:{current:1,total:4,scored:11}},
+        {log:'Scoring batch 3 / 4 · 30 scored',lvl:'info',score:{current:3,total:4,scored:30}},
+        {log:'Scoring complete · 47 scored',lvl:'ok',stage:{id:'score',status:'done',metric:{scored:47}},next:{id:'export',status:'active'}},
+        {log:'Applying threshold (≥ 40) & ranking…',lvl:'info'},
+        {log:'Exported 2 files',lvl:'ok',stage:{id:'export',status:'done',metric:{files:2}}}
+      ];
+    }
+    return [
+      {log:'Run started — initializing pipeline',lvl:'info',stage:{id:'profile',status:'done'}},
+      {log:'Analyzing your profile with Gemini…',lvl:'info',stage:{id:'criteria',status:'active',label:'Generating criteria'}},
+      {log:'Extracting titles, keywords & seniority…',lvl:'info'},
+      {log:'Criteria generated · 5 keywords, 3 titles',lvl:'ok',stage:{id:'criteria',status:'done',metric:{keywords:5}},next:{id:'search',status:'active'}},
+      {log:'Connecting to LinkedIn…',lvl:'info',conn:{id:'linkedin',status:'active'}},
+      {log:'Searching LinkedIn for "Senior .NET Developer"…',lvl:'info'},
+      {log:'LinkedIn returned 47 jobs · filtering by location',lvl:'ok',conn:{id:'linkedin',status:'done',jobs:47}},
+      {log:'Connecting to Indeed…',lvl:'info',conn2:{id:'indeed',status:'active'}},
+      {log:'Indeed returned 38 jobs',lvl:'ok',conn:{id:'indeed',status:'done',jobs:38}},
+      {log:'Deduplicating 85 results across sources…',lvl:'info'},
+      {log:'Search complete · 85 jobs',lvl:'ok',stage:{id:'search',status:'done',metric:{jobs:85}},next:{id:'score',status:'active'},score:{current:1,total:6,scored:0}},
+      {log:'Scoring batch 1 / 6 with Gemini…',lvl:'info',score:{current:1,total:6,scored:14}},
+      {log:'Scoring batch 4 / 6 · 72 scored',lvl:'info',score:{current:4,total:6,scored:72}},
+      {log:'Scoring complete · 85 scored',lvl:'ok',stage:{id:'score',status:'done',metric:{scored:85}},next:{id:'export',status:'active'}},
+      {log:'Applying threshold (≥ 40) & ranking…',lvl:'info'},
+      {log:'Writing results-2026-06-17.xlsx…',lvl:'info'},
+      {log:'Exported 2 files · 5 kept',lvl:'ok',stage:{id:'export',status:'done',metric:{files:2}}}
+    ];
+  }
+  fmtElapsed(ms){ return (ms/1000).toFixed(1)+'s'; }
+  clockNow(){ const d=new Date(); const p=n=>String(n).padStart(2,'0'); return p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds()); }
+  runSearch=()=>{ this.setState({screen:'results'},()=>this.play()); };
+  rerun=()=>this.play();
+  replay=()=>this.play();
+  setSuccess=()=>this.setState({variant:'success'},()=>this.play());
+  setPartial=()=>this.setState({variant:'partial'},()=>this.play());
+
+  play(){
+    this.clearTimers();
+    this.setState({
+      runState:'running',everRun:true,
+      stages:this.freshStages(),connectors:this.freshConnectors(),
+      scoreProg:{current:0,total:6,scored:0},elapsed:0,log:[],summary:null,
+      selectedId:null, logOpen:true
+    });
+    this._start=Date.now();
+    this._tick=setInterval(()=>this.setState({elapsed:Date.now()-this._start}),100);
+    const steps=this.steps();
+    const gap=this.reduced()?50:520;
+    steps.forEach((step,i)=>{
+      const t=setTimeout(()=>this.applyStep(step, i===steps.length-1), 420 + i*gap);
+      (this._timeouts=this._timeouts||[]).push(t);
+    });
+  }
+  applyStep(step,last){
+    this.setState(s=>{
+      const stages=s.stages.map(x=>({...x}));
+      const conns=s.connectors.map(x=>({...x}));
+      const apply=(ref)=>{ if(!ref)return; const st=stages.find(x=>x.id===ref.id); if(!st)return;
+        if(ref.status) st.status=ref.status; if(ref.metric) st.metric=ref.metric;
+        if(ref.label!==undefined) st.label=ref.label; if(ref.warn) st.warn=true; };
+      apply(step.stage); apply(step.next);
+      const applyC=(ref)=>{ if(!ref)return; const c=conns.find(x=>x.id===ref.id); if(!c)return;
+        if(ref.status) c.status=ref.status; if(ref.jobs!==undefined) c.jobs=ref.jobs; if(ref.reason!==undefined) c.reason=ref.reason; };
+      applyC(step.conn); applyC(step.conn2);
+      const score=step.score?{...step.score}:s.scoreProg;
+      const log=[...s.log,{t:this.clockNow(),text:step.log,lvl:step.lvl||'info'}];
+      return {stages,connectors:conns,scoreProg:score,log};
+    });
+    if(last){
+      if(this._tick) clearInterval(this._tick);
+      const partial=this.state.variant==='partial';
+      this.setState({
+        runState:'done',
+        summary:{
+          found: partial?47:85,
+          scored: partial?47:85,
+          kept: this.jobs.filter(j=>j.score>=this.state.threshold).length,
+          files:2,
+          paths:[
+            'C:\\Users\\you\\JobHunter\\exports\\results-2026-06-17.xlsx',
+            'C:\\Users\\you\\JobHunter\\exports\\results-2026-06-17.json'
+          ],
+          duration:this.fmtElapsed(Date.now()-this._start),
+          warning: partial?'Indeed connector failed (auth expired) — results may be incomplete.':null
+        }
+      });
+    }
+  }
+  toggleLog=()=>this.setState(s=>({logOpen:!s.logOpen}));
+
+  // ---------- results ----------
+  band(score){
+    if(score>=80) return {key:'green',label:'Excellent'};
+    if(score>=60) return {key:'amber',label:'Good'};
+    if(score>=40) return {key:'orange',label:'Fair'};
+    return {key:'gray',label:'Low'};
+  }
+  scoreBadgeStyle(score){
+    const b=this.band(score);
+    return `display:inline-flex;align-items:center;justify-content:center;min-width:34px;padding:3px 8px;font-family:var(--mono);font-weight:600;font-size:13px;border-radius:var(--r-sm);background:var(--score-${b.key}-soft);color:var(--score-${b.key});`;
+  }
+  sourceBadgeStyle(src){
+    const c = src==='linkedin' ? 'var(--accent)' : 'var(--text-muted)';
+    const bg = src==='linkedin' ? 'var(--accent-soft)' : 'var(--surface-2)';
+    return `display:inline-flex;align-items:center;padding:3px 9px;border-radius:var(--r-pill);font-size:11px;font-weight:600;background:${bg};color:${c};`;
+  }
+  setSort(k){ this.setState(s=>({sortKey:k,sortDir: s.sortKey===k ? (s.sortDir==='desc'?'asc':'desc') : (k==='score'?'desc':'asc')})); }
+  sortScore=()=>this.setSort('score'); sortTitle=()=>this.setSort('title'); sortCompany=()=>this.setSort('company');
+  sortLocation=()=>this.setSort('location'); sortSource=()=>this.setSort('source'); sortDate=()=>this.setSort('date');
+  onFilterSource=e=>this.setState({filterSource:e.target.value});
+  onFilterScore=e=>this.setState({filterMinScore:Number(e.target.value)});
+  onFilterFrom=e=>this.setState({filterFrom:e.target.value});
+  onFilterTo=e=>this.setState({filterTo:e.target.value});
+  selectJob=(id)=>this.setState({selectedId:id});
+  closePanel=()=>this.setState({selectedId:null});
+  toggleHidden=()=>this.setState(s=>({showHidden:!s.showHidden}));
+  exportResults=()=>this.saveCriteria();
+
+  filteredSorted(){
+    const s=this.state;
+    let rows=this.jobs.filter(j=>j.score>=s.threshold);
+    if(s.filterSource!=='all') rows=rows.filter(j=>j.source===s.filterSource);
+    if(s.filterMinScore>0) rows=rows.filter(j=>j.score>=s.filterMinScore);
+    if(s.filterFrom) rows=rows.filter(j=>j.date>=s.filterFrom);
+    if(s.filterTo) rows=rows.filter(j=>j.date<=s.filterTo);
+    const dir=s.sortDir==='asc'?1:-1;
+    rows.sort((a,b)=>{ const k=s.sortKey; let av=a[k],bv=b[k]; if(typeof av==='string'){return av.localeCompare(bv)*dir;} return (av-bv)*dir; });
+    return rows;
+  }
+
+  // ---------- settings ----------
+  toggleKey=()=>this.setState(s=>({keyVisible:!s.keyVisible}));
+  selectProvider=(p)=>this.setState({provider:p});
+  toggleConn=(id)=>this.setState(s=>({connEnabled:{...s.connEnabled,[id]:!s.connEnabled[id]}}));
+  setConnMin=(id,v)=>this.setState(s=>({connDelay:{...s.connDelay,[id]:[Number(v),Math.max(Number(v),s.connDelay[id][1])]}}));
+  setConnMax=(id,v)=>this.setState(s=>({connDelay:{...s.connDelay,[id]:[Math.min(s.connDelay[id][0],Number(v)),Number(v)]}}));
+  onMaxResults=e=>this.setState({maxResults:Number(e.target.value)});
+  connectGoogle=()=>this.setState(s=>({googleStatus:s.googleStatus==='connected'?'disconnected':'connected'}));
+  linkedinAuth=()=>this.setState(s=>({liStatus:s.liStatus==='connected'?'expired':'connected'}));
+
+  // ---------- render ----------
+  renderVals(){
+    const s=this.state;
+    const titleMap={criteria:'Criteria',results:'Results',settings:'Settings'};
+    const navBase='display:flex;align-items:center;gap:11px;padding:9px 11px;border:none;border-radius:var(--r-md);font-size:13px;font-weight:500;cursor:pointer;width:100%;text-align:left;background:transparent;color:var(--text-muted);position:relative;';
+    const navActive='display:flex;align-items:center;gap:11px;padding:9px 11px;border:none;border-radius:var(--r-md);font-size:13px;font-weight:600;cursor:pointer;width:100%;text-align:left;background:var(--accent-soft);color:var(--accent);position:relative;';
+    const nav=(k)=> s.screen===k?navActive:navBase;
+
+    // run pill (header)
+    const running=s.runState==='running';
+    const done=s.runState==='done';
+    const lastLog = s.log.length ? s.log[s.log.length-1] : null;
+    const lastWarn = lastLog && lastLog.lvl==='warn';
+    const sumWarn = !!(s.summary && s.summary.warning);
+    const keptNow = this.jobs.filter(j=>j.score>=s.threshold).length;
+    let runLabel, runDotBg='var(--text-subtle)', pillBg='var(--surface-2)', pillColor='var(--text-muted)';
+    if(running){
+      runLabel = lastLog ? lastLog.text : 'Starting pipeline…';
+      pillBg = lastWarn ? 'var(--warning-soft)' : 'var(--accent-soft)';
+      pillColor = lastWarn ? 'var(--warning)' : 'var(--accent)';
+    } else if(done){
+      runLabel = sumWarn ? 'Completed with warnings' : `Complete · ${keptNow} kept`;
+      runDotBg = sumWarn ? 'var(--warning)' : 'var(--success)';
+      pillBg = sumWarn ? 'var(--warning-soft)' : 'var(--success-soft)';
+      pillColor = sumWarn ? 'var(--warning)' : 'var(--success)';
+    } else {
+      runLabel = s.everRun ? 'Idle' : 'Ready to run';
+    }
+    const runPillStyle=`display:inline-flex;align-items:center;gap:8px;padding:5px 12px;border-radius:var(--r-pill);font-size:12px;font-weight:600;background:${pillBg};color:${pillColor};max-width:360px;transition:background var(--dur),color var(--dur);`;
+    const runDotStyle = running
+      ? 'width:12px;height:12px;border:2px solid var(--accent-soft);border-top-color:var(--accent);border-radius:50%;display:inline-block;flex:none;animation:jh-spin .7s linear infinite;'
+      : `width:8px;height:8px;border-radius:50%;background:${runDotBg};display:inline-block;flex:none;`;
+
+    // active stage position
+    let activeIdx=s.stages.findIndex(x=>x.status==='active');
+    let doneCount=s.stages.filter(x=>x.status==='done').length;
+    let pos = activeIdx>=0 ? activeIdx+1 : (doneCount>0?doneCount:1);
+
+    // stages view
+    const labels=['Profile','Criteria','Search','Score','Export'];
+    const stagesView=s.stages.map((st,i)=>{
+      const isLast=i===4;
+      let nodeColor,nodeBg,nodeBorder,numColor;
+      if(st.status==='done'){
+        if(st.warn){ nodeBg='var(--warning)';nodeBorder='var(--warning)';nodeColor='#fff'; }
+        else { nodeBg='var(--success)';nodeBorder='var(--success)';nodeColor='#fff'; }
+      } else if(st.status==='active'){ nodeBg='var(--accent-soft)';nodeBorder='var(--accent)';nodeColor='var(--accent)'; }
+      else if(st.status==='failed'){ nodeBg='var(--warning-soft)';nodeBorder='var(--warning)';nodeColor='var(--warning)'; }
+      else { nodeBg='var(--surface)';nodeBorder='var(--border-strong)';nodeColor='var(--text-subtle)'; }
+      const nodeStyle=`position:relative;z-index:1;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:${nodeBg};border:2px solid ${nodeBorder};color:${nodeColor};transition:all var(--dur) var(--ease);`;
+      const pulseStyle = st.status==='active'
+        ? 'position:absolute;inset:0;border-radius:50%;background:var(--accent);animation:jh-pulse 1.8s var(--ease) infinite;z-index:0;'
+        : 'display:none;';
+      const reached = st.status==='done';
+      const trackStyle = isLast ? 'display:none;' : 'position:absolute;top:21px;left:50%;width:100%;height:3px;background:var(--border);z-index:0;';
+      const fillStyle = `height:100%;background:var(--success);width:${reached?'100%':'0%'};transition:width var(--dur-slow) var(--ease);`;
+      let metricText='';
+      if(st.status==='done'&&st.metric){
+        if(st.metric.keywords!=null) metricText=st.metric.keywords+' keywords';
+        else if(st.metric.jobs!=null) metricText=st.metric.jobs+' jobs';
+        else if(st.metric.scored!=null) metricText=st.metric.scored+' scored';
+        else if(st.metric.files!=null) metricText=st.metric.files+' files';
+      } else if(st.status==='active'){ metricText=st.label||'Working…'; }
+      else if(st.status==='failed'){ metricText='failed'; }
+      const labelColor = st.status==='pending'?'var(--text-subtle)':'var(--text)';
+      const labelWeight = st.status==='active'||st.status==='done'?'600':'500';
+      return {
+        num:String(i+1), label:labels[i], nodeStyle, pulseStyle, trackStyle, fillStyle,
+        labelStyle:`margin-top:11px;font-size:12px;font-weight:${labelWeight};color:${labelColor};`,
+        metricStyle:`margin-top:3px;font-size:11px;color:${st.warn?'var(--warning)':'var(--text-subtle)'};font-family:var(--mono);min-height:14px;text-align:center;`,
+        metricText,
+        showCheck: st.status==='done'&&!st.warn,
+        showWarn: st.status==='failed'||(st.status==='done'&&st.warn),
+        showNum: st.status==='pending'||st.status==='active'
+      };
+    });
+
+    // connectors view
+    const connDot=(st)=>{ const c= st==='done'?'var(--success)':st==='active'?'var(--accent)':st==='failed'?'var(--warning)':'var(--border-strong)';
+      return `width:9px;height:9px;border-radius:50%;background:${c};flex:none;${st==='active'?'animation:jh-pulse 1.6s var(--ease) infinite;':''}`; };
+    const connectorsView=s.connectors.map(c=>{
+      const badgeMap={done:['Done','var(--success-soft)','var(--success)'],active:['Searching…','var(--accent-soft)','var(--accent)'],failed:['Failed','var(--warning-soft)','var(--warning)'],pending:['Pending','var(--surface-3)','var(--text-subtle)']};
+      const [bt,bbg,bc]=badgeMap[c.status]||badgeMap.pending;
+      return {
+        name:c.name,
+        dotStyle:connDot(c.status),
+        jobsText: c.status==='pending'?'—':(c.jobs+' jobs'),
+        jobsStyle:'font-family:var(--mono);font-size:12px;color:var(--text-muted);min-width:60px;',
+        reason: c.reason?('· '+c.reason):'',
+        reasonStyle: c.reason?'font-size:11px;color:var(--warning);':'display:none;',
+        badgeText:bt,
+        badgeStyle:`padding:3px 9px;border-radius:var(--r-pill);font-size:11px;font-weight:600;background:${bbg};color:${bc};`
+      };
+    });
+
+    const searchStage=s.stages[2], scoreStage=s.stages[3];
+    const showConnectors = searchStage.status==='active'||searchStage.status==='done'||searchStage.status==='failed';
+    const showScoreBar = scoreStage.status==='active'||scoreStage.status==='done';
+    const sp=s.scoreProg;
+    const scorePct = sp.total? Math.round((sp.scored/(s.variant==='partial'?47:85))*100):0;
+
+    // log view (streaming feed)
+    const logColor=(lvl)=> lvl==='ok'?'var(--success)':lvl==='warn'?'var(--warning)':'var(--text)';
+    const logView=s.log.map((l,i)=>{
+      const isLast=i===s.log.length-1;
+      const live=isLast&&running;
+      const col=logColor(l.lvl);
+      return {
+        t:l.t, text:l.text,
+        rowStyle:`display:flex;gap:11px;align-items:baseline;padding:4px 0;${isLast?'':'opacity:.62;'}`,
+        dotStyle:`width:6px;height:6px;border-radius:50%;flex:none;align-self:center;background:${live?'var(--accent)':col};${live?'animation:jh-pulse 1.3s var(--ease) infinite;':''}`,
+        tStyle:'color:var(--text-subtle);flex:none;font-variant-numeric:tabular-nums;',
+        style:`color:${col};${isLast?'font-weight:600;':''}`
+      };
+    });
+
+    // results
+    const rows=this.filteredSorted();
+    const arrow=(k)=> s.sortKey!==k?'':(s.sortDir==='desc'?'▾':'▴');
+    const thBase='text-align:left;padding:11px 16px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;cursor:pointer;user-select:none;white-space:nowrap;';
+    const jobsView=rows.map(j=>({
+      score:j.score, title:j.title, company:j.company, location:j.location,
+      sourceLabel:j.source==='linkedin'?'LinkedIn':'Indeed', date:j.date,
+      scoreStyle:this.scoreBadgeStyle(j.score), sourceStyle:this.sourceBadgeStyle(j.source),
+      rowStyle:`cursor:pointer;transition:background var(--dur-fast);${s.selectedId===j.id?'background:var(--accent-soft);':''}`,
+      select:()=>this.selectJob(j.id)
+    }));
+    const hiddenJobs=this.jobs.filter(j=>j.score<s.threshold);
+    const hiddenView=hiddenJobs.map(j=>({
+      score:j.score, title:j.title, company:j.company, location:j.location,
+      sourceLabel:j.source==='linkedin'?'LinkedIn':'Indeed', date:j.date,
+      scoreStyle:this.scoreBadgeStyle(j.score), sourceStyle:this.sourceBadgeStyle(j.source),
+      select:()=>this.selectJob(j.id)
+    }));
+
+    // detail panel
+    const job=this.jobs.find(j=>j.id===s.selectedId);
+    const panelOpen=!!job;
+    const panelStyle=`position:fixed;top:0;right:0;height:100vh;width:440px;max-width:92vw;background:var(--surface);border-left:1px solid var(--border);box-shadow:var(--sh-3);z-index:41;transform:translateX(${panelOpen?'0':'100%'});transition:transform var(--dur) var(--ease);`;
+
+    // criteria chips views
+    const keywordsView=s.keywords.map((k,i)=>({
+      text:k, editing:s.editingChip===i, notEditing:s.editingChip!==i,
+      wrapStyle:`display:inline-flex;align-items:center;gap:7px;padding:5px 10px;background:var(--accent-soft);border:1px solid var(--accent-soft);border-radius:var(--r-pill);${s.editingChip===i?'box-shadow:0 0 0 2px var(--accent);':''}`,
+      edit:()=>this.editChip(i), remove:()=>this.removeChip(i)
+    }));
+    const seniorityView=[['junior','Junior'],['mid','Mid'],['senior','Senior'],['lead','Lead']].map(([k,label])=>({
+      label, on:s.seniority[k], toggle:()=>this.toggleSeniority(k)
+    }));
+    const refineTurns=s.refineTurns.map(t=>({
+      text:t.text,
+      style: t.role==='user'
+        ? 'align-self:flex-end;max-width:75%;margin-bottom:8px;margin-left:auto;padding:8px 12px;background:var(--accent);color:var(--on-accent);border-radius:12px 12px 2px 12px;font-size:13px;'
+        : 'max-width:75%;margin-bottom:8px;padding:8px 12px;background:var(--surface-2);border-radius:12px 12px 12px 2px;font-size:13px;color:var(--text);'
+    }));
+
+    // settings
+    const providersView=[['gemini','Gemini','Google · cloud'],['ollama','Ollama','Local · private'],['openrouter','OpenRouter','Multi-model']].map(([k,name,desc])=>({
+      name,desc,select:()=>this.selectProvider(k),
+      cardStyle:`display:flex;flex-direction:column;gap:4px;align-items:flex-start;text-align:left;padding:13px 14px;border:1.5px solid ${s.provider===k?'var(--accent)':'var(--border)'};background:${s.provider===k?'var(--accent-soft)':'var(--surface)'};border-radius:var(--r-md);cursor:pointer;transition:all var(--dur-fast);`
+    }));
+    const connNames={linkedin:'LinkedIn',indeed:'Indeed',glassdoor:'Glassdoor'};
+    const connectorsSettingsView=['linkedin','indeed','glassdoor'].map(id=>{
+      const on=s.connEnabled[id]; const d=s.connDelay[id];
+      return {
+        name:connNames[id], on, onAria:on?'true':'false',
+        switchStyle:`position:relative;width:38px;height:22px;border-radius:var(--r-pill);border:none;cursor:pointer;background:${on?'var(--accent)':'var(--border-strong)'};transition:background var(--dur);flex:none;`,
+        knobStyle:`position:absolute;top:3px;left:${on?'19px':'3px'};width:16px;height:16px;border-radius:50%;background:#fff;transition:left var(--dur) var(--ease);box-shadow:0 1px 2px rgba(0,0,0,.3);`,
+        dmin:d[0], dmax:d[1], dminLabel:d[0]+'s', dmaxLabel:d[1]+'s',
+        setMin:e=>this.setConnMin(id,e.target.value), setMax:e=>this.setConnMax(id,e.target.value)
+      };
+    });
+    const statusBadge=(ok,okText,badText)=> ok
+      ? `padding:4px 10px;border-radius:var(--r-pill);font-size:11px;font-weight:600;background:var(--success-soft);color:var(--success);`
+      : `padding:4px 10px;border-radius:var(--r-pill);font-size:11px;font-weight:600;background:var(--error-soft);color:var(--error);`;
+    const dot=(ok)=>`width:9px;height:9px;border-radius:50%;flex:none;background:${ok?'var(--success)':'var(--error)'};`;
+    const liOk=s.liStatus==='connected', gOk=s.googleStatus==='connected';
+
+    const keptCount=this.jobs.filter(j=>j.score>=s.threshold).length;
+
+    return {
+      theme:s.theme, themeLabel:s.theme==='light'?'Dark mode':'Light mode',
+      themeIcon: s.theme==='light'
+        ? React.createElement('svg',{width:16,height:16,viewBox:'0 0 20 20',fill:'none',stroke:'currentColor','strokeWidth':1.6,strokeLinecap:'round',strokeLinejoin:'round'},React.createElement('path',{d:'M16 11.5A6.5 6.5 0 018.5 4a6.5 6.5 0 107.5 7.5z'}))
+        : React.createElement('svg',{width:16,height:16,viewBox:'0 0 20 20',fill:'none',stroke:'currentColor','strokeWidth':1.6,strokeLinecap:'round',strokeLinejoin:'round'},React.createElement('circle',{cx:10,cy:10,r:3.5}),React.createElement('path',{d:'M10 2v2M10 16v2M2 10h2M16 10h2M4.5 4.5l1.4 1.4M13.9 13.9l1.4 1.4M15.5 4.5l-1.4 1.4M6 13.9l-1.4 1.4'})),
+      screenTitle:titleMap[s.screen],
+      ariaCriteria:s.screen==='criteria'?'page':'false', ariaResults:s.screen==='results'?'page':'false', ariaSettings:s.screen==='settings'?'page':'false',
+      navCriteriaStyle:nav('criteria'), navResultsStyle:nav('results'), navSettingsStyle:nav('settings'),
+      goCriteria:this.goCriteria, goResults:this.goResults, goSettings:this.goSettings, toggleTheme:this.toggleTheme,
+      keptCount, resultsCountStyle:`margin-left:auto;font-family:var(--mono);font-size:11px;font-weight:600;padding:1px 7px;border-radius:var(--r-pill);background:${s.screen==='results'?'var(--accent)':'var(--surface-3)'};color:${s.screen==='results'?'var(--on-accent)':'var(--text-subtle)'};`,
+      providerName: s.provider==='gemini'?'Gemini':s.provider==='ollama'?'Ollama':'OpenRouter',
+      runLabel, runPillStyle, runDotStyle,
+      runLabelStyle:'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;',
+      runSpinner:'',
+      runTimer: running||done ? this.fmtElapsed(s.elapsed) : '',
+      runTimerStyle: running||done ? 'font-family:var(--mono);color:var(--text-subtle);font-weight:500;' : 'display:none;',
+      runTimerInline:this.fmtElapsed(s.elapsed),
+
+      // screens
+      isCriteria:s.screen==='criteria', isResults:s.screen==='results', isSettings:s.screen==='settings',
+
+      // criteria
+      profile:s.profile, onProfile:this.onProfile,
+      genBusy:s.genState==='generating', isGenerating:s.genState==='generating',
+      generateBtnLabel: s.genState==='generating'?'Generating…':(s.genState==='empty'?'Generate with AI':'Regenerate'),
+      generateBtnStyle:`display:inline-flex;align-items:center;gap:8px;padding:9px 15px;background:var(--accent);color:var(--on-accent);border:none;border-radius:var(--r-md);font-size:13px;font-weight:600;cursor:${s.genState==='generating'?'wait':'pointer'};opacity:${s.genState==='generating'?'.85':'1'};`,
+      genSpinnerStyle: s.genState==='generating'?'width:13px;height:13px;border:2px solid rgba(255,255,255,.45);border-top-color:#fff;border-radius:50%;display:inline-block;animation:jh-spin .7s linear infinite;':'display:none;',
+      genIconStyle: s.genState==='generating'?'display:none;':'display:block;',
+      generate:this.generate,
+      showPanel: s.genState==='generated'||s.genState==='refining',
+      titlesView:s.titles.map(t=>({text:t})),
+      keywordsView, editValue:s.editValue, onEditValue:this.onEditValue, onChipKey:this.onChipKey, commitChip:this.commitChip, addChip:this.addChip,
+      excludeView:s.exclude.map(t=>({text:t})),
+      seniorityView, locationsView:s.locations.map(t=>({text:t})),
+      threshold:s.threshold, onThreshold:this.onThreshold,
+      refineTurns, refineText:s.refineText, onRefine:this.onRefine, onRefineKey:this.onRefineKey, sendRefine:this.sendRefine,
+      runSearch:this.runSearch, running,
+      runBtnLabel: running?'Running…':'Run search',
+      runBtnStyle:`display:inline-flex;align-items:center;gap:8px;padding:10px 18px;background:var(--accent);color:var(--on-accent);border:none;border-radius:var(--r-md);font-size:13px;font-weight:600;cursor:${running?'not-allowed':'pointer'};opacity:${running?'.6':'1'};`,
+      saveCriteria:this.saveCriteria, savedMsg:s.savedMsg,
+      savedMsgStyle: s.savedMsg?'font-size:12px;color:var(--success);font-weight:600;display:inline-flex;align-items:center;':'display:none;',
+
+      // results
+      resultsEmpty: !s.everRun,
+      showPipeline: s.everRun,
+      positionLabel:`Stage ${pos} of 5`,
+      stagesView,
+      showConnectors, connectorsView,
+      showScoreBar, scoreBatchText:`Batch ${sp.current} / ${sp.total}`, scoreScoredText:`${sp.scored} scored`,
+      scoreFillStyle:`height:100%;background:var(--accent);width:${scorePct}%;transition:width var(--dur-slow) var(--ease);border-radius:var(--r-pill);`,
+      showIdleDetail: !showConnectors && !showScoreBar,
+      idleDetailText: running?'Starting pipeline…':'Pipeline ready.',
+      toggleLog:this.toggleLog, logOpen:s.logOpen, logOpenAria:s.logOpen?'true':'false',
+      logChevronStyle:`transition:transform var(--dur);transform:rotate(${s.logOpen?'0':'-90deg'});`,
+      bannerText: lastLog ? lastLog.text : (running ? 'Starting pipeline…' : 'Run complete'),
+      bannerTime: lastLog ? lastLog.t : this.clockNow(),
+      bannerStyle: `display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:var(--r-md);margin-bottom:24px;background:${lastWarn||sumWarn?'var(--warning-soft)':(running?'var(--accent-soft)':'var(--success-soft)')};`,
+      bannerTimeStyle:'font-family:var(--mono);font-size:12px;color:var(--text-subtle);flex:none;',
+      bannerDotStyle: running
+        ? 'width:15px;height:15px;border:2px solid var(--accent-soft);border-top-color:var(--accent);border-radius:50%;display:inline-block;flex:none;animation:jh-spin .7s linear infinite;'
+        : `width:11px;height:11px;border-radius:50%;flex:none;background:${sumWarn?'var(--warning)':'var(--success)'};`,
+      logCountText:`${s.log.length} events`, logView, logRef:this.logRef, logRunning:running,
+      logLiveStyle: running
+        ? 'display:inline-flex;align-items:center;gap:5px;padding:1px 8px;border-radius:var(--r-pill);background:var(--accent);color:var(--on-accent);font-size:10px;font-weight:700;letter-spacing:.04em;'
+        : 'display:none;',
+
+      showSummary: done && !!s.summary,
+      summaryFound:s.summary?s.summary.found:0, summaryScored:s.summary?s.summary.scored:0,
+      summaryKept:s.summary?s.summary.kept:0, summaryFiles:s.summary?s.summary.files:0,
+      summaryDuration:s.summary?s.summary.duration:'', 
+      summaryPaths: s.summary?s.summary.paths.map(p=>({text:p})):[],
+      hasWarnings: !!(s.summary&&s.summary.warning), summaryWarning:s.summary?s.summary.warning:'',
+
+      showTable: done,
+      filterSource:s.filterSource, onFilterSource:this.onFilterSource,
+      filterMinScore:s.filterMinScore, onFilterScore:this.onFilterScore,
+      filterFrom:s.filterFrom, onFilterFrom:this.onFilterFrom, filterTo:s.filterTo, onFilterTo:this.onFilterTo,
+      rerun:this.rerun, exportResults:this.exportResults,
+      thScore:thBase, thText:thBase,
+      arrowScore:arrow('score'), arrowTitle:arrow('title'), arrowCompany:arrow('company'),
+      arrowLocation:arrow('location'), arrowSource:arrow('source'), arrowDate:arrow('date'),
+      sortScore:this.sortScore, sortTitle:this.sortTitle, sortCompany:this.sortCompany,
+      sortLocation:this.sortLocation, sortSource:this.sortSource, sortDate:this.sortDate,
+      jobsView,
+      hiddenLabel:`${hiddenJobs.length} result below threshold (score < ${s.threshold})`,
+      hiddenToggleLabel: s.showHidden?'Hide':'Show hidden', toggleHidden:this.toggleHidden, showHidden:s.showHidden, hiddenView,
+
+      // tabs
+      setSuccess:this.setSuccess, setPartial:this.setPartial, replay:this.replay,
+      tabSuccessStyle:`padding:6px 12px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:${s.variant==='success'?'var(--accent)':'var(--surface)'};color:${s.variant==='success'?'var(--on-accent)':'var(--text-muted)'};`,
+      tabPartialStyle:`padding:6px 12px;border:none;border-left:1px solid var(--border);font-size:12px;font-weight:600;cursor:pointer;background:${s.variant==='partial'?'var(--warning)':'var(--surface)'};color:${s.variant==='partial'?'#fff':'var(--text-muted)'};`,
+
+      // detail panel
+      panelOpen, panelStyle, closePanel:this.closePanel,
+      detailScore: job?job.score:'', detailScoreStyle: job?this.scoreBadgeStyle(job.score)+'font-size:16px;min-width:42px;padding:6px 10px;':'',
+      detailTitle: job?job.title:'', detailCompany: job?job.company:'', detailLocation: job?job.location:'',
+      detailSourceLabel: job?(job.source==='linkedin'?'LinkedIn':'Indeed'):'', detailSourceStyle: job?this.sourceBadgeStyle(job.source):'',
+      detailDate: job?job.date:'', detailSalary: job?job.salary:'',
+      detailReason: job?job.reason:'', detailFlags: job?job.flags.map(f=>({text:f})):[],
+      detailDescription: job?job.desc:'',
+
+      // settings
+      providersView,
+      apiKeyDisplay: s.keyVisible?'AIzaSyD-3f9a-7Kx2mP8qR':'••••••••••••••3f9a', keyToggleLabel:s.keyVisible?'Hide':'Show', toggleKey:this.toggleKey,
+      googleBadgeStyle:statusBadge(gOk), googleBadgeText:gOk?'Connected':'Not connected',
+      googleBtnLabel:gOk?'Disconnect':'Connect', connectGoogle:this.connectGoogle,
+      connectorsSettingsView,
+      maxResults:s.maxResults, onMaxResults:this.onMaxResults,
+      liDotStyle:dot(liOk), liStatusText: liOk?'Active session · cookies valid':'Session expired — re-authenticate to resume LinkedIn search.',
+      liBadgeStyle:statusBadge(liOk), liBadgeText: liOk?'Connected':'Expired',
+      liBtnLabel: liOk?'Re-auth':'Log in', linkedinAuth:this.linkedinAuth,
+      googleDot2Style:dot(gOk), googleStatusText: gOk?'OAuth token valid':'No Google account connected.',
+      googleBadge2Style:statusBadge(gOk), googleBadge2Text: gOk?'Connected':'Disconnected'
+    };
+  }
+}
+</script>
+</body>
+</html>
