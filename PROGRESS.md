@@ -1,7 +1,8 @@
 # PROGRESS — JobHunter live tracker
 
 > Read this first. With [`Documents/JobHunter_DEV_PLAN_v1.0.md`](Documents/JobHunter_DEV_PLAN_v1.0.md)
-> and `git log`, this file is the whole project state. Update it **in the same commit** as each chunk.
+> and `git log`, this file is the whole project state. Update it **in the same commit** as each chunk,
+> on that chunk's `chunk/C-XXX` branch (merged to `main` via a reviewed PR — ADR-015).
 > Each chunk only moves to `done` after passing the Definition-of-Done gate (plan §3.1) and validation
 > sequence (plan §3.2).
 
@@ -20,7 +21,7 @@
 
 ## Ledger
 
-| ID | Title | Stage | Depends on | Status | Commit |
+| ID | Title | Stage | Depends on | Status | Merge |
 |----|-------|-------|-----------|--------|--------|
 | C-000 | Repo init + initial project snapshot | Bootstrap | — | done | 5cf9ee3 |
 | C-001 | Repo scaffold + tooling | Foundation | C-000 | todo | — |

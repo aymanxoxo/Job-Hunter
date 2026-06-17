@@ -47,7 +47,7 @@ no model ever pays to "figure out where we are".
   side effects (network, files, keyring, browser, stdout) are pushed to thin adapters at the edges. See §5.
 - **TDD per chunk.** Write the failing test(s) first; implement until green; refactor under green. The
   test is the chunk's executable spec.
-- **Trunk-based, one commit per chunk** on `main`. No long-lived branches.
+- **Branch per chunk, one commit each.** Each chunk is built on a short-lived `chunk/C-XXX-slug` branch with one clean commit, pushed and merged to `main` via a reviewed PR (§7, ADR-015). No long-lived branches.
 - **Docs are part of "done".** Any chunk that changes what a doc describes updates that doc in the same
   commit (see the mandatory rule in the root `AGENTS.md`).
 - **Traceable by construction.** Every effectful path emits structured logs keyed to a run id (§6), so a
@@ -85,7 +85,7 @@ is universal; the per-chunk *Validation* column supplies the chunk-specific item
    `AGENTS.md`).
 7. **Ledger updated** — `PROGRESS.md`: this chunk → `done` (+ commit hash); orientation block advanced
    to the next ready chunk.
-8. **One commit** — exactly one commit on `main` in the §7 format, tagged `[C-XXX]`.
+8. **One commit, one branch, one PR** — exactly one commit in the §7 format (tagged `[C-XXX]`) on a `chunk/C-XXX` branch, pushed and merged to `main` via a reviewed PR.
 
 ### 3.2 Validation steps (the move-to-next sequence)
 
@@ -101,7 +101,7 @@ pytest -q --asyncio-mode=auto
 ruff check .
 # 4. (UI chunks) component/state checks
 cd ui/desktop && npm run test && npm run build
-# 5. update PROGRESS.md (status + hash + orientation block), then commit per §7
+# 5. update PROGRESS.md, commit on the chunk/C-XXX branch, push, open PR for review + merge (§7)
 ```
 
 Only after this sequence is clean is the chunk `done` and the next ready chunk may begin. A chunk is
@@ -182,7 +182,7 @@ without re-running.
 
 ## 7. Commit convention (the progress log)
 
-**One commit per chunk on `main`.** Tests are authored first (TDD) and committed together with the
+**One commit per chunk, authored on a `chunk/C-XXX-slug` branch and merged to `main` via a reviewed PR** (ADR-015). Tests are authored first (TDD) and committed together with the
 implementation as a single green commit. Format:
 
 ```
