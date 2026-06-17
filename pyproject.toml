@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jobhunter"
+version = "0.1.0"
+description = "AI-powered, plugin-based job search aggregator (CLI + desktop)."
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2",
+    "httpx[http2]",
+    "click",
+    "rich",
+    "pyyaml",
+    "pandas",
+    "playwright",
+    "keyring",
+    "cryptography",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "pytest-asyncio", "ruff"]
+
+[tool.setuptools.packages.find]
+include = ["core*", "ui*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

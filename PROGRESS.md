@@ -9,8 +9,8 @@
 ## Orientation
 
 - **Phase:** Phase 1 — Foundation. **Next gate:** M-03 (chunk C-029).
-- **Last done:** **C-000** — repo initialized + initial project snapshot (commit `5cf9ee3`).
-- **Next ready:** **C-001** (Repo scaffold + tooling) — no remaining dependencies.
+- **Last done:** **C-001** — repo scaffold + tooling (3/3 scaffold tests green, ruff clean; PR open on `chunk/C-001-scaffold`, awaiting merge). Prior: **C-000** (`5cf9ee3`).
+- **Next ready (once C-001 merges):** **C-002** (logging), **C-004** (data models), **C-039** (walking skeleton) — all depend only on C-001.
 - **Blocked:** none.
 - **Notes:** Dev loop runs via the GitHub remote (the mount can't hold `.git`): the AI works in a
   sandbox clone, pushes one `chunk/C-XXX` branch per chunk with a risk read; the user reviews + merges the
@@ -27,7 +27,7 @@
 | ID | Title | Stage | Depends on | Status | Merge |
 |----|-------|-------|-----------|--------|--------|
 | C-000 | Repo init + initial project snapshot | Bootstrap | — | done | 5cf9ee3 |
-| C-001 | Repo scaffold + tooling | Foundation | C-000 | todo | — |
+| C-001 | Repo scaffold + tooling | Foundation | C-000 | done | (PR) |
 | C-039 | Walking skeleton (stub end-to-end) | Skeleton | C-001 | todo | — |
 | C-002 | Logging & trace core | Foundation | C-001 | todo | — |
 | C-003 | Config models + loader | Foundation | C-001, C-002 | todo | — |
@@ -69,6 +69,7 @@
 
 ## Changelog (newest first)
 
+- 2026-06-17 — **C-001** scaffold built on `chunk/C-001-scaffold`: package tree (`core/*`, `ui/cli`), user drop-zones, `pyproject.toml` + `requirements*.txt`, ruff + pytest-asyncio config; 3/3 scaffold tests green, ruff clean. PR open for review.
 - 2026-06-17 — Added per-chunk vertical protocol (ADR-016, §3.3), per-chunk dual docs — technical + business (ADR-017, §3.4, `Documents/PRODUCT_NOTES.md`), the PR template, and walking-skeleton chunk C-039; refreshed the workflow Notes.
 - 2026-06-17 — C-000 done: git initialized on `main`, initial snapshot committed (`5cf9ee3`). Added
   `Documents/DECISIONS.md` (ADR log). C-001 is the next ready chunk.

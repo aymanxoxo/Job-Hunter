@@ -30,7 +30,7 @@ provider interface).
 
 ## Module index (planned)
 
-The folder tree below is the SDD target. **Status: not yet scaffolded** — only `Documents/` exists today.
+The folder tree below is the SDD target. **Status: scaffolded (C-001)** — the `core/*` + `ui/cli` package tree, user drop-zones, and tooling (`pyproject.toml`, ruff, pytest) are in place; modules are empty stubs filled by later chunks.
 Each module folder gets its own `AGENTS.md` (following the template below) when it is created.
 
 | Module | Path | Purpose |

@@ -1,0 +1,1 @@
+"""JobHunter ui.cli package."""
