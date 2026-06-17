@@ -16,12 +16,13 @@
 | 006 | Filter precedence: `min_score_threshold` is the single effective filter | Accepted | 2026-06-17 |
 | 007 | Explicit output module at `core/output.py` | Accepted | 2026-06-17 |
 | 008 | Functional core / imperative shell + TDD per chunk | Accepted | 2026-06-17 |
-| 009 | Trunk-based, one commit per chunk, `[C-XXX]` + ledger as live tracker | Accepted | 2026-06-17 |
+| 009 | Trunk-based, one commit per chunk, `[C-XXX]` + ledger as live tracker | Amended by 015 | 2026-06-17 |
 | 010 | Tauri sidecar IPC over stdin/stdout JSON; logs stderr-only | Accepted | 2026-06-17 |
 | 011 | Local git only, whole-folder tracking, remote deferred | Superseded by 014 | 2026-06-17 |
 | 012 | Hierarchical `AGENTS.md` + mandatory documentation upkeep | Accepted | 2026-06-17 |
 | 013 | Live Pipeline Progress UI as a first-class product feature | Accepted | 2026-06-17 |
-| 014 | Remote (GitHub) dev/commit loop; AI as sole committer | Accepted | 2026-06-17 |
+| 014 | Remote (GitHub) dev/commit loop; AI as sole committer | Amended by 015 | 2026-06-17 |
+| 015 | Feature-branch per chunk; user reviews & merges PRs | Accepted | 2026-06-17 |
 
 ---
 
@@ -217,3 +218,23 @@ Trade-offs: a repo-scoped token lives in the sandbox **for the session only** (n
 redacted in logs, user-revocable); the user must `git pull` to see changes and must **not** commit
 locally while the AI is the committer; if a second writer is unavoidable, reconcile with `git pull
 --rebase` before the next push. **Supersedes ADR-011.**
+
+
+## ADR-015 — Feature-branch per chunk; user reviews & merges PRs
+
+**Context.** ADR-014 had the AI commit and push directly to `main` as sole committer. The user wanted a
+safer model where a conflict becomes a conversation rather than a broken `main`, and where changes are
+reviewable before they land.
+
+**Decision.** Each chunk is built on a short-lived branch `chunk/C-XXX-slug` with one clean commit
+(`[C-XXX]` convention, TDD). The AI **pushes the branch only** — never directly to `main`. GitHub prompts
+the user to open a PR; the **user reviews and merges** it. (The repo-scoped token is Contents-only — enough
+for the AI to push branches but not to open/merge PRs via API, by design.) Conflicts surface in the PR and
+are discussed before merging. After merge, the AI pulls `main`, deletes the branch, and starts the next
+chunk's branch.
+
+**Consequences.** `main` changes only through reviewed merges the user controls; conflicts are visible and
+discussable. Cost: a per-chunk merge click for the user. **Amends ADR-009** (no longer pure trunk-based;
+short-lived branches are the norm) **and ADR-014** (AI pushes branches, is no longer sole committer to
+`main`; the user is the merge gate). One-commit-per-chunk, `[C-XXX]` tagging, and the ledger conventions
+are unchanged.
