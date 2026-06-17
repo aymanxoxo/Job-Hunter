@@ -1,0 +1,38 @@
+# Generated results (per SDD §2 — git-ignored)
+output/
+
+# Secrets / credentials — never commit
+.env
+.env.*
+*.key
+*.pem
+sessions/
+*.enc
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+build/
+dist/
+
+# Node / Vite (ui/desktop)
+node_modules/
+ui/desktop/dist/
+.vite/
+
+# Tauri / Rust
+ui/desktop/src-tauri/target/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

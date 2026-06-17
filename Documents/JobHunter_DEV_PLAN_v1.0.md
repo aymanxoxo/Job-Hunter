@@ -1,0 +1,389 @@
+# JobHunter — Development Plan
+
+**AI-Powered Job Search Aggregator | Development & Delivery Plan**
+
+| | |
+|---|---|
+| Version | 1.0 |
+| Date | June 2026 |
+| Companion docs | [SDD v1.1](JobHunter_SDD_v1.1.md), [SOW v1.1](JobHunter_SOW_v1.1.md) |
+| Live tracker | [`../PROGRESS.md`](../PROGRESS.md) + git log |
+| Classification | Internal / Confidential |
+
+> **Who executes this plan.** All development and testing is performed by AI models — no human writes
+> code. The plan is therefore optimised for an AI agent that may be **swapped mid-project**: any model
+> must be able to read a tiny amount of state and know exactly where things stand and what to do next,
+> without re-deriving context from the whole repo. That constraint drives every convention below.
+
+---
+
+## 1. How to pick up this project cold (30-second orientation)
+
+A fresh model does exactly this, in order:
+
+1. Read [`../PROGRESS.md`](../PROGRESS.md) **top block** — it names the last completed chunk, the next
+   ready chunk(s), and any blockers. ~10 lines.
+2. Read the row for the next chunk in the ledger table → it gives the chunk's goal, files, dependencies,
+   acceptance test, and the SDD section to consult.
+3. Skim `git log --oneline` — every commit is one chunk tagged `[C-XXX]`, so history reads as a
+   progress log with no archaeology required.
+4. Open the linked SDD §, implement the chunk **test-first**, commit with the convention (§7), update
+   the ledger row to `done` **in the same commit**.
+
+That's the whole loop. Plan + ledger + commit log are three views of one truth; keep them in sync and
+no model ever pays to "figure out where we are".
+
+---
+
+## 2. Operating principles
+
+- **AI-oriented, not scrum-oriented.** There are no sprints, story points, velocity, estimates, or
+  standups — those exist to coordinate humans across time. Work is a **dependency DAG of chunks**.
+  A chunk is workable the moment its dependencies are `done`; pick any ready chunk. Sizing is by
+  *"smallest independently testable and committable unit"*, never by hours.
+- **Small chunks.** Each chunk is one focused deliverable = one green commit. If a chunk can't be
+  described by a single clear outcome and one acceptance test, split it.
+- **Functional core, imperative shell.** Business logic lives in pure functions (deterministic, no I/O);
+  side effects (network, files, keyring, browser, stdout) are pushed to thin adapters at the edges. See §5.
+- **TDD per chunk.** Write the failing test(s) first; implement until green; refactor under green. The
+  test is the chunk's executable spec.
+- **Trunk-based, one commit per chunk** on `main`. No long-lived branches.
+- **Docs are part of "done".** Any chunk that changes what a doc describes updates that doc in the same
+  commit (see the mandatory rule in the root `AGENTS.md`).
+- **Traceable by construction.** Every effectful path emits structured logs keyed to a run id (§6), so a
+  failed run can be reconstructed from logs alone.
+
+---
+
+## 3. Anatomy of a chunk
+
+Every chunk in §10 has these fields:
+
+| Field | Meaning |
+|-------|---------|
+| **ID** | Stable identifier `C-XXX`. The join key across plan ↔ ledger ↔ commit. Never reused. |
+| **Goal** | One sentence: the outcome. |
+| **Files** | The files created/touched. |
+| **Depends on** | Chunk IDs that must be `done` first. Defines readiness. |
+| **Validation (done when…)** | The chunk-specific checks that must pass — the executable definition of *correct* for this chunk. This is the per-chunk acceptance criteria; the authored test files are its binding form. |
+| **SDD ref** | Section of SDD v1.1 to consult. |
+
+**Chunk states** (tracked in the ledger): `todo` → `in-progress` → `done`; or `blocked` (with reason).
+
+### 3.1 Definition of Done — the gate run for *every* chunk
+
+A chunk may only be marked `done` (and the next chunk started) when **all** of the following pass. This
+is universal; the per-chunk *Validation* column supplies the chunk-specific item (1).
+
+1. **Chunk validation passes** — the chunk's own tests/criteria (its *Validation* column) are green.
+2. **Full suite still green** — `pytest` (whole project) passes; the chunk broke nothing upstream.
+3. **Lint/type clean** — `ruff` (and type checks where configured) report no new issues.
+4. **FP + logging conventions honoured** — logic is in pure functions where applicable (§5); any new
+   effectful path logs to **stderr** with the `run_id` (§6).
+5. **Scope discipline** — only this chunk's files were touched; no unrelated drive-by changes.
+6. **Docs synced** — any doc the chunk made stale is updated in the same change (mandatory rule, root
+   `AGENTS.md`).
+7. **Ledger updated** — `PROGRESS.md`: this chunk → `done` (+ commit hash); orientation block advanced
+   to the next ready chunk.
+8. **One commit** — exactly one commit on `main` in the §7 format, tagged `[C-XXX]`.
+
+### 3.2 Validation steps (the move-to-next sequence)
+
+Run these in order before flipping a chunk to `done`. If any step fails, the chunk stays
+`in-progress` (or `blocked` with the reason recorded in the ledger):
+
+```bash
+# 1. chunk-specific tests (fast feedback)
+pytest tests/<area>/ -v --asyncio-mode=auto
+# 2. full regression — nothing else broke
+pytest -q --asyncio-mode=auto
+# 3. static checks
+ruff check .
+# 4. (UI chunks) component/state checks
+cd ui/desktop && npm run test && npm run build
+# 5. update PROGRESS.md (status + hash + orientation block), then commit per §7
+```
+
+Only after this sequence is clean is the chunk `done` and the next ready chunk may begin. A chunk is
+**never** done while any test fails, the implementation is partial, a touched doc is stale, or the
+ledger is behind.
+
+---
+
+## 4. Module → chunk map (high level)
+
+Chunks are grouped into stages that follow the SDD architecture and the SOW phases. Stages are an
+ordering aid only; readiness is still governed by per-chunk dependencies.
+
+```
+Phase 1 (Core + CLI)                         Phase 2 (Desktop + OpenRouter + Progress UI)
+  Foundation:  C-001 … C-004                   Provider:   C-030
+  Contracts:   C-005 … C-009                   Shell/IPC:  C-031
+  AI engine:   C-010 … C-014                   Vue app:    C-032
+  Providers:   C-015 … C-017                   Progress UI:C-033   ← emphasised feature
+  Connectors:  C-018 … C-021                   Views:      C-034 … C-036
+  Pipeline:    C-022 … C-025                   Packaging:  C-037
+  CLI:         C-026 … C-029  (→ M-03 gate)    Docs:       C-038   (→ M-06 gate)
+```
+
+---
+
+## 5. Functional programming standards (code-level rules)
+
+These are enforced in review (by the AI) and, where practical, by lint/tests.
+
+1. **One job per function.** A function does a single thing, named for that thing. If a name needs
+   "and", split it.
+2. **Pure by default.** Core logic functions are deterministic and side-effect-free: same input →
+   same output, no I/O, no global mutation, no hidden clock/random. Inject time/uuid/random as
+   parameters so they're testable.
+3. **Functional core, imperative shell.** Pure transforms (prompt building, parsing, dedup, scoring
+   normalisation, batching, filtering, serialisation) live in `*_pure`-style modules with no imports of
+   httpx/playwright/keyring. Effects live in thin adapters (connectors, providers, output writer, auth)
+   that call the pure core. The `runner` and `ai_engine` are the only orchestrators that combine them.
+4. **Immutable data.** `Job` and `SearchCriteria` are frozen; functions return new objects, never mutate
+   inputs (the SDD already requires "input jobs are not mutated"). Prefer returning values over
+   in-place edits.
+5. **Explicit boundaries.** Every effectful function takes its dependencies/config explicitly (no
+   reaching into globals). This makes them swappable with fakes in tests.
+6. **Errors are values at boundaries.** Adapters convert exceptions into typed results the orchestrator
+   can act on (fail-graceful: one connector's failure returns "no jobs + reason", it does not raise
+   through the pipeline).
+7. **No premature abstraction.** Compose small functions; use the plugin ABCs only where the SDD defines
+   a contract. Inheritance is for those contracts, not for code reuse.
+8. **Small surface, typed.** Full type hints; pydantic v2 validates at the edges; pure functions assume
+   already-valid inputs.
+
+---
+
+## 6. Logging & traceability standard
+
+Goal: any run can be understood and debugged from logs alone, and a swapped model can read a failure
+without re-running.
+
+- **One run id per pipeline execution.** A `run_id` (uuid4) is created at the start of a run and threaded
+  through every log line and progress event. Per-component context (`component=gemini`,
+  `connector=linkedin`, `chunk_stage=score`) is attached structurally.
+- **Structured logs (JSON lines).** Use a single `core/logging.py` helper exposing `get_logger(name)`
+  and a `bind(run_id=…, **ctx)` mechanism. No ad-hoc `print` for diagnostics.
+- **stderr only — never stdout.** stdout is the Tauri sidecar IPC channel (JSON protocol). **All logs go
+  to stderr**; only protocol messages (progress/result) go to stdout. This is a hard rule — a stray
+  stdout log corrupts the desktop IPC stream.
+- **Levels.** `DEBUG` = boundary entry/exit + payload sizes (not full payloads, never secrets);
+  `INFO` = milestones (criteria generated, connector finished with N jobs, batch x/y scored, export
+  written); `WARNING` = graceful degradations (connector skipped, auth method fell back, partial
+  results); `ERROR` = failures with stack + run_id.
+- **Never log secrets.** Tokens, cookies, API keys, raw session state are redacted. `config show`
+  redacts; logs redact.
+- **Trace ↔ progress symmetry.** Every user-visible progress event (§9) has a corresponding INFO log
+  line with the same `run_id`, so the UI timeline and the log file tell the same story.
+
+---
+
+## 7. Commit convention (the progress log)
+
+**One commit per chunk on `main`.** Tests are authored first (TDD) and committed together with the
+implementation as a single green commit. Format:
+
+```
+<type>(<scope>): <imperative summary>  [C-XXX]
+
+<why + what changed — 1–3 lines>
+Tests: <acceptance test(s) added and passing>
+Ledger: C-XXX → done
+```
+
+- **type** ∈ `feat` | `test` | `refactor` | `fix` | `docs` | `chore` | `build`
+- **scope** = module/area, e.g. `config`, `ai-engine`, `gemini`, `runner`, `cli`, `ui-progress`
+- **`[C-XXX]`** = the chunk id; it is the join key. `git log --grep "C-017"` finds the exact change.
+
+Example:
+
+```
+feat(ai-engine): pure GENERATE_CRITERIA + SCORE_JOBS prompt builders  [C-010]
+
+Add deterministic prompt builders returning the SDD §5.2 contract strings.
+No I/O — provider-agnostic, fully unit-tested.
+Tests: tests/ai_engine/test_prompts.py (schema + field-stripping)
+Ledger: C-010 → done
+```
+
+Rule of thumb: reading only `git log --oneline` should read like a build diary. If a commit needs more
+than one chunk id, it's too big — split it.
+
+---
+
+## 8. Progress ledger convention (`PROGRESS.md`)
+
+The ledger is the at-a-glance state. It has two parts, both updated as part of a chunk's commit:
+
+1. **Orientation block** (top): `Last done`, `Next ready`, `Blocked`, `Phase/gate`. This is what a cold
+   model reads first — keep it to a few lines.
+2. **Chunk ledger table**: one row per chunk — `ID | Title | Stage | Depends on | Status | Commit`.
+   `Status` ∈ `todo | in-progress | done | blocked`. `Commit` holds the short hash once done.
+
+The ledger is deliberately plain Markdown so it is both human-skimmable and trivially greppable/parsable
+by a model (`grep "in-progress" PROGRESS.md`). It is **not** the app's runtime progress (§9) — that is a
+separate, end-user feature.
+
+---
+
+## 9. Runtime feature — Live Pipeline Progress (must-have, UX-critical)
+
+This is the in-app progress display the product requires. It is a first-class feature (chunk **C-033**),
+not a spinner. It must look polished and communicate real, granular state.
+
+### 9.1 What it shows
+
+A **pipeline timeline** with five stages, driven live by streamed events:
+
+```
+①  Profile      ─►  ②  Criteria    ─►  ③  Search        ─►  ④  Score        ─►  ⑤  Export
+   parse CV         generate via AI      ├ LinkedIn  47        batch 4 / 6        2 files
+                                          └ Indeed    38        72 / 85 scored
+```
+
+- **Per-stage state**: `pending` (muted), `active` (animated), `done` (check + metric), `failed`
+  (amber, with reason), `skipped` (dashed). Failures of a connector are **amber and non-blocking** — the
+  timeline shows Search partially succeeded and the pipeline continues, mirroring the fail-graceful core.
+- **Search stage expands** into one sub-row per connector with a live job count and its own state, so a
+  single connector failing is visible without implying total failure.
+- **Score stage** shows a determinate bar: `batch x/y` and `n/total scored`.
+- **Header**: active provider badge, elapsed timer, overall position (`stage 3 of 5`).
+- **Collapsible Activity log** drawer: the streamed events in human-readable form, collapsed by default
+  to keep the surface clean; expandable for debugging.
+- **Final summary card**: found / scored / kept (≥ threshold) / export paths / duration, plus any
+  connector warnings.
+
+### 9.2 UX qualities (the "not ugly" bar)
+
+- Motion communicates progress without noise: a subtle pulse on the active node and an animated
+  connector-line fill between completed stages; no spinners-as-filler.
+- **No layout shift** — reserve space for all stages up front; states swap in place.
+- Color semantics are consistent with the Results view score bands (green/amber/orange/gray).
+- First-class **empty/zero, partial, and error states** (e.g., "Indeed returned 0", "LinkedIn auth
+  expired — re-connect").
+- Respect `prefers-reduced-motion`; full keyboard/screen-reader labels on each stage node.
+- Fully **data-driven** from the event stream — the component holds no business logic.
+
+### 9.3 Data contract (extends SDD §11.1 IPC)
+
+Progress events on stdout, one JSON object per line:
+
+```jsonc
+{ "type": "progress",
+  "run_id": "…",
+  "stage": "search",                 // profile | criteria | search | score | export
+  "status": "active",                // pending | active | done | failed | skipped
+  "connector": "linkedin",           // optional, for search sub-rows
+  "current": 4, "total": 6,          // optional, for determinate bars
+  "metric": { "jobs": 47 },          // optional, stage-specific
+  "label": "Searching LinkedIn",     // optional human label
+  "ts": "2026-06-17T14:30:22Z" }
+```
+
+CLI (Rich) and Desktop (Vue) both render from this same stream → one emitter (chunk **C-023**), two
+renderers. The Vue store maps events into the timeline model; the component is pure presentation.
+
+---
+
+## 10. Chunk breakdown
+
+> The **Acceptance** column is each chunk's *Validation (done when…)* — the chunk-specific checks from
+> §3.1 item 1; the authored test files are its binding form. Every chunk additionally passes the full
+> §3.1 Definition-of-Done gate and §3.2 validation sequence before the next chunk starts. SDD refs point
+> into [SDD v1.1](JobHunter_SDD_v1.1.md).
+
+### Foundation
+
+| ID | Goal | Files | Depends on | Acceptance | SDD ref |
+|----|------|-------|-----------|------------|---------|
+| C-001 | Repo scaffold + tooling | folder tree, `pyproject.toml`/`requirements.txt`, `pytest.ini` (asyncio), `ruff` config, package `__init__`s | — | `pytest` runs (zero tests OK); `ruff` clean; package imports | §2, §13.1 |
+| C-002 | Logging & trace core | `core/logging.py` | C-001 | Logger emits JSON to **stderr**; `run_id`/context bound; secret redaction helper unit-tested | §6 (this doc) |
+| C-003 | Config models + loader | `core/config.py`, `config.yaml` | C-001, C-002 | Pydantic validates; env `__` overrides apply; validator rejects inline credentials | §9 |
+| C-004 | Data models | `core/models/job.py`, `core/models/search_criteria.py` | C-001 | Frozen models; validation pass/fail cases; `min_score_threshold` default seeded from config | §3 |
+
+### Contracts & loading
+
+| ID | Goal | Files | Depends on | Acceptance | SDD ref |
+|----|------|-------|-----------|------------|---------|
+| C-005 | BaseConnector ABC | `core/connectors/base_connector.py` | C-004 | Subclass must implement `search`; `auth_methods` default `['none']`; contract test scaffold | §4.1 |
+| C-006 | BaseAIProvider ABC | `core/ai_providers/base_provider.py` | C-004 | Subclass must implement `generate_criteria`+`score_jobs`; `auth_methods` declared | §4.2 |
+| C-007 | BaseProfileInput ABC + text parser | `core/profile_inputs/base_profile_input.py`, `text_input.py` | C-004 | `TextProfileInput.to_text` returns input text; contract test for base | §3.3, §5.3 |
+| C-008 | Auth strategy resolver | `core/auth/auth_strategy.py` | C-002, C-003 | Resolves ordered `auth_methods` with injected fakes; first success wins; unmet → skip + warn | §8.1 |
+| C-009 | Plugin discovery | `core/runner.py` (discovery only) | C-005, C-006, C-007 | Discovers/loads/instantiates plugins from temp dirs; ignores `_`/`base_` files | §5.1 |
+
+### AI engine (pure core + facade)
+
+| ID | Goal | Files | Depends on | Acceptance | SDD ref |
+|----|------|-------|-----------|------------|---------|
+| C-010 | Prompt builders (pure) | `core/ai_engine/prompts.py` | C-004 | Deterministic GENERATE/SCORE prompt strings match §5.2 schema | §5.2 |
+| C-011 | Response parsers (pure) | `core/ai_engine/parsing.py` | C-004 | JSON → `SearchCriteria` / scored jobs; malformed input handled gracefully | §5.2 |
+| C-012 | Job field-stripper (pure) | `core/ai_engine/scrub.py` | C-004 | Strips to id/title/company/description before send | §5.2 IMPORTANT |
+| C-013 | Batching util (pure) | `core/ai_engine/batching.py` | C-004 | Splits N jobs into batches of `batch_size`; edge cases (0, exact, remainder) | §5.1 step 9 |
+| C-014 | AI engine facade | `core/ai_engine/__init__.py` | C-006, C-010–C-013 | `generate_criteria`/`score_jobs` orchestrate pure pieces + a fake provider; jobs not mutated | §5.2 |
+
+### Providers
+
+| ID | Goal | Files | Depends on | Acceptance | SDD ref |
+|----|------|-------|-----------|------------|---------|
+| C-015 | Ollama provider | `core/ai_providers/ollama_provider.py` | C-006, C-014 | Calls local endpoint (faked in tests); returns valid criteria/scores; `auth_methods=['none']` | §7.2 |
+| C-016 | Google OAuth device flow | `core/auth/google_oauth.py` | C-002, C-008 | Device-flow + refresh logic with faked HTTP/keyring; tokens stored/redacted | §7.1, §8.2 |
+| C-017 | Gemini provider | `core/ai_providers/gemini_provider.py` | C-006, C-008, C-016 | `auth_methods=['oauth','api_key']` resolves correctly; `gemini-3-flash` calls faked; parses response | §7.1 |
+
+### Connectors
+
+| ID | Goal | Files | Depends on | Acceptance | SDD ref |
+|----|------|-------|-----------|------------|---------|
+| C-018 | Mock connector + fixtures | `core/connectors/mock_connector.py`, `fixtures/jobs.json` | C-005 | Returns Jobs from fixture; passes connector contract test | §6.3, §12 |
+| C-019 | Session store | `core/auth/session_store.py` | C-002 | Fernet encrypt/decrypt round-trip; key via faked keyring; redaction | §8.3 |
+| C-020 | Indeed connector | `core/connectors/indeed_connector.py` (+ pure parser) | C-005 | Pure parser extracts fields from fixture HTML/JSON; fetch faked; partial-on-timeout | §6.1 |
+| C-021 | LinkedIn connector | `core/connectors/linkedin_connector.py` | C-005, C-019 | Pure card-parser tested on fixture DOM; Playwright + session faked; contract test | §6.2 |
+
+### Pipeline, progress emitter & output
+
+| ID | Goal | Files | Depends on | Acceptance | SDD ref |
+|----|------|-------|-----------|------------|---------|
+| C-022 | Pure pipeline transforms | `core/pipeline.py` | C-004 | `merge`, `dedup_by_url`, `sort_by_score`, `filter_below_threshold` — all pure, unit-tested | §5.1 steps 7–10 |
+| C-023 | Progress event emitter | `core/progress.py` | C-002 | Emits §9.3 JSON to **stdout**, logs twin to stderr; schema validated | §9 (this doc), §11.1 |
+| C-024 | Output exporter | `core/output.py` | C-004 | Writes timestamped CSV+JSON per config; deterministic serialisation unit-tested | §5.4, §9 SDD |
+| C-025 | Runner orchestrator | `core/runner.py` | C-009, C-014, C-022, C-023, C-024, ≥1 provider, ≥1 connector | Full pipeline with Mock+Ollama+fakes: generate→search→merge→score→filter→export; emits progress; one connector failing does not abort | §5.1 |
+
+### CLI (→ M-03 gate)
+
+| ID | Goal | Files | Depends on | Acceptance | SDD ref |
+|----|------|-------|-----------|------------|---------|
+| C-026 | CLI skeleton + run + Rich render | `ui/cli/cli.py` | C-025 | `jobhunter run` executes pipeline; Rich table renders from progress/results | §10 |
+| C-027 | CLI auth commands | `ui/cli/auth.py` | C-016, C-017, C-019, C-021 | `auth google/linkedin/logout/status` drive the auth strategy; statuses correct | §10.1, §8 |
+| C-028 | CLI config/list/export commands | `ui/cli/config_cmd.py` | C-003, C-009, C-024 | `config show` (redacted), `connectors/providers list`, `export --format` work | §10.1 |
+| C-029 | E2E CLI test (Phase 1 gate) | `tests/e2e/test_cli_run.py` | C-026, C-018, C-015 | `jobhunter run` with Mock+Ollama produces a scored CSV with rows | §12 E2E, **M-03** |
+
+### Phase 2 — Desktop, OpenRouter, Progress UI (→ M-06 gate)
+
+| ID | Goal | Files | Depends on | Acceptance | SDD ref |
+|----|------|-------|-----------|------------|---------|
+| C-030 | OpenRouter provider | `core/ai_providers/openrouter_provider.py` | C-006, C-014 | `qwen3-coder:free` default, `deepseek-r1:free` fallback; faked HTTP; parses | §7.3 |
+| C-031 | Tauri shell + sidecar + IPC | `ui/desktop/src-tauri/**` | C-026, C-023 | Rust spawns Python sidecar; round-trips a `run_pipeline` request; streams progress | §11.1 |
+| C-032 | Vue app scaffold | `ui/desktop/src/**` | C-031 | Router + Pinia store + design tokens; receives IPC events into store | §11 |
+| C-033 | **Live Pipeline Progress UX** | `ui/desktop/src/components/PipelineProgress.vue` | C-032, C-023 | Renders the §9 timeline from the event stream; all states incl. partial/failed; reduced-motion; no layout shift | §9 (this doc), §11.2 |
+| C-034 | Criteria View | `ui/desktop/src/views/CriteriaView.vue` | C-032 | Profile input + Generate + editable chips + refine; future file-upload control present-but-disabled | §11.2 |
+| C-035 | Results View | `ui/desktop/src/views/ResultsView.vue` | C-032 | Sortable scored table, score bands, detail panel, filter, export, re-run | §11.2 |
+| C-036 | Settings View | `ui/desktop/src/views/SettingsView.vue` | C-032, C-003 | Provider selector, masked key field, connector toggles, auth status — persist to config | §11.2 |
+| C-037 | Windows installer | `ui/desktop/src-tauri/tauri.conf.json`, build spec | C-033–C-036, C-030 | `.msi` builds; installs/runs on clean Win11; < 120 MB | §13.2 |
+| C-038 | Authoring docs (Phase 2 gate) | `README.md`, `CONNECTOR_GUIDE.md`, `PROVIDER_GUIDE.md`, `PROFILE_INPUT_GUIDE.md` | stable contracts (C-005–C-007) | Each guide lets a new plugin be added by following it; peer-reviewed (by AI) | §14, **M-06** |
+
+---
+
+## 11. Milestone gates
+
+These map the SOW gates onto chunks; a gate is the acceptance test of its final chunk.
+
+- **M-03 (Phase 1)** — passes when **C-029** is green: CLI accepts a profile, generates criteria,
+  runs connectors, scores+ranks, exports CSV (with llama3/Ollama as the offline path).
+- **M-06 (Phase 2)** — passes when **C-037** + **C-038** are green: desktop replicates the CLI,
+  `.msi` installs cleanly on Windows 11, OpenRouter returns scored results, the Live Pipeline Progress
+  UI behaves across all states, and the authoring guides are reviewed.
+
+---
+
+*End of Development Plan v1.0 — keep [`../PROGRESS.md`](../PROGRESS.md) and commits in lockstep with this file.*

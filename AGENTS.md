@@ -1,0 +1,159 @@
+# JobHunter — AI agent guide (root)
+
+> **Read this first.** This file is the map of the project. It orients any AI agent (or human) to the
+> structure, conventions, and where to go for detail — without reading every file. It is the
+> *orientation layer*; the design docs are the *spec layer*; the code is the *truth*.
+
+## What JobHunter is
+
+A locally-installed, **plugin-based AI job-search aggregator**. It scrapes job listings from multiple
+platforms, uses AI to (a) generate structured search criteria from a user profile and (b) score raw
+listings against that criteria, then presents the scored results through a CLI (Click/Rich) and a
+desktop UI (Tauri v2 + Vue 3) that talks to the Python core over a stdin/stdout JSON sidecar.
+
+Core principles: **plugin-first** (drop a `.py` file in a folder, it's auto-loaded — no registration),
+**auth-safe** (no hardcoded credentials), **fail-graceful** (one connector failing doesn't stop the
+pipeline), **dual interface** (same core for CLI + desktop), **AI-agnostic** (engine calls an abstract
+provider interface).
+
+## Documentation layers
+
+| Layer | Where | Use it for |
+|-------|-------|-----------|
+| Orientation | `AGENTS.md` files (this one + per-module) | "What is this folder, where do I go next" |
+| Spec | [`Documents/JobHunter_SDD_v1.1.md`](Documents/JobHunter_SDD_v1.1.md) | How the system actually works — models, contracts, connector/provider specs, IPC, tests, build |
+| Scope/plan | [`Documents/JobHunter_SOW_v1.1.md`](Documents/JobHunter_SOW_v1.1.md) | Scope, deliverables, milestones, acceptance criteria, risks |
+| Dev plan | [`Documents/JobHunter_DEV_PLAN_v1.0.md`](Documents/JobHunter_DEV_PLAN_v1.0.md) | How we build it: chunk model, FP + logging standards, commit + ledger conventions, per-chunk DoD, progress-UI spec, full chunk list |
+| Live tracker | [`PROGRESS.md`](PROGRESS.md) | Current state — last done / next ready / blocked + the chunk ledger. Read this first when picking up work |
+| Decisions | See "Active design decisions" below | Choices that *amend* the docs since they were written |
+
+## Module index (planned)
+
+The folder tree below is the SDD target. **Status: not yet scaffolded** — only `Documents/` exists today.
+Each module folder gets its own `AGENTS.md` (following the template below) when it is created.
+
+| Module | Path | Purpose |
+|--------|------|---------|
+| Models | `core/models/` | `Job` and `SearchCriteria` dataclasses |
+| Connectors (built-in) | `core/connectors/` | `BaseConnector` ABC + Indeed / LinkedIn / Mock |
+| AI providers (built-in) | `core/ai_providers/` | `BaseAIProvider` ABC + Gemini / Ollama / OpenRouter |
+| Auth | `core/auth/` | OAuth device flow + keyring; Playwright session store |
+| Engine | `core/ai_engine.py` | Facade: `generate_criteria` + `score_jobs` |
+| Runner | `core/runner.py` | Plugin loader (importlib) + pipeline orchestrator |
+| Connector drop-zone | `connectors/` | User-added connectors, auto-discovered |
+| Provider drop-zone | `ai_providers/` | User-added providers, auto-discovered |
+| Profile input *(new — see decisions)* | `profile_inputs/` (planned) | Pluggable profile parsers; v1 = text only, PDF/Word/image as future drop-ins |
+| CLI | `ui/cli/` | Click + Rich command interface |
+| Desktop | `ui/desktop/` | Tauri v2 (Rust) shell + Vue 3 frontend |
+| Fixtures | `fixtures/` | Mock connector data (`jobs.json`) |
+| Output | `output/` | Generated results — **git-ignored** |
+| Config | `config.yaml` | User configuration |
+
+## Active design decisions (now folded into SDD/SOW v1.1)
+
+These were agreed after v1.0 and are now incorporated into the v1.1 spec docs. Kept here as a quick
+reference; the docs are the authority.
+
+1. **Auth is an abstract, ordered strategy** — `oauth → api_key` fallback, declared on the plugin and
+   resolved by the runner. Applies to **both** base classes (providers for model auth; connectors keep
+   site auth `none|session|oauth`). Replaces the SDD's plain `requires_api_key: bool`.
+2. **Profile input is a new pluggable layer** in front of `GENERATE_CRITERIA`. v1 ships a built-in
+   text-in-chat parser only; PDF / Word / image parsers are future drop-in plugins (same pattern as
+   connectors/providers). Architecture must reserve the seam now.
+3. **Profile interaction supports both modes** — one-shot (files+text together; only text wired in v1)
+   and multi-turn refinement of the generated criteria afterward.
+4. **Version control:** local git over the whole project folder (docs + code); `output/` git-ignored;
+   remote deferred.
+
+**Reconciled in v1.1:** output/export module now lives at `core/output.py`; `min_score_threshold` is the
+single effective filter (seeded by `ai.min_score`); model IDs refreshed (Gemini → `gemini-3-flash`,
+OpenRouter fallback → `deepseek-r1:free` since `deepseek-v4-flash:free` left the free tier; Gemini auth
+uses restricted authorization keys + OAuth).
+
+## Non-negotiable conventions
+
+- Every connector inherits `BaseConnector` and implements `search(criteria) -> list[Job]`.
+- Every provider inherits `BaseAIProvider` and implements `generate_criteria` + `score_jobs`.
+- **No connector or provider imports from another** — plugins are independent.
+- Discovery is via `importlib` at startup — no registration file.
+- **No credentials in source or `config.yaml`** — config holds env-var *names*, values come from env or
+  secure store (OS keyring / Windows Credential Manager). LinkedIn session encrypted at rest (Fernet).
+- Connectors use a configurable randomised delay (default 2–5s) and ≤ 50 requests/session without an
+  explicit override. Personal use only.
+
+## Documentation upkeep (MANDATORY)
+
+Keeping the documentation in sync with reality is **not optional**. Any change that affects what a doc
+describes must be reflected in that doc *as part of the same change* — never deferred, never "later".
+
+- **Scope.** This rule covers the spec docs ([`Documents/JobHunter_SDD_v1.1.md`](Documents/JobHunter_SDD_v1.1.md),
+  [`Documents/JobHunter_SOW_v1.1.md`](Documents/JobHunter_SOW_v1.1.md)), this root `AGENTS.md`, and every
+  per-module `AGENTS.md`.
+- **Trigger.** If you add/rename/remove a module, change a contract or interface, alter config keys,
+  swap a model/provider, change commands, or make any decision that amends the spec — update the
+  affected doc(s) in the same commit. Apply the "if needed" judgement honestly: a pure internal
+  refactor with no externally-visible change may need nothing, but anything a reader of the doc would
+  now find wrong **must** be fixed.
+- **Specifics.** New module folder → add its `AGENTS.md` (template below) **and** flip its row in the
+  module index from *planned* to *present*. Spec change → bump the relevant doc, add a Changelog entry,
+  and increment the version. Decision that amends a doc → fold it in; don't leave it living only in chat
+  or memory.
+- **Single source of truth.** Update the one canonical place and fix links — never copy a fact into a
+  second file to "keep them both current".
+- **Definition of done.** A task is not complete while any doc it touched is stale. Treat a stale doc as
+  a bug.
+
+## Development workflow (how chunks get built)
+
+Full detail in the [dev plan](Documents/JobHunter_DEV_PLAN_v1.0.md); the essentials:
+
+- **All work is AI-executed and chunk-based.** Not scrum — a dependency DAG of small chunks (`C-XXX`).
+  A chunk is workable once its dependencies are `done`; pick any ready one from [`PROGRESS.md`](PROGRESS.md).
+- **The loop:** read `PROGRESS.md` orientation block → take the next ready chunk → read its row + linked
+  SDD § → write tests first (**TDD**) → implement until green → run the §3.2 validation sequence → set
+  the ledger row to `done` (+ hash) → **one commit** on `main`.
+- **Definition of Done (every chunk):** chunk tests green; full `pytest` green; `ruff` clean; FP +
+  logging conventions honoured; only the chunk's scope touched; docs synced; ledger updated; exactly one
+  commit. A chunk is not done while any of these is outstanding.
+- **Commit format:** `<type>(<scope>): <summary>  [C-XXX]` with body lines `Tests:` and `Ledger: C-XXX → done`.
+  The `[C-XXX]` tag joins plan ↔ ledger ↔ history, so `git log` reads as a progress diary.
+- **Code style:** functional core / imperative shell — pure, single-job, testable functions; effects
+  isolated in thin adapters; immutable models; inject time/uuid/random.
+- **Logging:** structured, keyed to a per-run `run_id`, **stderr only** (stdout is the sidecar IPC
+  channel — a stray stdout log corrupts it). Never log secrets.
+
+## Commands (planned — from SDD §13)
+
+```bash
+# Python env
+python -m venv .venv && .venv\Scripts\activate && pip install -r requirements.txt
+playwright install chromium --with-deps
+# Run
+python -m ui.cli.cli run            # CLI only
+# Desktop (needs Node 20+, Rust toolchain)
+cd ui/desktop && npm install && npm run tauri dev
+# Tests
+pytest tests/ -v --asyncio-mode=auto
+```
+
+## Tech stack (fixed)
+
+Python 3.11+, Playwright (async), httpx (async/http2), Pydantic v2, Click, Rich, PyYAML, Pandas,
+Pytest+pytest-asyncio; Tauri v2, Vue 3 (Composition API) + Vite, Pinia.
+
+## Template for per-folder AGENTS.md
+
+When you create a module folder, add an `AGENTS.md` using this skeleton. Keep it short — describe only
+what is *local* to that folder; link, don't duplicate.
+
+```markdown
+# <folder> — <one-line purpose>
+## Contents      — each file → one-line description
+## Contracts     — interfaces/rules anything here must honor (omit if none)
+## Conventions   — local patterns, gotchas
+## Pointers      — parent AGENTS.md, related modules, relevant SDD section
+```
+
+Rules of thumb: only add a file where a folder's content is non-obvious or carries a contract (trivial
+folders inherit from their parent); never copy facts between files; update the AGENTS.md in the same
+commit as the code it describes.
