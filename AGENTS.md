@@ -26,6 +26,7 @@ provider interface).
 | Dev plan | [`Documents/JobHunter_DEV_PLAN_v1.0.md`](Documents/JobHunter_DEV_PLAN_v1.0.md) | How we build it: chunk model, FP + logging standards, commit + ledger conventions, per-chunk DoD, progress-UI spec, full chunk list |
 | Live tracker | [`PROGRESS.md`](PROGRESS.md) | Current state — last done / next ready / blocked + the chunk ledger. Read this first when picking up work |
 | Decisions | [`Documents/DECISIONS.md`](Documents/DECISIONS.md) | ADR log — the *why* behind key architectural and process choices |
+| Design | [`design/v1.1/`](design/v1.1/) — DESIGN.md + tokens.css + wireframes | UI/UX design system, tokens & wireframes — source for the Vue UI (C-032–C-036); versioned, current **v1.1** |
 
 ## Module index (planned)
 
@@ -48,6 +49,7 @@ Each module folder gets its own `AGENTS.md` (following the template below) when 
 | Fixtures | `fixtures/` | Mock connector data (`jobs.json`) |
 | Output | `output/` | Generated results — **git-ignored** |
 | Config | `config.yaml` | User configuration |
+| Design assets | `design/` | Versioned UI/UX (current `v1.1/`): `DESIGN.md`, `tokens.css`, wireframes — the UI source |
 
 ## Active design decisions (now folded into SDD/SOW v1.1)
 
