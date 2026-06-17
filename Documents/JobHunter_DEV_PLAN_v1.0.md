@@ -110,6 +110,47 @@ ledger is behind.
 
 ---
 
+### 3.3 Per-chunk execution protocol (the vertical steps)
+
+Every chunk is executed as six checkpointed steps, done and validated **one at a time** — no step starts
+until the previous is green. This is the guard against hallucinated or half-finished work.
+
+1. **Design.** Restate the contract + goal; list the exact signatures/types to add, the pure/effect
+   split, and the external APIs to be used — and **verify those APIs actually exist** (against the
+   installed library) so nothing is invented. Output: the PR's **Design note**. Per-chunk design lives
+   here, not in a separate file; cross-cutting decisions are promoted to an ADR.
+2. **Test (red).** Author the tests that encode the chunk's acceptance criteria **first**; run them and
+   confirm they **fail for the right reason**. A failing test proves the test is real.
+3. **Implement (green).** Minimum code to pass; capture the real `pytest` green output.
+4. **Refactor + gate.** Clean up under green, then run the full §3.1 Definition-of-Done gate (whole
+   suite + `ruff` + FP/logging check).
+5. **Verify (anti-hallucination).** Confirm every referenced file/symbol/import resolves (no dead refs,
+   no invented APIs) and smoke-check any external integration.
+6. **Land.** Update the `PROGRESS` ledger, commit on `chunk/C-XXX`, push, and open the PR carrying the
+   Design note **and** the pasted red→green→full-suite evidence. The user reviews + merges; the AI tags
+   `C-XXX` and deletes the branch.
+
+**Checkpoint policy (ADR-016).** Before step 2 the AI assesses chunk risk. **Higher-risk or
+under-specified chunks pause after step 1 (Design) for the user's sign-off** before any code; **routine
+chunks run the full vertical** and are reviewed only at the PR. Currently risk-flagged: C-008, C-016,
+C-017, C-020, C-021, C-025, C-031, C-033.
+
+
+### 3.4 Per-chunk documentation — technical + business (ADR-017)
+
+Beyond code, each chunk captures two documentation facets, **only when they add value** (a pure util may
+need neither):
+
+- **Technical** — how it works for the next engineer/AI: update the module's `AGENTS.md`; add a
+  `docs/tech/<topic>.md` only for a non-obvious, cross-cutting mechanism. Summarize in the PR Design note.
+- **Business** — why it matters to the user/product and any business rule it encodes (scoring, filtering,
+  ToS/rate-limit behavior, the progress UX value): add a short, chunk-tagged entry to
+  `Documents/PRODUCT_NOTES.md`; promote to `docs/business/<topic>.md` if substantial. Summarize in the
+  PR's "Business value / rules" field.
+
+Both are *integrated* into existing docs — no per-chunk doc files. The §3.1 "docs synced" gate now covers
+both facets where warranted; the PR template prompts for each.
+
 ## 4. Module → chunk map (high level)
 
 Chunks are grouped into stages that follow the SDD architecture and the SOW phases. Stages are an
@@ -127,6 +168,11 @@ Phase 1 (Core + CLI)                         Phase 2 (Desktop + OpenRouter + Pro
 ```
 
 ---
+
+**Walking skeleton first (C-039).** Before the deep layered build, an early thin end-to-end slice wires
+*stub* versions of the pipeline (scaffold → mock connector → stub provider → minimal runner → minimal
+CLI) so the architecture and integration seams are proven before they're fleshed out. The real chunks
+then replace the stubs. See §10 and ADR-016.
 
 ## 5. Functional programming standards (code-level rules)
 
@@ -293,6 +339,12 @@ renderers. The Vue store maps events into the timeline model; the component is p
 > §3.1 item 1; the authored test files are its binding form. Every chunk additionally passes the full
 > §3.1 Definition-of-Done gate and §3.2 validation sequence before the next chunk starts. SDD refs point
 > into [SDD v1.1](JobHunter_SDD_v1.1.md).
+
+### Walking skeleton (early integration — runs right after C-001)
+
+| ID | Goal | Files | Depends on | Acceptance | SDD ref |
+|----|------|-------|-----------|------------|---------|
+| C-039 | Thin end-to-end pipeline with **stub** implementations — proves the integration seams before the deep build | minimal `core/*` stubs + `ui/cli` stub + a smoke test | C-001 | `jobhunter run` executes profile → criteria → search → score → export end-to-end using a stub provider + mock fixtures and prints a scored table; a smoke test asserts the wiring holds. Stubs are replaced by the real chunks (C-004/005/014/018/025/026 …). | §1.2, §5.1 |
 
 ### Foundation
 

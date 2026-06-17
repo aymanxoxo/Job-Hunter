@@ -23,6 +23,8 @@
 | 013 | Live Pipeline Progress UI as a first-class product feature | Accepted | 2026-06-17 |
 | 014 | Remote (GitHub) dev/commit loop; AI as sole committer | Amended by 015 | 2026-06-17 |
 | 015 | Feature-branch per chunk; user reviews & merges PRs | Accepted | 2026-06-17 |
+| 016 | Per-chunk vertical protocol; risk-flagged design sign-off; walking skeleton | Accepted | 2026-06-17 |
+| 017 | Per-chunk dual documentation (technical + business) | Accepted | 2026-06-17 |
 
 ---
 
@@ -238,3 +240,49 @@ discussable. Cost: a per-chunk merge click for the user. **Amends ADR-009** (no 
 short-lived branches are the norm) **and ADR-014** (AI pushes branches, is no longer sole committer to
 `main`; the user is the merge gate). One-commit-per-chunk, `[C-XXX]` tagging, and the ledger conventions
 are unchanged.
+
+
+## ADR-016 — Per-chunk vertical protocol; risk-flagged design sign-off; walking skeleton
+
+**Context.** All code is AI-written and models may be swapped mid-project; the user wants strong
+guarantees against hallucinated or incomplete work, with steps done and validated one at a time rather
+than a big-bang chunk.
+
+**Decision.** Three process additions:
+1. **Per-chunk vertical protocol (six checkpointed steps):** Design → Test (red) → Implement (green) →
+   Refactor + DoD gate → Verify (anti-hallucination) → Land (PR with evidence). Each step is validated
+   before the next; the PR carries the Design note plus pasted red→green→full-suite output, so review is
+   of proof, not claims. (Detailed in Dev Plan §3.3; `.github/PULL_REQUEST_TEMPLATE.md` enforces it.)
+2. **Risk-flagged design sign-off:** before coding, the AI assesses chunk risk. Higher-risk or
+   under-specified chunks (auth resolver C-008, OAuth C-016/C-017, scrapers C-020/C-021, runner C-025,
+   IPC C-031, progress UI C-033) pause after the Design step for the user's OK; routine chunks run the
+   full vertical and are reviewed only at the PR.
+3. **Walking skeleton first (C-039):** an early thin end-to-end slice with stub implementations proves
+   the architecture and integration seams before the deep layered build; the real chunks replace the
+   stubs.
+
+**Consequences.** Tests authored-first and shown failing, plus captured command output in every PR, make
+incomplete or hallucinated work visible. Per-chunk design decisions live in the PR's Design note
+(escalated to an ADR when cross-cutting) — no per-chunk architecture files. Cost: the skeleton adds some
+throwaway stub code; risk assessment adds a brief judgement step per chunk.
+
+
+## ADR-017 — Per-chunk dual documentation (technical + business)
+
+**Context.** Beyond code correctness, each chunk's *technical* workings and its *business/product*
+rationale need durable, discoverable homes, so a future engineer, AI, or stakeholder understands both how
+a piece works and why it matters — without re-reading all the code.
+
+**Decision.** Every chunk produces two documentation facets, **each included only when it adds value**
+("if needed / worth it" — trivial or pure-internal chunks may need neither):
+- **Technical** → the affected module's `AGENTS.md` (per ADR-012), plus `docs/tech/<topic>.md` only when
+  a mechanism is non-obvious and cross-cutting. Always summarized in the PR's Design note.
+- **Business** → a short, chunk-tagged entry in the running `Documents/PRODUCT_NOTES.md` (user/product
+  value + any business rules the chunk encodes), promoted to `docs/business/<topic>.md` when substantial.
+  Summarized in the PR's "Business value / rules" field.
+Both are **integrated into existing docs — no per-chunk doc files.** The §3.1 "docs synced" gate covers
+both facets; the PR template prompts for each.
+
+**Consequences.** Tech and business knowledge persist in low-rot, discoverable places and the author
+decides explicitly each time. Cost: a per-chunk judgement on whether a note is warranted; `docs/tech/`
+and `docs/business/` are created lazily on first use.

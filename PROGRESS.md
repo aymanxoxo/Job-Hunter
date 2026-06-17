@@ -12,8 +12,11 @@
 - **Last done:** **C-000** — repo initialized + initial project snapshot (commit `5cf9ee3`).
 - **Next ready:** **C-001** (Repo scaffold + tooling) — no remaining dependencies.
 - **Blocked:** none.
-- **Notes:** Git runs on the user's machine only — the Cowork mount can't hold `.git` (see
-  [DECISIONS ADR-011](Documents/DECISIONS.md)). The AI proposes file changes; the user commits.
+- **Notes:** Dev loop runs via the GitHub remote (the mount can't hold `.git`): the AI works in a
+  sandbox clone, pushes one `chunk/C-XXX` branch per chunk with a risk read; the user reviews + merges the
+  PR; the AI tags `C-XXX` + deletes the branch. See [ADR-014/015/016](Documents/DECISIONS.md).
+- **Protocol:** each chunk runs the six-step vertical (design→test→impl→gate→verify→land, plan §3.3);
+  risky chunks get a Design sign-off first. A walking skeleton (C-039) runs right after C-001.
 
 ## Status legend
 
@@ -25,6 +28,7 @@
 |----|-------|-------|-----------|--------|--------|
 | C-000 | Repo init + initial project snapshot | Bootstrap | — | done | 5cf9ee3 |
 | C-001 | Repo scaffold + tooling | Foundation | C-000 | todo | — |
+| C-039 | Walking skeleton (stub end-to-end) | Skeleton | C-001 | todo | — |
 | C-002 | Logging & trace core | Foundation | C-001 | todo | — |
 | C-003 | Config models + loader | Foundation | C-001, C-002 | todo | — |
 | C-004 | Data models (Job, SearchCriteria) | Foundation | C-001 | todo | — |
@@ -65,6 +69,7 @@
 
 ## Changelog (newest first)
 
+- 2026-06-17 — Added per-chunk vertical protocol (ADR-016, §3.3), per-chunk dual docs — technical + business (ADR-017, §3.4, `Documents/PRODUCT_NOTES.md`), the PR template, and walking-skeleton chunk C-039; refreshed the workflow Notes.
 - 2026-06-17 — C-000 done: git initialized on `main`, initial snapshot committed (`5cf9ee3`). Added
   `Documents/DECISIONS.md` (ADR log). C-001 is the next ready chunk.
 - 2026-06-17 — Plan v1.0 authored; ledger seeded with 38 chunks (C-001…C-038). No code yet.
