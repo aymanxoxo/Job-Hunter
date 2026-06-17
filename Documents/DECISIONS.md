@@ -18,9 +18,10 @@
 | 008 | Functional core / imperative shell + TDD per chunk | Accepted | 2026-06-17 |
 | 009 | Trunk-based, one commit per chunk, `[C-XXX]` + ledger as live tracker | Accepted | 2026-06-17 |
 | 010 | Tauri sidecar IPC over stdin/stdout JSON; logs stderr-only | Accepted | 2026-06-17 |
-| 011 | Local git only, whole-folder tracking, remote deferred | Accepted | 2026-06-17 |
+| 011 | Local git only, whole-folder tracking, remote deferred | Superseded by 014 | 2026-06-17 |
 | 012 | Hierarchical `AGENTS.md` + mandatory documentation upkeep | Accepted | 2026-06-17 |
 | 013 | Live Pipeline Progress UI as a first-class product feature | Accepted | 2026-06-17 |
+| 014 | Remote (GitHub) dev/commit loop; AI as sole committer | Accepted | 2026-06-17 |
 
 ---
 
@@ -194,3 +195,25 @@ component holds no business logic.
 **Consequences.** A standout UX and a clear, testable contract between the core's event stream and the
 UI. The same event stream also drives the CLI's Rich rendering (one emitter, two renderers). Distinct
 from the *dev* progress ledger (`PROGRESS.md`), which tracks build state, not runtime state.
+
+
+## ADR-014 — Remote (GitHub) dev/commit loop; AI as sole committer
+
+**Context.** ADR-011 chose local-git-only. In practice the Cowork sandbox file-mount cannot reliably
+hold a `.git` directory (index corruption, truncated filenames, `null sha1`, stale/truncated reads), so
+git cannot run against the user's folder from the sandbox. The user wanted the full
+build → test → commit → push cycle automated rather than hand-committing each chunk.
+
+**Decision.** Use a **private GitHub repo** (`github.com/aymanxoxo/Job-Hunter`) as the sync channel
+instead of the file-mount. The AI keeps an **authoritative working clone in reliable sandbox-native
+storage**, runs the full TDD loop there, and **commits + pushes to GitHub** via a fine-grained,
+repo-scoped Personal Access Token (Contents: read/write). The user **pulls**. To prevent two-writer
+divergence on `main`, the **AI is the sole committer**; the user only pulls, and routes any
+externally-produced files (e.g. the Claude-design output) through the AI to be committed. Bitbucket was
+ruled out — `bitbucket.org` is proxy-blocked from the sandbox; GitHub HTTPS is reachable.
+
+**Consequences.** The broken mount is removed from the critical path and the loop is fully automated.
+Trade-offs: a repo-scoped token lives in the sandbox **for the session only** (never stored in memory,
+redacted in logs, user-revocable); the user must `git pull` to see changes and must **not** commit
+locally while the AI is the committer; if a second writer is unavoidable, reconcile with `git pull
+--rebase` before the next push. **Supersedes ADR-011.**
