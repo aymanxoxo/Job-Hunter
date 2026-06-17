@@ -25,7 +25,7 @@ provider interface).
 | Scope/plan | [`Documents/JobHunter_SOW_v1.1.md`](Documents/JobHunter_SOW_v1.1.md) | Scope, deliverables, milestones, acceptance criteria, risks |
 | Dev plan | [`Documents/JobHunter_DEV_PLAN_v1.0.md`](Documents/JobHunter_DEV_PLAN_v1.0.md) | How we build it: chunk model, FP + logging standards, commit + ledger conventions, per-chunk DoD, progress-UI spec, full chunk list |
 | Live tracker | [`PROGRESS.md`](PROGRESS.md) | Current state — last done / next ready / blocked + the chunk ledger. Read this first when picking up work |
-| Decisions | See "Active design decisions" below | Choices that *amend* the docs since they were written |
+| Decisions | [`Documents/DECISIONS.md`](Documents/DECISIONS.md) | ADR log — the *why* behind key architectural and process choices |
 
 ## Module index (planned)
 
@@ -52,7 +52,8 @@ Each module folder gets its own `AGENTS.md` (following the template below) when 
 ## Active design decisions (now folded into SDD/SOW v1.1)
 
 These were agreed after v1.0 and are now incorporated into the v1.1 spec docs. Kept here as a quick
-reference; the docs are the authority.
+reference; the full rationale lives in [`Documents/DECISIONS.md`](Documents/DECISIONS.md), and the docs
+are the authority.
 
 1. **Auth is an abstract, ordered strategy** — `oauth → api_key` fallback, declared on the plugin and
    resolved by the runner. Applies to **both** base classes (providers for model auth; connectors keep
@@ -87,8 +88,9 @@ Keeping the documentation in sync with reality is **not optional**. Any change t
 describes must be reflected in that doc *as part of the same change* — never deferred, never "later".
 
 - **Scope.** This rule covers the spec docs ([`Documents/JobHunter_SDD_v1.1.md`](Documents/JobHunter_SDD_v1.1.md),
-  [`Documents/JobHunter_SOW_v1.1.md`](Documents/JobHunter_SOW_v1.1.md)), this root `AGENTS.md`, and every
-  per-module `AGENTS.md`.
+  [`Documents/JobHunter_SOW_v1.1.md`](Documents/JobHunter_SOW_v1.1.md)), the [dev plan](Documents/JobHunter_DEV_PLAN_v1.0.md),
+  the [decisions log](Documents/DECISIONS.md), [`PROGRESS.md`](PROGRESS.md), this root `AGENTS.md`, and
+  every per-module `AGENTS.md`.
 - **Trigger.** If you add/rename/remove a module, change a contract or interface, alter config keys,
   swap a model/provider, change commands, or make any decision that amends the spec — update the
   affected doc(s) in the same commit. Apply the "if needed" judgement honestly: a pure internal
@@ -96,8 +98,8 @@ describes must be reflected in that doc *as part of the same change* — never d
   now find wrong **must** be fixed.
 - **Specifics.** New module folder → add its `AGENTS.md` (template below) **and** flip its row in the
   module index from *planned* to *present*. Spec change → bump the relevant doc, add a Changelog entry,
-  and increment the version. Decision that amends a doc → fold it in; don't leave it living only in chat
-  or memory.
+  and increment the version. New material decision → add an ADR entry to `DECISIONS.md`; don't leave it
+  living only in chat or memory.
 - **Single source of truth.** Update the one canonical place and fix links — never copy a fact into a
   second file to "keep them both current".
 - **Definition of done.** A task is not complete while any doc it touched is stale. Treat a stale doc as

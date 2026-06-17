@@ -8,10 +8,11 @@
 ## Orientation
 
 - **Phase:** Phase 1 — Foundation. **Next gate:** M-03 (chunk C-029).
-- **Last done:** — (no implementation chunks yet; planning + docs complete)
-- **Next ready:** **C-001** (Repo scaffold + tooling) — no dependencies.
+- **Last done:** **C-000** — repo initialized + initial project snapshot (commit `5cf9ee3`).
+- **Next ready:** **C-001** (Repo scaffold + tooling) — no remaining dependencies.
 - **Blocked:** none.
-- **Notes:** Git to be initialised locally by the user before C-001's first commit (see chat / SDD §13.4).
+- **Notes:** Git runs on the user's machine only — the Cowork mount can't hold `.git` (see
+  [DECISIONS ADR-011](Documents/DECISIONS.md)). The AI proposes file changes; the user commits.
 
 ## Status legend
 
@@ -21,7 +22,8 @@
 
 | ID | Title | Stage | Depends on | Status | Commit |
 |----|-------|-------|-----------|--------|--------|
-| C-001 | Repo scaffold + tooling | Foundation | — | todo | — |
+| C-000 | Repo init + initial project snapshot | Bootstrap | — | done | 5cf9ee3 |
+| C-001 | Repo scaffold + tooling | Foundation | C-000 | todo | — |
 | C-002 | Logging & trace core | Foundation | C-001 | todo | — |
 | C-003 | Config models + loader | Foundation | C-001, C-002 | todo | — |
 | C-004 | Data models (Job, SearchCriteria) | Foundation | C-001 | todo | — |
@@ -62,4 +64,6 @@
 
 ## Changelog (newest first)
 
+- 2026-06-17 — C-000 done: git initialized on `main`, initial snapshot committed (`5cf9ee3`). Added
+  `Documents/DECISIONS.md` (ADR log). C-001 is the next ready chunk.
 - 2026-06-17 — Plan v1.0 authored; ledger seeded with 38 chunks (C-001…C-038). No code yet.
