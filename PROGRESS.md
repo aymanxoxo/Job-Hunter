@@ -9,8 +9,8 @@
 ## Orientation
 
 - **Phase:** Phase 1 — Foundation. **Next gate:** M-03 (chunk C-029).
-- **Last done:** **C-003** — config (merged `b3e45f9`, tag `C-003`). Foundation **C-001–C-004 all merged & tagged**; config/model hardening (ADR-018) merged (`e758131`, PR #8).
-- **Next ready:** **C-005 / 006 / 007** (plugin ABCs), **C-008** (auth resolver — risk-flagged), **C-039** (walking skeleton).
+- **Last done:** **C-005** — BaseConnector ABC (35/35 tests green, ruff clean; PR open on `chunk/C-005-base-connector`). Prior: Foundation C-001–C-004 + hardening (ADR-018) all merged.
+- **Next ready (once C-005 merges):** **C-006 / 007** (provider + profile-input ABCs), **C-008** (auth resolver — risk-flagged), **C-018** (mock connector), **C-039** (walking skeleton).
 - **Blocked:** none.
 - **Notes:** Dev loop runs via the GitHub remote (the mount can't hold `.git`): the AI works in a
   sandbox clone, pushes one `chunk/C-XXX` branch per chunk with a risk read; the user reviews + merges the
@@ -32,7 +32,7 @@
 | C-002 | Logging & trace core | Foundation | C-001 | done | 5f1ae5f |
 | C-003 | Config models + loader | Foundation | C-001, C-002 | done | b3e45f9 |
 | C-004 | Data models (Job, SearchCriteria) | Foundation | C-001 | done | d86d7aa |
-| C-005 | BaseConnector ABC | Contracts | C-004 | todo | — |
+| C-005 | BaseConnector ABC | Contracts | C-004 | done | (PR) |
 | C-006 | BaseAIProvider ABC | Contracts | C-004 | todo | — |
 | C-007 | BaseProfileInput ABC + text parser | Contracts | C-004 | todo | — |
 | C-008 | Auth strategy resolver | Contracts | C-002, C-003 | todo | — |
@@ -69,6 +69,7 @@
 
 ## Changelog (newest first)
 
+- 2026-06-18 — **C-005** BaseConnector ABC on `chunk/C-005-base-connector`: `core/connectors/base_connector.py` (abstract `search`, ordered `auth_methods`, `authenticate`) + reusable contract check `tests/contracts/connector_contract.py`; `core/connectors/AGENTS.md`. 35/35 tests green, ruff clean. PR open.
 - 2026-06-18 — **Hardening** (`fix/config-models-hardening`, review findings): config sub-models now `extra=forbid` (unknown/secret keys fail load), `output.format` enum, `delay_min <= delay_max`; `Job`/`SearchCriteria` containers are tuples (truly immutable). ADR-018. 30/30 tests green, ruff clean. Merged `e758131` (PR #8).
 - 2026-06-17 — **C-003** config on `chunk/C-003-config`: `core/config.py` (pydantic models, YAML loader, `KEY__SUBKEY` env overrides, no-secrets validator) + `config.yaml`; first `PRODUCT_NOTES.md` entry. 24/24 tests green, ruff clean. Merged `b3e45f9`, tag `C-003`.
 - 2026-06-17 — **C-004** data models on `chunk/C-004-models`: frozen pydantic `Job` + `SearchCriteria` (score 0–100, bounds; `min_score_threshold` default 40 per ADR-006); `core/models/AGENTS.md`. 18/18 tests green, ruff clean. Merged `d86d7aa`, tag `C-004`.
