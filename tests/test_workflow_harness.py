@@ -101,6 +101,29 @@ def test_pr_body_generation_includes_required_evidence():
     assert "PASS focused tests" in body
     assert "PASS pytest" in body
     assert "Low: tooling-only chunk." in body
+    assert "- [ ] Auto-merge after CI" in body
+
+
+def test_pr_body_can_opt_into_auto_merge():
+    evidence = jh.GateEvidence(
+        chunk_id="C-042",
+        doctor="PASS doctor",
+        focused="PASS focused tests",
+        full_pytest="PASS pytest",
+        ruff="PASS ruff",
+        smoke="PASS import smoke",
+    )
+
+    body = jh.generate_pr_body(
+        chunk_id="C-042",
+        summary="Adds CI-native auto-merge.",
+        design_note="CI job checks opt-in flag.",
+        evidence=evidence,
+        risk_read="Low.",
+        auto_merge=True,
+    )
+
+    assert "- [x] Auto-merge after CI" in body
 
 
 def test_github_handoff_prefers_pr_then_compare_then_patch():
@@ -154,6 +177,20 @@ def test_pr_merge_readiness_blocks_pending_failed_and_missing_checks():
     assert "Check 'python' concluded failure" in failed.issues
 
 
+def test_pr_merge_readiness_can_ignore_current_auto_merge_check():
+    readiness = jh.evaluate_pr_merge_readiness(
+        _open_pr(),
+        [
+            jh.PullRequestCheck(name="python", status="completed", conclusion="success"),
+            jh.PullRequestCheck(name="auto-merge", status="in_progress", conclusion=""),
+        ],
+        [],
+        ignored_checks={"auto-merge"},
+    )
+
+    assert readiness.ready is True
+
+
 def test_pr_merge_readiness_blocks_unmergeable_draft_or_closed_pr():
     closed = jh.evaluate_pr_merge_readiness(
         _open_pr(state="closed"),
@@ -174,6 +211,13 @@ def test_pr_merge_readiness_blocks_unmergeable_draft_or_closed_pr():
     assert "PR is not open: closed" in closed.issues
     assert "PR is draft" in draft.issues
     assert "PR is not confirmed mergeable: dirty" in dirty.issues
+
+
+def test_pr_auto_merge_opt_in_by_label_or_body_checkbox():
+    assert jh.pr_requests_auto_merge({"labels": [{"name": "auto-merge"}], "body": ""})
+    assert jh.pr_requests_auto_merge({"labels": [], "body": "- [x] Auto-merge after CI"})
+    assert jh.pr_requests_auto_merge({"labels": [], "body": "- [X] Auto-merge after CI"})
+    assert not jh.pr_requests_auto_merge({"labels": [], "body": "- [ ] Auto-merge after CI"})
 
 
 def test_merge_pr_command_dry_run_does_not_merge(monkeypatch, capsys):
@@ -276,6 +320,99 @@ def test_merge_pr_command_merges_with_head_sha_and_can_delete_branch(monkeypatch
     output = capsys.readouterr().out
 
     assert "https://github.com/acme/repo/pull/15" in output
+    assert calls["merge"]["head_sha"] == "abc1234"
+    assert calls["deleted"] == "feature/test"
+
+
+def test_ci_auto_merge_skips_without_pr_event(monkeypatch, tmp_path, capsys):
+    event = tmp_path / "event.json"
+    event.write_text("{}", encoding="utf-8")
+    monkeypatch.setenv("GITHUB_EVENT_PATH", str(event))
+    monkeypatch.setenv("GITHUB_TOKEN", "secret-token")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "acme/repo")
+    args = SimpleNamespace(
+        label="auto-merge",
+        body_flag="Auto-merge after CI",
+        wait=0,
+        poll=10,
+        method="merge",
+        ignore_check=["auto-merge"],
+        delete_branch=True,
+    )
+
+    assert jh.command_ci_auto_merge(args) == 0
+    assert "event is not a pull_request" in capsys.readouterr().out
+
+
+def test_ci_auto_merge_skips_without_opt_in(monkeypatch, tmp_path, capsys):
+    event = tmp_path / "event.json"
+    event.write_text('{"pull_request": {"number": 18}}', encoding="utf-8")
+    monkeypatch.setenv("GITHUB_EVENT_PATH", str(event))
+    monkeypatch.setenv("GITHUB_TOKEN", "secret-token")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "acme/repo")
+    monkeypatch.setattr(
+        jh,
+        "get_pull_request_via_api",
+        lambda remote, token, pr_number: _open_pr(labels=[], body="- [ ] Auto-merge after CI"),
+    )
+    args = SimpleNamespace(
+        label="auto-merge",
+        body_flag="Auto-merge after CI",
+        wait=0,
+        poll=10,
+        method="merge",
+        ignore_check=["auto-merge"],
+        delete_branch=True,
+    )
+
+    assert jh.command_ci_auto_merge(args) == 0
+    assert "did not opt in" in capsys.readouterr().out
+
+
+def test_ci_auto_merge_merges_opted_in_green_pr(monkeypatch, tmp_path, capsys):
+    event = tmp_path / "event.json"
+    event.write_text('{"pull_request": {"number": 18}}', encoding="utf-8")
+    monkeypatch.setenv("GITHUB_EVENT_PATH", str(event))
+    monkeypatch.setenv("GITHUB_TOKEN", "secret-token")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "acme/repo")
+    calls = {}
+    monkeypatch.setattr(
+        jh,
+        "get_pull_request_via_api",
+        lambda remote, token, pr_number: _open_pr(labels=[{"name": "auto-merge"}]),
+    )
+    monkeypatch.setattr(
+        jh,
+        "wait_for_pr_merge_readiness",
+        lambda **kwargs: jh.PullRequestReadiness(True, (), "abc1234", "feature/test"),
+    )
+    monkeypatch.setattr(
+        jh,
+        "merge_pr_via_api",
+        lambda **kwargs: (
+            calls.setdefault("merge", kwargs),
+            {"sha": "def5678", "html_url": "https://github.com/acme/repo/pull/18"},
+        )[1],
+    )
+    monkeypatch.setattr(
+        jh,
+        "delete_remote_branch_via_api",
+        lambda remote, token, branch: calls.setdefault("deleted", branch) or True,
+    )
+    args = SimpleNamespace(
+        label="auto-merge",
+        body_flag="Auto-merge after CI",
+        wait=600,
+        poll=10,
+        method="merge",
+        ignore_check=["auto-merge"],
+        delete_branch=True,
+    )
+
+    assert jh.command_ci_auto_merge(args) == 0
+    output = capsys.readouterr().out
+
+    assert "CI auto-merged PR #18" in output
     assert calls["merge"]["head_sha"] == "abc1234"
     assert calls["deleted"] == "feature/test"
 

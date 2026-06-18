@@ -29,6 +29,7 @@
 | 019 | Capability-based PR creation and handoff | Accepted | 2026-06-18 |
 | 020 | Deterministic workflow automation harness | Accepted | 2026-06-18 |
 | 021 | CI-gated auto-merge for explicitly allowed PR classes | Accepted | 2026-06-18 |
+| 022 | CI-native opt-in auto-merge and pre-chunk merge-policy prompt | Accepted | 2026-06-18 |
 
 ---
 
@@ -367,3 +368,21 @@ or unknown CI blocks the merge with a clear reason.
 **Consequences.** Mechanical PRs can land without another user click once CI is green. Risk remains bounded
 because the default still blocks uncertain states, and higher-risk/product-design chunks still require
 explicit user approval before auto-merge is used.
+
+
+## ADR-022 — CI-native opt-in auto-merge and pre-chunk merge-policy prompt
+
+**Context.** A separate agent-side wait loop works, but it still requires the agent session to stay alive.
+The user asked for CI itself to merge when validations pass, controlled by a parameter/flag, and for agents
+to ask before starting work whether the PR should auto-merge or wait for manual review.
+
+**Decision.** The GitHub Actions CI workflow includes an `auto-merge` job that runs after validation. It
+is a no-op unless the PR opts in with the `auto-merge` label or a checked `Auto-merge after CI` PR-body
+checkbox. When opted in, CI calls `python tools/jh.py ci-auto-merge`, which uses the same readiness rules
+as `merge-pr`, ignores its own in-progress check, merges only the exact checked head SHA, and deletes the
+branch after merge. Agents must ask the user for the merge policy before starting a chunk or code change
+and encode the answer in the PR.
+
+**Consequences.** Green opted-in PRs can merge even if the agent disconnects. Manual review remains the
+default because no label/checkbox means the CI job skips. The cost is stricter PR metadata discipline:
+agents must capture the user's merge-policy choice before implementation.

@@ -18,6 +18,9 @@ you productive fast; the repo is the source of truth.
 - Start with the deterministic harness: `python tools/jh.py bootstrap`, then `python tools/jh.py status`
   and `python tools/jh.py next`. Use the docs for judgment and context, but let the harness do the
   mechanical state discovery whenever possible.
+- Before starting a chunk or code change, ask the user whether the resulting PR should be auto-merged
+  after green CI or held for manual review. Encode the answer in the PR body checkbox
+  `Auto-merge after CI` or with the `auto-merge` label.
 - Pick the next ready chunk from `PROGRESS.md` (ready = all `Depends on` are `done`); confirm with the
   user before starting.
 - Vertical protocol per chunk: **design → failing tests (red) → implement (green) → refactor + full
@@ -54,6 +57,8 @@ and import smoke checks.
 - Auto-merge is allowed only when the user has explicitly allowed it for the PR class. Use
   `python tools/jh.py merge-pr <PR_NUMBER> --wait 600`; it refuses draft, unmergeable, pending, failed,
   or missing-CI PRs.
+- CI also runs the same policy natively: when a PR has the `auto-merge` label or checked
+  `Auto-merge after CI` PR-body box, the workflow merges it after all validation jobs pass.
 
 ## FIRST TASK — continue after C-040
 C-006 (BaseAIProvider ABC) is merged at `27dd173`. C-040 adds the deterministic workflow harness. If

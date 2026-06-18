@@ -33,3 +33,6 @@ C-XXX — <title>
 
 ## Risk read
 <low / medium / high + recommendation>
+
+## Merge policy
+- [ ] Auto-merge after CI
