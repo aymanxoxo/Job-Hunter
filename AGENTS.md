@@ -21,7 +21,7 @@ provider interface).
 | Layer | Where | Use it for |
 |-------|-------|-----------|
 | Orientation | `AGENTS.md` files (this one + per-module) | "What is this folder, where do I go next" |
-| **Handoff** | [`HANDOFF.md`](HANDOFF.md) | **Start here if you are a new AI (Claude Code / Codex) taking over** |
+| **Handoff** | [`HANDOFF.md`](HANDOFF.md) | **Start here if you are a new AI agent taking over** |
 | Spec | [`Documents/JobHunter_SDD_v1.1.md`](Documents/JobHunter_SDD_v1.1.md) | How the system actually works — models, contracts, connector/provider specs, IPC, tests, build |
 | Scope/plan | [`Documents/JobHunter_SOW_v1.1.md`](Documents/JobHunter_SOW_v1.1.md) | Scope, deliverables, milestones, acceptance criteria, risks |
 | Dev plan | [`Documents/JobHunter_DEV_PLAN_v1.0.md`](Documents/JobHunter_DEV_PLAN_v1.0.md) | How we build it: chunk model, FP + logging standards, commit + ledger conventions, per-chunk DoD, progress-UI spec, full chunk list |

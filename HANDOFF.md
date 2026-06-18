@@ -30,12 +30,18 @@ you productive fast; the repo is the source of truth.
   After the user merges a chunk's PR: pull `main`, tag the merge commit `C-XXX`, delete the branch.
 
 ## Environment (you run locally now)
-You have direct repo + network access, so — unlike the prior Cowork-sandbox agent — git and GitHub just
-work: create branches, push them, and give the user a GitHub compare/PR URL for review. If `gh` is
-installed, `gh pr create` / `gh pr view <#> --comments` are fine; otherwise use normal git plus the
-browser/API as available. The Cowork-specific notes in ADR-014/015 (sandbox clone, api.github.com
-blocked, no PR creation) were environmental and do not apply to you. Validate in the project's Python
-(3.11+).
+Git/GitHub capability can differ by AI runtime. Every agent should take the workflow as far as its
+available access allows, while the user remains the review/merge gate:
+
+1. If PR creation is available, create the GitHub PR directly and give the user the PR URL.
+2. If PR creation is unavailable but branch push works, push the branch and give the user the GitHub
+   compare/new-PR URL.
+3. If branch push is unavailable, provide the diff/patch plus exact PR title and description for manual
+   creation.
+
+Every PR or manual PR handoff must include a clear title (with the chunk ID when applicable), a
+human-readable description, the Design note, red→green test evidence, full gate evidence, and a one-line
+risk read. Validate in the project's Python (3.11+).
 
 ## FIRST TASK — continue from C-006
 C-005 (BaseConnector ABC) is merged at `a796edd`; its review finding is fixed and the contract helper
