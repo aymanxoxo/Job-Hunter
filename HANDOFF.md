@@ -31,19 +31,19 @@ you productive fast; the repo is the source of truth.
 
 ## Environment (you run locally now)
 You have direct repo + network access, so — unlike the prior Cowork-sandbox agent — git and GitHub just
-work: create branches, open PRs (`gh pr create`), read review threads (`gh pr view <#> --comments`), and
-let the user review/merge. The Cowork-specific notes in ADR-014/015 (sandbox clone, api.github.com
+work: create branches, push them, and give the user a GitHub compare/PR URL for review. If `gh` is
+installed, `gh pr create` / `gh pr view <#> --comments` are fine; otherwise use normal git plus the
+browser/API as available. The Cowork-specific notes in ADR-014/015 (sandbox clone, api.github.com
 blocked, no PR creation) were environmental and do not apply to you. Validate in the project's Python
 (3.11+).
 
-## FIRST TASK — confirm C-005, then continue
-The `chunk/C-005-base-connector` PR (BaseConnector ABC) had one review finding — the contract helper
-accepted non-`Job` results — which is **already fixed on the branch** (a commit makes the helper assert
-`isinstance(job, Job)`). Confirm that PR is merged (re-review if it isn't), then pick up the next ready
-chunk from `PROGRESS.md` (C-006 onward).
+## FIRST TASK — continue from C-006
+C-005 (BaseConnector ABC) is merged at `a796edd`; its review finding is fixed and the contract helper
+asserts `isinstance(job, Job)`. C-006 adds `BaseAIProvider` and the reusable provider contract checks.
+If this branch is merged, tag the merge commit `C-006`, delete `chunk/C-006-base-ai-provider`, then pick
+up the next ready chunk from `PROGRESS.md`.
 
 ## Where we are
-Foundation (C-001–C-004) + a config/model hardening fix are merged & tagged. **C-005 (BaseConnector ABC)
-is pushed with an open PR + a pending review** (see First Task). Next ready after C-005: C-006
-(BaseAIProvider), C-007 (BaseProfileInput + text parser), C-008 (auth resolver — risk-flagged), C-018
-(mock connector), C-039 (walking skeleton).
+Foundation (C-001–C-005) + a config/model hardening fix are merged. **C-006 (BaseAIProvider ABC)** is the
+current routine contract chunk. Next ready after C-006: C-007 (BaseProfileInput + text parser), C-008
+(auth resolver — risk-flagged), C-018 (mock connector), C-039 (walking skeleton).
