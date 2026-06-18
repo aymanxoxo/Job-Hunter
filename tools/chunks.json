@@ -1,0 +1,501 @@
+{
+  "_comment": "SSOT for chunk metadata (ADR-024). Static facts live here; live status/merge stay in PROGRESS.md until C-046 adds generation. `jh.py doctor` fails if this, the PROGRESS ledger, and dev-plan §10 disagree.",
+  "smoke_imports": [
+    "core",
+    "core.profile_inputs",
+    "tools.jh",
+    "ui.cli.cli"
+  ],
+  "chunks": {
+    "C-000": {
+      "title": "Repo init + initial project snapshot",
+      "stage": "Bootstrap",
+      "depends_on": [],
+      "risk_flagged": false,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-001": {
+      "title": "Repo scaffold + tooling",
+      "stage": "Foundation",
+      "depends_on": [
+        "C-000"
+      ],
+      "risk_flagged": false,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-039": {
+      "title": "Walking skeleton (stub end-to-end)",
+      "stage": "Skeleton",
+      "depends_on": [
+        "C-001"
+      ],
+      "risk_flagged": false,
+      "tests": [
+        "tests/test_walking_skeleton.py"
+      ],
+      "sdd_anchor": ""
+    },
+    "C-002": {
+      "title": "Logging & trace core",
+      "stage": "Foundation",
+      "depends_on": [
+        "C-001"
+      ],
+      "risk_flagged": false,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-003": {
+      "title": "Config models + loader",
+      "stage": "Foundation",
+      "depends_on": [
+        "C-001",
+        "C-002"
+      ],
+      "risk_flagged": false,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-004": {
+      "title": "Data models (Job, SearchCriteria)",
+      "stage": "Foundation",
+      "depends_on": [
+        "C-001"
+      ],
+      "risk_flagged": false,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-005": {
+      "title": "BaseConnector ABC",
+      "stage": "Contracts",
+      "depends_on": [
+        "C-004"
+      ],
+      "risk_flagged": false,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-006": {
+      "title": "BaseAIProvider ABC",
+      "stage": "Contracts",
+      "depends_on": [
+        "C-004"
+      ],
+      "risk_flagged": false,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-040": {
+      "title": "Workflow automation harness",
+      "stage": "Tooling",
+      "depends_on": [
+        "C-006"
+      ],
+      "risk_flagged": false,
+      "tests": [
+        "tests/test_workflow_harness.py"
+      ],
+      "sdd_anchor": ""
+    },
+    "C-041": {
+      "title": "CI-gated auto-merge command",
+      "stage": "Tooling",
+      "depends_on": [
+        "C-040"
+      ],
+      "risk_flagged": false,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-042": {
+      "title": "CI-native opt-in auto-merge",
+      "stage": "Tooling",
+      "depends_on": [
+        "C-041"
+      ],
+      "risk_flagged": false,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-043": {
+      "title": "Async/idempotent long-running waits",
+      "stage": "Tooling",
+      "depends_on": [
+        "C-042"
+      ],
+      "risk_flagged": false,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-007": {
+      "title": "BaseProfileInput ABC + text parser",
+      "stage": "Contracts",
+      "depends_on": [
+        "C-004"
+      ],
+      "risk_flagged": false,
+      "tests": [
+        "tests/test_profile_inputs.py"
+      ],
+      "sdd_anchor": ""
+    },
+    "C-008": {
+      "title": "Auth strategy resolver",
+      "stage": "Contracts",
+      "depends_on": [
+        "C-002",
+        "C-003"
+      ],
+      "risk_flagged": true,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-009": {
+      "title": "Plugin discovery",
+      "stage": "Contracts",
+      "depends_on": [
+        "C-005",
+        "C-006",
+        "C-007"
+      ],
+      "risk_flagged": false,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-010": {
+      "title": "Prompt builders (pure)",
+      "stage": "AI engine",
+      "depends_on": [
+        "C-004"
+      ],
+      "risk_flagged": false,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-011": {
+      "title": "Response parsers (pure)",
+      "stage": "AI engine",
+      "depends_on": [
+        "C-004"
+      ],
+      "risk_flagged": false,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-012": {
+      "title": "Job field-stripper (pure)",
+      "stage": "AI engine",
+      "depends_on": [
+        "C-004"
+      ],
+      "risk_flagged": false,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-013": {
+      "title": "Batching util (pure)",
+      "stage": "AI engine",
+      "depends_on": [
+        "C-004"
+      ],
+      "risk_flagged": false,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-014": {
+      "title": "AI engine facade",
+      "stage": "AI engine",
+      "depends_on": [
+        "C-006",
+        "C-010",
+        "C-011",
+        "C-012",
+        "C-013"
+      ],
+      "risk_flagged": false,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-015": {
+      "title": "Ollama provider",
+      "stage": "Providers",
+      "depends_on": [
+        "C-006",
+        "C-014"
+      ],
+      "risk_flagged": false,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-016": {
+      "title": "Google OAuth device flow",
+      "stage": "Providers",
+      "depends_on": [
+        "C-002",
+        "C-008"
+      ],
+      "risk_flagged": true,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-017": {
+      "title": "Gemini provider",
+      "stage": "Providers",
+      "depends_on": [
+        "C-006",
+        "C-008",
+        "C-016"
+      ],
+      "risk_flagged": true,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-018": {
+      "title": "Mock connector + fixtures",
+      "stage": "Connectors",
+      "depends_on": [
+        "C-005"
+      ],
+      "risk_flagged": false,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-019": {
+      "title": "Session store",
+      "stage": "Connectors",
+      "depends_on": [
+        "C-002"
+      ],
+      "risk_flagged": false,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-020": {
+      "title": "Indeed connector",
+      "stage": "Connectors",
+      "depends_on": [
+        "C-005"
+      ],
+      "risk_flagged": true,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-021": {
+      "title": "LinkedIn connector",
+      "stage": "Connectors",
+      "depends_on": [
+        "C-005",
+        "C-019"
+      ],
+      "risk_flagged": true,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-022": {
+      "title": "Pure pipeline transforms",
+      "stage": "Pipeline",
+      "depends_on": [
+        "C-004"
+      ],
+      "risk_flagged": false,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-023": {
+      "title": "Progress event emitter",
+      "stage": "Pipeline",
+      "depends_on": [
+        "C-002"
+      ],
+      "risk_flagged": false,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-024": {
+      "title": "Output exporter",
+      "stage": "Pipeline",
+      "depends_on": [
+        "C-004"
+      ],
+      "risk_flagged": false,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-025": {
+      "title": "Runner orchestrator",
+      "stage": "Pipeline",
+      "depends_on": [
+        "C-009",
+        "C-014",
+        "C-022",
+        "C-023",
+        "C-024"
+      ],
+      "risk_flagged": true,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-026": {
+      "title": "CLI skeleton + run + Rich render",
+      "stage": "CLI",
+      "depends_on": [
+        "C-025"
+      ],
+      "risk_flagged": false,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-027": {
+      "title": "CLI auth commands",
+      "stage": "CLI",
+      "depends_on": [
+        "C-016",
+        "C-017",
+        "C-019",
+        "C-021"
+      ],
+      "risk_flagged": false,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-028": {
+      "title": "CLI config/list/export commands",
+      "stage": "CLI",
+      "depends_on": [
+        "C-003",
+        "C-009",
+        "C-024"
+      ],
+      "risk_flagged": false,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-029": {
+      "title": "E2E CLI test — **M-03 gate**",
+      "stage": "CLI",
+      "depends_on": [
+        "C-026",
+        "C-018",
+        "C-015"
+      ],
+      "risk_flagged": false,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-030": {
+      "title": "OpenRouter provider",
+      "stage": "Phase 2",
+      "depends_on": [
+        "C-006",
+        "C-014"
+      ],
+      "risk_flagged": false,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-031": {
+      "title": "Tauri shell + sidecar + IPC",
+      "stage": "Phase 2",
+      "depends_on": [
+        "C-026",
+        "C-023"
+      ],
+      "risk_flagged": true,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-032": {
+      "title": "Vue app scaffold",
+      "stage": "Phase 2",
+      "depends_on": [
+        "C-031"
+      ],
+      "risk_flagged": false,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-033": {
+      "title": "Live Pipeline Progress UX",
+      "stage": "Phase 2",
+      "depends_on": [
+        "C-032",
+        "C-023"
+      ],
+      "risk_flagged": true,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-034": {
+      "title": "Criteria View",
+      "stage": "Phase 2",
+      "depends_on": [
+        "C-032"
+      ],
+      "risk_flagged": false,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-035": {
+      "title": "Results View",
+      "stage": "Phase 2",
+      "depends_on": [
+        "C-032"
+      ],
+      "risk_flagged": false,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-036": {
+      "title": "Settings View",
+      "stage": "Phase 2",
+      "depends_on": [
+        "C-032",
+        "C-003"
+      ],
+      "risk_flagged": false,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-037": {
+      "title": "Windows installer",
+      "stage": "Phase 2",
+      "depends_on": [
+        "C-033",
+        "C-034",
+        "C-035",
+        "C-036",
+        "C-030"
+      ],
+      "risk_flagged": false,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-038": {
+      "title": "Authoring docs — **M-06 gate**",
+      "stage": "Phase 2",
+      "depends_on": [
+        "C-005",
+        "C-006",
+        "C-007"
+      ],
+      "risk_flagged": false,
+      "tests": [],
+      "sdd_anchor": ""
+    },
+    "C-045": {
+      "title": "Chunk registry single source of truth",
+      "stage": "Tooling",
+      "depends_on": [
+        "C-040"
+      ],
+      "risk_flagged": false,
+      "tests": [
+        "tests/test_workflow_harness.py"
+      ],
+      "sdd_anchor": ""
+    }
+  }
+}

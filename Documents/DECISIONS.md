@@ -409,3 +409,25 @@ once). A new `pr-status <#>` command does a single non-blocking readiness read (
 op already completed returns success at once. Callers that want to block opt in with a bounded `--wait`;
 CI's `ci-auto-merge` keeps a bounded wait (default 300s). The cost is a small, documented protocol change
 (README/HANDOFF): poll `pr-status` rather than `merge-pr --wait 600`.
+
+
+## ADR-024 — Machine-readable chunk registry as the single source of truth
+
+**Context.** Per-chunk metadata lived in three hand-synced places: the PROGRESS.md ledger table
+(status/deps/merge), `tools/jh_config.json` (risk flags, test mappings, smoke imports), and the dev-plan
+§10 tables (goal/files/deps). Hand-syncing drifts — a dependency edited in one place and not the others —
+and the harness had to scrape a markdown table to know the chunk graph.
+
+**Decision.** `tools/chunks.json` is the single registry for per-chunk *static* metadata (title, stage,
+`depends_on`, `risk_flagged`, `tests`) plus global `smoke_imports`; it absorbs and replaces
+`jh_config.json`. `load_config` now derives its legacy `{risk_flagged_chunks, chunk_tests, smoke_imports}`
+view from the registry, so existing callers are unchanged. `doctor` gains `check_registry_consistency`,
+which fails if the registry, the PROGRESS ledger, and dev-plan §10 disagree on the chunk set, stage,
+dependencies, or risk flags (dev-plan dependency ranges such as `C-010–C-013` are expanded before
+comparison). Live status/merge intentionally stay hand-edited in PROGRESS.md for now; authority for those
+moves to the registry in C-046 once generation exists, so this chunk introduces no new drift. (Proposed as
+ADR-019; renumbered to 024 to follow the repo's ADR sequence.)
+
+**Consequences.** One edit point for the chunk graph; the harness reads JSON instead of scraping markdown;
+drift between the three trackers becomes a failing `doctor` check rather than a silent inconsistency. Cost:
+the registry and the human-readable ledger coexist until C-046 wires generation.

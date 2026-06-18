@@ -1,6 +1,7 @@
 """C-040 deterministic workflow harness."""
 
 import io
+import json
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -916,3 +917,129 @@ def test_pr_status_command_is_registered():
     args = parser.parse_args(["pr-status", "9", "--json"])
     assert args.func is jh.command_pr_status
     assert args.pr == 9
+
+
+# --- C-045: chunk registry single source of truth (ADR-024) ---
+
+REGISTRY_FIXTURE = {
+    "smoke_imports": ["core"],
+    "chunks": {
+        "C-001": {
+            "title": "Scaffold",
+            "stage": "Foundation",
+            "depends_on": [],
+            "risk_flagged": False,
+            "tests": [],
+        },
+        "C-008": {
+            "title": "Auth resolver",
+            "stage": "Contracts",
+            "depends_on": ["C-001"],
+            "risk_flagged": True,
+            "tests": ["tests/test_auth.py"],
+        },
+    },
+}
+
+DEV_PLAN_OK = (
+    "| ID | Goal | Files | Depends on | Acceptance | SDD ref |\n"
+    "| C-001 | x | y | — | a | §1 |\n"
+    "| C-008 | x | y | C-001 | a | §1 |\n"
+)
+
+
+def _consistent_ledger():
+    return {
+        "C-001": jh.Chunk("C-001", "Scaffold", "Foundation", (), "done", "abc", False),
+        "C-008": jh.Chunk("C-008", "Auth resolver", "Contracts", ("C-001",), "todo", "—", True),
+    }
+
+
+def _write_registry(tmp_path, registry):
+    (tmp_path / "tools").mkdir(exist_ok=True)
+    (tmp_path / "tools" / "chunks.json").write_text(json.dumps(registry), encoding="utf-8")
+
+
+def test_load_registry_reads_chunks_json(tmp_path):
+    _write_registry(tmp_path, REGISTRY_FIXTURE)
+    reg = jh.load_registry(tmp_path)
+    assert reg["chunks"]["C-008"]["risk_flagged"] is True
+    assert reg["smoke_imports"] == ["core"]
+
+
+def test_load_config_derives_from_registry(tmp_path):
+    _write_registry(tmp_path, REGISTRY_FIXTURE)
+    cfg = jh.load_config(tmp_path)
+    assert cfg["risk_flagged_chunks"] == ["C-008"]
+    assert cfg["chunk_tests"] == {"C-008": ["tests/test_auth.py"]}
+    assert cfg["smoke_imports"] == ["core"]
+
+
+def test_registry_consistency_passes_when_aligned():
+    assert jh.check_registry_consistency(REGISTRY_FIXTURE, _consistent_ledger(), DEV_PLAN_OK) == []
+
+
+def test_registry_consistency_flags_ledger_dependency_mismatch():
+    ledger = _consistent_ledger()
+    ledger["C-008"] = jh.Chunk(
+        "C-008", "Auth resolver", "Contracts", ("C-001", "C-005"), "todo", "—", True
+    )
+    issues = jh.check_registry_consistency(REGISTRY_FIXTURE, ledger, DEV_PLAN_OK)
+    assert any(i.code == "registry.depends" and "C-008" in i.message for i in issues)
+
+
+def test_registry_consistency_flags_risk_mismatch():
+    ledger = _consistent_ledger()
+    ledger["C-008"] = jh.Chunk(
+        "C-008", "Auth resolver", "Contracts", ("C-001",), "todo", "—", False
+    )
+    issues = jh.check_registry_consistency(REGISTRY_FIXTURE, ledger, DEV_PLAN_OK)
+    assert any(i.code == "registry.risk" and "C-008" in i.message for i in issues)
+
+
+def test_registry_consistency_flags_devplan_dependency_mismatch():
+    bad_plan = DEV_PLAN_OK.replace("| C-008 | x | y | C-001 |", "| C-008 | x | y | — |")
+    issues = jh.check_registry_consistency(REGISTRY_FIXTURE, _consistent_ledger(), bad_plan)
+    assert any(i.code == "registry.devplan_depends" and "C-008" in i.message for i in issues)
+
+
+def test_registry_consistency_expands_dev_plan_ranges():
+    registry = {
+        "smoke_imports": ["core"],
+        "chunks": {
+            "C-010": {"title": "a", "stage": "AI", "depends_on": [],
+                      "risk_flagged": False, "tests": []},
+            "C-011": {"title": "b", "stage": "AI", "depends_on": [],
+                      "risk_flagged": False, "tests": []},
+            "C-014": {"title": "f", "stage": "AI", "depends_on": ["C-010", "C-011"],
+                      "risk_flagged": False, "tests": []},
+        },
+    }
+    ledger = {
+        "C-010": jh.Chunk("C-010", "a", "AI", (), "todo", "—", False),
+        "C-011": jh.Chunk("C-011", "b", "AI", (), "todo", "—", False),
+        "C-014": jh.Chunk("C-014", "f", "AI", ("C-010", "C-011"), "todo", "—", False),
+    }
+    plan = (
+        "| ID | Goal | Files | Depends on | Acceptance | SDD ref |\n"
+        "| C-010 | a | f | — | x | §1 |\n"
+        "| C-011 | b | f | — | x | §1 |\n"
+        "| C-014 | f | f | C-010–C-011 | x | §1 |\n"
+    )
+    assert jh.check_registry_consistency(registry, ledger, plan) == []
+
+
+def test_real_registry_matches_ledger_and_doctor_passes():
+    reg = jh.load_registry()
+    ledger = jh.read_chunks()
+    assert set(reg["chunks"]) == set(ledger)
+    issues = jh.check_registry_consistency(
+        reg,
+        ledger,
+        (jh.ROOT / "Documents" / "JobHunter_DEV_PLAN_v1.0.md").read_text(encoding="utf-8"),
+    )
+    assert issues == []
+
+
+def test_jh_config_json_is_absorbed_into_registry():
+    assert not (jh.ROOT / "tools" / "jh_config.json").exists()
