@@ -319,14 +319,14 @@ from abc import ABC, abstractmethod
 
 class BaseProfileInput(ABC):
     name: str = 'unnamed'
-    accepts: list[str] = ['text']   # e.g. ['text'], ['pdf'], ['png','jpg'], ['docx']
+    accepts: tuple[str, ...] = ('text',)   # e.g. ('text',), ('pdf',), ('png','jpg'), ('docx',)
 
     @abstractmethod
     async def to_text(self, source) -> str:
         """Return plain profile text. `source` is raw text (v1) or a file path (future)."""
 ```
 
-v1 ships `TextProfileInput(accepts=['text'])`. PDF/Word/image parsers are added by dropping a file into
+v1 ships `TextProfileInput(accepts=('text',))`. PDF/Word/image parsers are added by dropping a file into
 `profile_inputs/` — image parsers may either run local OCR or defer to a multimodal provider; that
 choice is internal to the plugin and does not affect the engine.
 
@@ -769,7 +769,7 @@ from core.profile_inputs.base_profile_input import BaseProfileInput
 
 class PdfProfileInput(BaseProfileInput):
     name = 'pdf'
-    accepts = ['pdf']
+    accepts = ('pdf',)
     async def to_text(self, source) -> str:
         # extract text layer; OCR or multimodal fallback for scanned PDFs
         ...

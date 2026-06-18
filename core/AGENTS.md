@@ -11,7 +11,8 @@ pipeline runner, and shared infra. Pure logic stays side-effect-free; I/O lives 
 - `connectors/` — `BaseConnector` ABC (see `connectors/AGENTS.md`). **[C-005 · present]**
 - `ai_providers/` — `BaseAIProvider` ABC (see `ai_providers/AGENTS.md`). **[C-006 · present]**
 - `walking_skeleton.py` — C-039 stub profile -> criteria -> fixture search -> score -> JSON export.
-- `profile_inputs/`, `auth/`, `ai_engine/` — empty stubs until their chunks land.
+- `profile_inputs/` — `BaseProfileInput` ABC + `TextProfileInput` (see `profile_inputs/AGENTS.md`). **[C-007 · present]**
+- `auth/`, `ai_engine/` — empty stubs until their chunks land.
 
 ## Conventions / contracts
 - **Config (`config.py`, SDD §9).** `load_config(path, env=None)` → a validated `Config`;

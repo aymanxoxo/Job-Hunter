@@ -60,12 +60,12 @@ and import smoke checks.
 - CI also runs the same policy natively: when a PR has the `auto-merge` label or checked
   `Auto-merge after CI` PR-body box, the workflow merges it after all validation jobs pass.
 
-## FIRST TASK — continue after C-039
-C-039 adds a temporary walking skeleton (`jobhunter run`) that wires profile text to criteria, fixture
-jobs, stub scoring, and JSON export. If this branch is merged, tag the merge commit `C-039`, delete
-`chunk/C-039-walking-skeleton`, then run `python tools/jh.py status` and pick up C-007 next.
+## FIRST TASK — continue after C-007
+C-007 adds `BaseProfileInput` and the v1 `TextProfileInput`. If this branch is merged, tag the merge
+commit `C-007`, delete `chunk/C-007-base-profile-input`, then pause for the C-008 auth resolver design
+sign-off before writing code.
 
 ## Where we are
-Foundation (C-001–C-006), workflow automation (C-040–C-042), and C-039 walking skeleton are complete
-or in review. Next planned routine chunk: C-007 (BaseProfileInput + text parser). Pause for design
-sign-off before C-008 (auth resolver).
+Foundation (C-001–C-007), workflow automation (C-040–C-042), and C-039 walking skeleton are complete
+or in review. C-008 (auth resolver) is ready but risk-flagged, so the next agent should prepare a
+design note and get explicit user sign-off before implementation.
