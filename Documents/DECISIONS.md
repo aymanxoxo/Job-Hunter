@@ -27,6 +27,7 @@
 | 017 | Per-chunk dual documentation (technical + business) | Accepted | 2026-06-17 |
 | 018 | Strict config validation (`extra=forbid`) + immutable model containers | Accepted | 2026-06-18 |
 | 019 | Capability-based PR creation and handoff | Accepted | 2026-06-18 |
+| 020 | Deterministic workflow automation harness | Accepted | 2026-06-18 |
 
 ---
 
@@ -327,3 +328,24 @@ review/merge gate.
 More capable environments remove manual steps; constrained environments still preserve enough context for
 the user or another agent to create the same PR. This clarifies ADR-015 without changing its merge-gate
 rule.
+
+
+## ADR-020 — Deterministic workflow automation harness
+
+**Context.** The project is intentionally strict and AI-oriented, but repeated mechanical work still
+burns model tokens: environment setup, chunk readiness checks, stale ledger detection, validation gates,
+PR evidence formatting, PR creation fallback, and post-merge cleanup. These tasks are deterministic and
+should not be re-reasoned by every agent.
+
+**Decision.** Add a repo-owned workflow harness at `tools/jh.py`. Agents start with
+`python tools/jh.py bootstrap`, `status`, and `next`; validate with `doctor` and `gate`; generate PR
+handoffs with `pr-ready`; create PRs or fall back per ADR-019 with `create-pr`; and use `after-merge` for
+tag/branch cleanup. Direct PR creation checks authenticated `gh`, OAuth device flow captured by
+`auth-login`, environment tokens (`JH_GITHUB_TOKEN`, `GH_TOKEN`, `GITHUB_TOKEN`), then Git Credential
+Manager via `git credential fill`. The harness is Python stdlib plus existing project tools, writes full
+logs only under git-ignored `output/agent/`, and is backed by CI.
+
+**Consequences.** Token use shifts away from repetitive project-state reconstruction and manual gate
+formatting toward actual design/code judgment. Quality improves for rules that can be checked
+deterministically. Cost: the harness itself becomes maintained project infrastructure and must stay small,
+testable, and updated when the workflow changes.

@@ -15,6 +15,9 @@ you productive fast; the repo is the source of truth.
 5. `Documents/JobHunter_SDD_v1.1.md` (deep spec) + each module's `AGENTS.md` as you touch it.
 
 ## How to work — one chunk at a time, test-first
+- Start with the deterministic harness: `python tools/jh.py bootstrap`, then `python tools/jh.py status`
+  and `python tools/jh.py next`. Use the docs for judgment and context, but let the harness do the
+  mechanical state discovery whenever possible.
 - Pick the next ready chunk from `PROGRESS.md` (ready = all `Depends on` are `done`); confirm with the
   user before starting.
 - Vertical protocol per chunk: **design → failing tests (red) → implement (green) → refactor + full
@@ -26,7 +29,9 @@ you productive fast; the repo is the source of truth.
 - Each chunk = **one commit** on a `chunk/C-XXX-slug` branch: `<type>(<scope>): <summary>  [C-XXX]`;
   update the `PROGRESS` ledger row to `done` in that commit; add tech/business docs where warranted
   (ADR-017: module `AGENTS.md` + `Documents/PRODUCT_NOTES.md`).
-- PR descriptions: short, human-readable (design note + red→green test evidence + a one-line risk read).
+- PR descriptions: generate them with `python tools/jh.py pr-ready C-XXX` when possible; every handoff
+  stays short and human-readable (design note + red→green test evidence + full gate evidence + a
+  one-line risk read).
   After the user merges a chunk's PR: pull `main`, tag the merge commit `C-XXX`, delete the branch.
 
 ## Environment (you run locally now)
@@ -41,15 +46,18 @@ available access allows, while the user remains the review/merge gate:
 
 Every PR or manual PR handoff must include a clear title (with the chunk ID when applicable), a
 human-readable description, the Design note, red→green test evidence, full gate evidence, and a one-line
-risk read. Validate in the project's Python (3.11+).
+risk read. Prefer `python tools/jh.py auth-status` and `python tools/jh.py create-pr C-XXX`; the harness
+uses authenticated `gh`, `auth-login` OAuth device flow, `JH_GITHUB_TOKEN`/`GH_TOKEN`/`GITHUB_TOKEN`, or
+Git Credential Manager before it falls back to the compare URL or patch handoff. Validate with
+`python tools/jh.py gate C-XXX`, which runs the deterministic doctor, focused tests, full pytest, ruff,
+and import smoke checks.
 
-## FIRST TASK — continue from C-006
-C-005 (BaseConnector ABC) is merged at `a796edd`; its review finding is fixed and the contract helper
-asserts `isinstance(job, Job)`. C-006 adds `BaseAIProvider` and the reusable provider contract checks.
-If this branch is merged, tag the merge commit `C-006`, delete `chunk/C-006-base-ai-provider`, then pick
-up the next ready chunk from `PROGRESS.md`.
+## FIRST TASK — continue after C-040
+C-006 (BaseAIProvider ABC) is merged at `27dd173`. C-040 adds the deterministic workflow harness. If
+this branch is merged, tag the merge commit `C-040`, delete `chunk/C-040-workflow-automation-harness`,
+then run `python tools/jh.py status` and pick up the next ready chunk from `PROGRESS.md`.
 
 ## Where we are
-Foundation (C-001–C-005) + a config/model hardening fix are merged. **C-006 (BaseAIProvider ABC)** is the
-current routine contract chunk. Next ready after C-006: C-007 (BaseProfileInput + text parser), C-008
-(auth resolver — risk-flagged), C-018 (mock connector), C-039 (walking skeleton).
+Foundation (C-001–C-006), a config/model hardening fix, and the C-040 workflow harness are complete or
+in review. Next ready: C-007 (BaseProfileInput + text parser), C-008 (auth resolver — risk-flagged),
+C-018 (mock connector), C-039 (walking skeleton).

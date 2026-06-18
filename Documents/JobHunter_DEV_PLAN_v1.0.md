@@ -33,6 +33,10 @@ A fresh model does exactly this, in order:
 That's the whole loop. Plan + ledger + commit log are three views of one truth; keep them in sync and
 no model ever pays to "figure out where we are".
 
+After C-040, agents use `python tools/jh.py status` and `python tools/jh.py next` as the deterministic
+front door before spending tokens on docs. The docs remain authoritative; the harness handles repeatable
+state discovery and validation.
+
 ---
 
 ## 2. Operating principles
@@ -107,6 +111,10 @@ cd ui/desktop && npm run test && npm run build
 Only after this sequence is clean is the chunk `done` and the next ready chunk may begin. A chunk is
 **never** done while any test fails, the implementation is partial, a touched doc is stale, or the
 ledger is behind.
+
+After C-040, prefer `python tools/jh.py gate C-XXX` for the full mechanical gate. It runs the deterministic
+doctor, configured focused tests, full `pytest`, `ruff`, and import smoke checks, then writes full
+evidence under `output/agent/`.
 
 ---
 
@@ -345,6 +353,12 @@ renderers. The Vue store maps events into the timeline model; the component is p
 | ID | Goal | Files | Depends on | Acceptance | SDD ref |
 |----|------|-------|-----------|------------|---------|
 | C-039 | Thin end-to-end pipeline with **stub** implementations — proves the integration seams before the deep build | minimal `core/*` stubs + `ui/cli` stub + a smoke test | C-001 | `jobhunter run` executes profile → criteria → search → score → export end-to-end using a stub provider + mock fixtures and prints a scored table; a smoke test asserts the wiring holds. Stubs are replaced by the real chunks (C-004/005/014/018/025/026 …). | §1.2, §5.1 |
+
+### Workflow automation
+
+| ID | Goal | Files | Depends on | Acceptance | SDD ref |
+|----|------|-------|-----------|------------|---------|
+| C-040 | Deterministic workflow harness for AI agents: bootstrap, status, next, start, doctor, gate, GitHub auth status, PR handoff, and post-merge cleanup | `tools/jh.py`, `tools/jh_config.json`, CI workflow, harness tests/docs | C-006 | Harness unit tests cover ledger parsing, readiness, stale merge detection, doctor checks, PR body generation, GitHub credential fallback order, and dry-run planning; `python tools/jh.py gate C-040` passes. | ADR-020 |
 
 ### Foundation
 
