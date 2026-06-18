@@ -19,6 +19,9 @@ dependencies = [
     "cryptography",
 ]
 
+[project.scripts]
+jobhunter = "ui.cli.cli:main"
+
 [project.optional-dependencies]
 dev = ["pytest", "pytest-asyncio", "ruff"]
 

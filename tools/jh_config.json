@@ -1,7 +1,8 @@
 {
   "risk_flagged_chunks": ["C-008", "C-016", "C-017", "C-020", "C-021", "C-025", "C-031", "C-033"],
   "chunk_tests": {
+    "C-039": ["tests/test_walking_skeleton.py"],
     "C-040": ["tests/test_workflow_harness.py"]
   },
-  "smoke_imports": ["core", "tools.jh"]
+  "smoke_imports": ["core", "tools.jh", "ui.cli.cli"]
 }
