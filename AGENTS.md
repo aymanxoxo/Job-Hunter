@@ -44,7 +44,8 @@ Each module folder gets its own `AGENTS.md` (following the template below) when 
 | Runner | `core/runner.py` | Plugin loader (importlib) + pipeline orchestrator |
 | Connector drop-zone | `connectors/` | User-added connectors, auto-discovered |
 | Provider drop-zone | `ai_providers/` | User-added providers, auto-discovered |
-| Profile input *(new — see decisions)* | `profile_inputs/` (planned) | Pluggable profile parsers; v1 = text only, PDF/Word/image as future drop-ins |
+| Profile inputs (built-in) | `core/profile_inputs/` | `BaseProfileInput` ABC + `TextProfileInput` text passthrough |
+| Profile input drop-zone | `profile_inputs/` | User-added profile parsers; PDF/Word/image are future drop-ins |
 | CLI | `ui/cli/` | Click + Rich command interface; C-039 has a temporary walking-skeleton command |
 | Desktop | `ui/desktop/` | Tauri v2 (Rust) shell + Vue 3 frontend |
 | Fixtures | `fixtures/` | Mock connector data (`jobs.json`); C-039 sample fixture present |
