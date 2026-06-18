@@ -109,6 +109,177 @@ def test_github_handoff_prefers_pr_then_compare_then_patch():
     assert jh.choose_handoff(can_create_pr=False, can_push=False).method == "patch"
 
 
+def _open_pr(**overrides):
+    base = {
+        "state": "open",
+        "draft": False,
+        "mergeable": True,
+        "mergeable_state": "clean",
+        "head": {"sha": "abc1234", "ref": "feature/test"},
+    }
+    base.update(overrides)
+    return base
+
+
+def test_pr_merge_readiness_allows_open_mergeable_green_pr():
+    readiness = jh.evaluate_pr_merge_readiness(
+        _open_pr(),
+        [jh.PullRequestCheck(name="python", status="completed", conclusion="success")],
+        [{"context": "legacy", "state": "success"}],
+    )
+
+    assert readiness.ready is True
+    assert readiness.issues == ()
+    assert readiness.head_sha == "abc1234"
+
+
+def test_pr_merge_readiness_blocks_pending_failed_and_missing_checks():
+    no_checks = jh.evaluate_pr_merge_readiness(_open_pr(), [], [])
+    pending = jh.evaluate_pr_merge_readiness(
+        _open_pr(),
+        [jh.PullRequestCheck(name="python", status="in_progress", conclusion="")],
+        [],
+    )
+    failed = jh.evaluate_pr_merge_readiness(
+        _open_pr(),
+        [jh.PullRequestCheck(name="python", status="completed", conclusion="failure")],
+        [],
+    )
+
+    assert no_checks.ready is False
+    assert "No CI check runs found for PR head" in no_checks.issues
+    assert pending.ready is False
+    assert "Check 'python' is in_progress" in pending.issues
+    assert failed.ready is False
+    assert "Check 'python' concluded failure" in failed.issues
+
+
+def test_pr_merge_readiness_blocks_unmergeable_draft_or_closed_pr():
+    closed = jh.evaluate_pr_merge_readiness(
+        _open_pr(state="closed"),
+        [jh.PullRequestCheck(name="python", status="completed", conclusion="success")],
+        [],
+    )
+    draft = jh.evaluate_pr_merge_readiness(
+        _open_pr(draft=True),
+        [jh.PullRequestCheck(name="python", status="completed", conclusion="success")],
+        [],
+    )
+    dirty = jh.evaluate_pr_merge_readiness(
+        _open_pr(mergeable=False, mergeable_state="dirty"),
+        [jh.PullRequestCheck(name="python", status="completed", conclusion="success")],
+        [],
+    )
+
+    assert "PR is not open: closed" in closed.issues
+    assert "PR is draft" in draft.issues
+    assert "PR is not confirmed mergeable: dirty" in dirty.issues
+
+
+def test_merge_pr_command_dry_run_does_not_merge(monkeypatch, capsys):
+    merged = {}
+    monkeypatch.setattr(
+        jh,
+        "resolve_github_token",
+        lambda root: jh.GitHubCredential(source="env:JH_GITHUB_TOKEN", token="secret-token"),
+    )
+    monkeypatch.setattr(jh, "_github_remote", lambda root: "https://github.com/acme/repo")
+    monkeypatch.setattr(
+        jh,
+        "wait_for_pr_merge_readiness",
+        lambda **kwargs: jh.PullRequestReadiness(True, (), "abc1234", "feature/test"),
+    )
+    monkeypatch.setattr(jh, "merge_pr_via_api", lambda **kwargs: merged.update(kwargs))
+    args = SimpleNamespace(
+        root=".",
+        pr=15,
+        wait=0,
+        poll=10,
+        method="merge",
+        delete_branch=False,
+        dry_run=True,
+    )
+
+    assert jh.command_merge_pr(args) == 0
+    output = capsys.readouterr().out
+
+    assert "ready to merge" in output
+    assert merged == {}
+
+
+def test_merge_pr_command_blocks_not_ready(monkeypatch, capsys):
+    monkeypatch.setattr(
+        jh,
+        "resolve_github_token",
+        lambda root: jh.GitHubCredential(source="env:JH_GITHUB_TOKEN", token="secret-token"),
+    )
+    monkeypatch.setattr(jh, "_github_remote", lambda root: "https://github.com/acme/repo")
+    monkeypatch.setattr(
+        jh,
+        "wait_for_pr_merge_readiness",
+        lambda **kwargs: jh.PullRequestReadiness(
+            False, ("Check 'python' is queued",), "abc1234", ""
+        ),
+    )
+    args = SimpleNamespace(
+        root=".",
+        pr=15,
+        wait=0,
+        poll=10,
+        method="merge",
+        delete_branch=False,
+        dry_run=False,
+    )
+
+    assert jh.command_merge_pr(args) == 1
+    output = capsys.readouterr().out
+
+    assert "PR is not safe to auto-merge" in output
+    assert "Check 'python' is queued" in output
+
+
+def test_merge_pr_command_merges_with_head_sha_and_can_delete_branch(monkeypatch, capsys):
+    calls = {}
+    monkeypatch.setattr(
+        jh,
+        "resolve_github_token",
+        lambda root: jh.GitHubCredential(source="env:JH_GITHUB_TOKEN", token="secret-token"),
+    )
+    monkeypatch.setattr(jh, "_github_remote", lambda root: "https://github.com/acme/repo")
+    monkeypatch.setattr(
+        jh,
+        "wait_for_pr_merge_readiness",
+        lambda **kwargs: jh.PullRequestReadiness(True, (), "abc1234", "feature/test"),
+    )
+
+    def _merge(**kwargs):
+        calls["merge"] = kwargs
+        return {"html_url": "https://github.com/acme/repo/pull/15", "sha": "def5678"}
+
+    monkeypatch.setattr(jh, "merge_pr_via_api", _merge)
+    monkeypatch.setattr(
+        jh,
+        "delete_remote_branch_via_api",
+        lambda remote, token, branch: calls.setdefault("deleted", branch) or True,
+    )
+    args = SimpleNamespace(
+        root=".",
+        pr=15,
+        wait=0,
+        poll=10,
+        method="merge",
+        delete_branch=True,
+        dry_run=False,
+    )
+
+    assert jh.command_merge_pr(args) == 0
+    output = capsys.readouterr().out
+
+    assert "https://github.com/acme/repo/pull/15" in output
+    assert calls["merge"]["head_sha"] == "abc1234"
+    assert calls["deleted"] == "feature/test"
+
+
 def test_github_token_prefers_project_env(monkeypatch):
     monkeypatch.setenv("JH_GITHUB_TOKEN", "token-from-project-env")
     monkeypatch.setenv("GH_TOKEN", "token-from-gh-env")

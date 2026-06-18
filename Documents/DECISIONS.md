@@ -28,6 +28,7 @@
 | 018 | Strict config validation (`extra=forbid`) + immutable model containers | Accepted | 2026-06-18 |
 | 019 | Capability-based PR creation and handoff | Accepted | 2026-06-18 |
 | 020 | Deterministic workflow automation harness | Accepted | 2026-06-18 |
+| 021 | CI-gated auto-merge for explicitly allowed PR classes | Accepted | 2026-06-18 |
 
 ---
 
@@ -349,3 +350,20 @@ logs only under git-ignored `output/agent/`, and is backed by CI.
 formatting toward actual design/code judgment. Quality improves for rules that can be checked
 deterministically. Cost: the harness itself becomes maintained project infrastructure and must stay small,
 testable, and updated when the workflow changes.
+
+
+## ADR-021 — CI-gated auto-merge for explicitly allowed PR classes
+
+**Context.** Some PRs are fully mechanical and covered by deterministic checks. For those, requiring a
+manual merge click after green CI adds delay without improving review quality. The user explicitly allowed
+auto-merge when CI thoroughly checks the change.
+
+**Decision.** Auto-merge is permitted only through `python tools/jh.py merge-pr <PR_NUMBER>` and only for
+PR classes the user has allowed. The command checks GitHub directly and refuses to merge unless the PR is
+open, non-draft, mergeable, and all check runs/statuses for the exact head SHA have completed with
+`success`. It merges with the checked head SHA to avoid racing a changed branch. Missing, pending, failed,
+or unknown CI blocks the merge with a clear reason.
+
+**Consequences.** Mechanical PRs can land without another user click once CI is green. Risk remains bounded
+because the default still blocks uncertain states, and higher-risk/product-design chunks still require
+explicit user approval before auto-merge is used.
