@@ -23,7 +23,8 @@ python tools/jh.py gate C-XXX
 python tools/jh.py pr-ready C-XXX
 python tools/jh.py auth-status
 python tools/jh.py create-pr C-XXX
-python tools/jh.py merge-pr <PR_NUMBER> --wait 600
+python tools/jh.py merge-pr <PR_NUMBER>          # async: one readiness check, no long block (ADR-023)
+python tools/jh.py pr-status <PR_NUMBER>         # non-blocking poll between turns
 python tools/jh.py after-merge C-XXX --branch chunk/C-XXX-slug
 ```
 
@@ -86,7 +87,7 @@ green CI. Encode the answer with either:
 - the checked PR body line `- [x] Auto-merge after CI`.
 
 ```bash
-python tools/jh.py merge-pr <PR_NUMBER> --wait 600 --delete-branch
+python tools/jh.py merge-pr <PR_NUMBER> --delete-branch   # add --wait <=300 to block (opt-in, ADR-023)
 ```
 
 If checks are pending, failed, missing, or mergeability is unknown, the command exits nonzero and prints

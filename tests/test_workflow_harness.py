@@ -752,3 +752,167 @@ def test_ci_workflow_exists_after_chunk_lands():
 
 def test_tools_readme_exists_for_other_agents():
     assert Path("tools/README.md").is_file()
+
+
+# --- C-043: async-by-default + idempotent long-running ops (ADR-023) ---
+
+
+def test_clamp_wait_seconds_bounds_the_wait():
+    assert jh.clamp_wait_seconds(600) == jh.MAX_WAIT_SECONDS
+    assert jh.clamp_wait_seconds(-5) == 0
+    assert jh.clamp_wait_seconds(120) == 120
+
+
+def test_pr_already_merged_detected():
+    assert jh.pr_already_merged({"merged": True}) is True
+    assert jh.pr_already_merged({"state": "closed", "merged_at": "2026-06-18T00:00:00Z"}) is True
+    assert jh.pr_already_merged(_open_pr()) is False
+
+
+def test_wait_short_circuits_on_already_merged_without_polling(monkeypatch):
+    calls = {"pr": 0}
+
+    def fake_get_pr(remote, token, pr_number):
+        calls["pr"] += 1
+        return {"merged": True, "head": {"sha": "abc1234", "ref": "chunk/C-043"}}
+
+    def boom(*args, **kwargs):
+        raise AssertionError("must not poll checks/statuses or sleep on a merged PR")
+
+    monkeypatch.setattr(jh, "get_pull_request_via_api", fake_get_pr)
+    monkeypatch.setattr(jh, "get_check_runs_via_api", boom)
+    monkeypatch.setattr(jh, "get_statuses_via_api", boom)
+
+    readiness = jh.wait_for_pr_merge_readiness(
+        remote="https://github.com/acme/repo",
+        token="t",
+        pr_number=9,
+        wait_seconds=600,
+        poll_seconds=10,
+        sleep=boom,
+    )
+
+    assert readiness.already_merged is True
+    assert readiness.ready is False
+    assert calls["pr"] == 1
+
+
+def test_merge_pr_already_merged_is_idempotent(monkeypatch, capsys):
+    deletes = []
+    merged = {}
+    monkeypatch.setattr(
+        jh,
+        "resolve_github_token",
+        lambda root: jh.GitHubCredential(source="env", token="t"),
+    )
+    monkeypatch.setattr(jh, "_github_remote", lambda root: "https://github.com/acme/repo")
+    monkeypatch.setattr(
+        jh,
+        "wait_for_pr_merge_readiness",
+        lambda **kwargs: jh.PullRequestReadiness(
+            False, ("PR already merged",), "abc1234", "chunk/C-043", already_merged=True
+        ),
+    )
+    monkeypatch.setattr(jh, "merge_pr_via_api", lambda **kwargs: merged.update(kwargs))
+    monkeypatch.setattr(
+        jh,
+        "delete_remote_branch_via_api",
+        lambda remote, token, branch: deletes.append(branch) or True,
+    )
+    args = SimpleNamespace(
+        root=".",
+        pr=9,
+        wait=600,
+        poll=10,
+        method="merge",
+        ignore_check=[],
+        delete_branch=True,
+        dry_run=False,
+    )
+
+    assert jh.command_merge_pr(args) == 0
+    out = capsys.readouterr().out
+    assert "already merged" in out
+    assert merged == {}
+    assert deletes == ["chunk/C-043"]
+
+
+def test_maybe_delete_branch_reports_already_absent(monkeypatch, capsys):
+    monkeypatch.setattr(jh, "delete_remote_branch_via_api", lambda remote, token, branch: False)
+    jh._maybe_delete_branch("https://github.com/acme/repo", "t", "chunk/gone", delete=True)
+    out = capsys.readouterr().out
+    assert "already absent" in out
+
+
+def test_merge_pr_clamps_excessive_wait(monkeypatch, capsys):
+    seen = {}
+
+    def fake_wait(**kwargs):
+        seen["wait_seconds"] = kwargs["wait_seconds"]
+        return jh.PullRequestReadiness(False, ("Check 'python' is queued",), "abc1234", "b")
+
+    monkeypatch.setattr(
+        jh, "resolve_github_token", lambda root: jh.GitHubCredential(source="env", token="t")
+    )
+    monkeypatch.setattr(jh, "_github_remote", lambda root: "https://github.com/acme/repo")
+    monkeypatch.setattr(jh, "wait_for_pr_merge_readiness", fake_wait)
+    args = SimpleNamespace(
+        root=".",
+        pr=9,
+        wait=600,
+        poll=10,
+        method="merge",
+        ignore_check=[],
+        delete_branch=False,
+        dry_run=False,
+    )
+
+    jh.command_merge_pr(args)
+    assert seen["wait_seconds"] == jh.MAX_WAIT_SECONDS
+
+
+def test_pr_status_reports_merged(monkeypatch, capsys):
+    monkeypatch.setattr(
+        jh, "resolve_github_token", lambda root: jh.GitHubCredential(source="env", token="t")
+    )
+    monkeypatch.setattr(jh, "_github_remote", lambda root: "https://github.com/acme/repo")
+    monkeypatch.setattr(
+        jh,
+        "wait_for_pr_merge_readiness",
+        lambda **kwargs: jh.PullRequestReadiness(
+            False, ("PR already merged",), "abc1234", "b", already_merged=True
+        ),
+    )
+    args = SimpleNamespace(root=".", pr=9, json=True, ignore_check=[])
+
+    assert jh.command_pr_status(args) == 0
+    out = capsys.readouterr().out.lower()
+    assert '"merged": true' in out
+    assert '"state": "merged"' in out
+
+
+def test_pr_status_reports_pending(monkeypatch, capsys):
+    monkeypatch.setattr(
+        jh, "resolve_github_token", lambda root: jh.GitHubCredential(source="env", token="t")
+    )
+    monkeypatch.setattr(jh, "_github_remote", lambda root: "https://github.com/acme/repo")
+    monkeypatch.setattr(
+        jh,
+        "wait_for_pr_merge_readiness",
+        lambda **kwargs: jh.PullRequestReadiness(
+            False, ("Check 'python' is queued",), "abc1234", "b"
+        ),
+    )
+    args = SimpleNamespace(root=".", pr=9, json=False, ignore_check=[])
+
+    assert jh.command_pr_status(args) == 0
+    out = capsys.readouterr().out
+    assert "pending" in out
+    assert "queued" in out
+
+
+def test_pr_status_command_is_registered():
+    parser = jh.build_parser()
+    args = parser.parse_args(["pr-status", "9", "--json"])
+    assert args.func is jh.command_pr_status
+    assert args.pr == 9

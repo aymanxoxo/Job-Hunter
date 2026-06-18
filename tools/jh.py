@@ -124,6 +124,22 @@ class PullRequestReadiness:
     issues: tuple[str, ...]
     head_sha: str
     head_ref: str
+    already_merged: bool = False
+
+
+MAX_WAIT_SECONDS = 300
+
+
+def clamp_wait_seconds(seconds: int, *, maximum: int = MAX_WAIT_SECONDS) -> int:
+    """Bound a requested wait so no agent-facing op can block unbounded (ADR-023)."""
+    return max(0, min(seconds, maximum))
+
+
+def pr_already_merged(pr: dict[str, Any]) -> bool:
+    """True when the PR is already merged, so merge/delete can no-op idempotently."""
+    if pr.get("merged") is True:
+        return True
+    return pr.get("state") == "closed" and bool(pr.get("merged_at"))
 
 
 def load_config(root: Path = ROOT) -> dict[str, Any]:
@@ -907,6 +923,16 @@ def command_create_pr(args: argparse.Namespace) -> int:
     return 0
 
 
+def _maybe_delete_branch(remote: str, token: str, ref: str, *, delete: bool) -> None:
+    """Idempotently delete a merged PR's branch; an already-gone branch is success."""
+    if not (delete and ref):
+        return
+    if delete_remote_branch_via_api(remote, token, ref):
+        print(f"deleted branch: {ref}")
+    else:
+        print(f"branch already absent: {ref}")
+
+
 def command_merge_pr(args: argparse.Namespace) -> int:
     root = Path(args.root).resolve()
     credential = resolve_github_token(root)
@@ -918,16 +944,25 @@ def command_merge_pr(args: argparse.Namespace) -> int:
         print("Missing GitHub origin remote.")
         return 1
 
+    wait_seconds = clamp_wait_seconds(args.wait)
+    if wait_seconds != args.wait:
+        print(f"note: --wait {args.wait} clamped to {wait_seconds}s (max {MAX_WAIT_SECONDS})")
     readiness = wait_for_pr_merge_readiness(
         remote=remote,
         token=credential.token,
         pr_number=args.pr,
-        wait_seconds=args.wait,
+        wait_seconds=wait_seconds,
         poll_seconds=args.poll,
         ignored_checks=set(getattr(args, "ignore_check", [])),
     )
+    if readiness.already_merged:
+        print(f"already merged: {readiness.head_sha[:7]}")
+        _maybe_delete_branch(
+            remote, credential.token, readiness.head_ref, delete=args.delete_branch
+        )
+        return 0
     if not readiness.ready:
-        print("PR is not safe to auto-merge:")
+        print("PR is not safe to auto-merge yet (poll with `jh.py pr-status`):")
         for issue in readiness.issues:
             print(f"- {issue}")
         return 1
@@ -944,9 +979,9 @@ def command_merge_pr(args: argparse.Namespace) -> int:
     )
     print(merge["html_url"])
     print(f"merged: {merge['sha'][:7]}")
-    if args.delete_branch and readiness.head_ref:
-        deleted = delete_remote_branch_via_api(remote, credential.token, readiness.head_ref)
-        print(f"deleted branch: {readiness.head_ref}" if deleted else "branch delete skipped")
+    _maybe_delete_branch(
+        remote, credential.token, readiness.head_ref, delete=args.delete_branch
+    )
     return 0
 
 
@@ -972,10 +1007,14 @@ def command_ci_auto_merge(args: argparse.Namespace) -> int:
         remote=remote,
         token=token,
         pr_number=pr_number,
-        wait_seconds=args.wait,
+        wait_seconds=clamp_wait_seconds(args.wait),
         poll_seconds=args.poll,
         ignored_checks=set(args.ignore_check),
     )
+    if readiness.already_merged:
+        print(f"CI auto-merge: PR #{pr_number} already merged ({readiness.head_sha[:7]})")
+        _maybe_delete_branch(remote, token, readiness.head_ref, delete=args.delete_branch)
+        return 0
     if not readiness.ready:
         print("CI auto-merge blocked:")
         for issue in readiness.issues:
@@ -989,9 +1028,51 @@ def command_ci_auto_merge(args: argparse.Namespace) -> int:
         method=args.method,
     )
     print(f"CI auto-merged PR #{pr_number}: {merge['sha'][:7]}")
-    if args.delete_branch and readiness.head_ref:
-        deleted = delete_remote_branch_via_api(remote, token, readiness.head_ref)
-        print(f"deleted branch: {readiness.head_ref}" if deleted else "branch delete skipped")
+    _maybe_delete_branch(remote, token, readiness.head_ref, delete=args.delete_branch)
+    return 0
+
+
+def command_pr_status(args: argparse.Namespace) -> int:
+    root = Path(args.root).resolve()
+    credential = resolve_github_token(root)
+    remote = _github_remote(root)
+    if not credential:
+        print("Missing GitHub credential; run auth-login or set JH_GITHUB_TOKEN.")
+        return 1
+    if not remote:
+        print("Missing GitHub origin remote.")
+        return 1
+    readiness = wait_for_pr_merge_readiness(
+        remote=remote,
+        token=credential.token,
+        pr_number=args.pr,
+        wait_seconds=0,
+        poll_seconds=0,
+        ignored_checks=set(getattr(args, "ignore_check", [])),
+    )
+    if readiness.already_merged:
+        state = "merged"
+    elif readiness.ready:
+        state = "ready"
+    else:
+        state = "pending"
+    if getattr(args, "json", False):
+        print(
+            json.dumps(
+                {
+                    "pr": args.pr,
+                    "state": state,
+                    "merged": readiness.already_merged,
+                    "ready": readiness.ready,
+                    "head_sha": readiness.head_sha,
+                    "issues": list(readiness.issues),
+                }
+            )
+        )
+    else:
+        print(f"PR #{args.pr}: {state}")
+        for issue in readiness.issues:
+            print(f"- {issue}")
     return 0
 
 
@@ -1222,6 +1303,15 @@ def wait_for_pr_merge_readiness(
     last_readiness = PullRequestReadiness(False, ("PR readiness not checked",), "", "")
     while True:
         pr = get_pull_request_via_api(remote, token, pr_number)
+        if pr_already_merged(pr):
+            head = pr.get("head", {})
+            return PullRequestReadiness(
+                False,
+                ("PR already merged",),
+                head.get("sha", ""),
+                head.get("ref", ""),
+                already_merged=True,
+            )
         checks = get_check_runs_via_api(remote, token, pr["head"]["sha"])
         statuses = get_statuses_via_api(remote, token, pr["head"]["sha"])
         readiness = evaluate_pr_merge_readiness(
@@ -1430,10 +1520,16 @@ def build_parser() -> argparse.ArgumentParser:
     merge_pr.add_argument("--dry-run", action="store_true")
     merge_pr.set_defaults(func=command_merge_pr)
 
+    pr_status = sub.add_parser("pr-status")
+    pr_status.add_argument("pr", type=int)
+    pr_status.add_argument("--json", action="store_true")
+    pr_status.add_argument("--ignore-check", action="append", default=[])
+    pr_status.set_defaults(func=command_pr_status)
+
     ci_auto_merge = sub.add_parser("ci-auto-merge")
     ci_auto_merge.add_argument("--label", default="auto-merge")
     ci_auto_merge.add_argument("--body-flag", default="Auto-merge after CI")
-    ci_auto_merge.add_argument("--wait", type=int, default=600)
+    ci_auto_merge.add_argument("--wait", type=int, default=300)
     ci_auto_merge.add_argument("--poll", type=int, default=10)
     ci_auto_merge.add_argument("--method", choices=["merge", "squash", "rebase"], default="merge")
     ci_auto_merge.add_argument("--ignore-check", action="append", default=["auto-merge"])
