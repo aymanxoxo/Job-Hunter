@@ -7,7 +7,7 @@ you productive fast; the repo is the source of truth.
 ## Read first, in order
 1. `AGENTS.md` (root) — the map: project, conventions, doc layers, dev workflow.
 2. `PROGRESS.md` — the live tracker. Orientation block = last-done / next-ready / blocked; the ledger is
-   the full chunk plan (C-001…C-039) with statuses + merge hashes. **This is current state.**
+   the full chunk plan (C-001…C-042) with statuses + merge hashes. **This is current state.**
 3. `Documents/JobHunter_DEV_PLAN_v1.0.md` — the chunk model, per-chunk vertical protocol (§3.3), the
    Definition-of-Done gate (§3.1), commit + ledger conventions (§7–8), the live-progress UI spec (§9),
    and the full chunk specs (§10).
@@ -60,12 +60,12 @@ and import smoke checks.
 - CI also runs the same policy natively: when a PR has the `auto-merge` label or checked
   `Auto-merge after CI` PR-body box, the workflow merges it after all validation jobs pass.
 
-## FIRST TASK — continue after C-040
-C-006 (BaseAIProvider ABC) is merged at `27dd173`. C-040 adds the deterministic workflow harness. If
-this branch is merged, tag the merge commit `C-040`, delete `chunk/C-040-workflow-automation-harness`,
-then run `python tools/jh.py status` and pick up the next ready chunk from `PROGRESS.md`.
+## FIRST TASK — continue after C-039
+C-039 adds a temporary walking skeleton (`jobhunter run`) that wires profile text to criteria, fixture
+jobs, stub scoring, and JSON export. If this branch is merged, tag the merge commit `C-039`, delete
+`chunk/C-039-walking-skeleton`, then run `python tools/jh.py status` and pick up C-007 next.
 
 ## Where we are
-Foundation (C-001–C-006), a config/model hardening fix, and the C-040 workflow harness are complete or
-in review. Next ready: C-007 (BaseProfileInput + text parser), C-008 (auth resolver — risk-flagged),
-C-018 (mock connector), C-039 (walking skeleton).
+Foundation (C-001–C-006), workflow automation (C-040–C-042), and C-039 walking skeleton are complete
+or in review. Next planned routine chunk: C-007 (BaseProfileInput + text parser). Pause for design
+sign-off before C-008 (auth resolver).

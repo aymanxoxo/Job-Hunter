@@ -9,14 +9,14 @@
 ## Orientation
 
 - **Phase:** Phase 1 — Foundation. **Next gate:** M-03 (chunk C-029).
-- **Last done:** **C-042** — CI-native opt-in auto-merge and pre-chunk merge-policy prompt. Prior: **C-041** CI-gated auto-merge merged `6886786`.
-- **Next ready:** **C-007** (profile-input ABC), **C-008** (auth resolver — risk-flagged), **C-018** (mock connector), **C-039** (walking skeleton).
+- **Last done:** **C-039** — walking skeleton stub end-to-end. Prior: **C-042** CI-native opt-in auto-merge merged `5e1ef5a`.
+- **Next ready:** **C-007** (profile-input ABC, recommended next), **C-008** (auth resolver — risk-flagged), **C-010**–**C-013** (AI-engine pure helpers), **C-018** (mock connector), **C-019** (session store), **C-022**–**C-024** (pipeline pure/output chunks).
 - **Blocked:** none.
 - **Notes:** Dev loop runs via the GitHub remote (the mount can't hold `.git`): the AI works in a
   sandbox clone, pushes one `chunk/C-XXX` branch per chunk with a risk read; the user reviews + merges the
   PR; the AI tags `C-XXX` + deletes the branch. See [ADR-014/015/016](Documents/DECISIONS.md).
 - **Protocol:** each chunk runs the six-step vertical (design→test→impl→gate→verify→land, plan §3.3);
-  risky chunks get a Design sign-off first. A walking skeleton (C-039) runs right after C-001.
+  risky chunks get a Design sign-off first. C-039 has now proven the early stub integration path.
 
 ## Status legend
 
@@ -28,7 +28,7 @@
 |----|-------|-------|-----------|--------|--------|
 | C-000 | Repo init + initial project snapshot | Bootstrap | — | done | 5cf9ee3 |
 | C-001 | Repo scaffold + tooling | Foundation | C-000 | done | 808d1ca |
-| C-039 | Walking skeleton (stub end-to-end) | Skeleton | C-001 | todo | — |
+| C-039 | Walking skeleton (stub end-to-end) | Skeleton | C-001 | done | PR |
 | C-002 | Logging & trace core | Foundation | C-001 | done | 5f1ae5f |
 | C-003 | Config models + loader | Foundation | C-001, C-002 | done | b3e45f9 |
 | C-004 | Data models (Job, SearchCriteria) | Foundation | C-001 | done | d86d7aa |
@@ -72,6 +72,7 @@
 
 ## Changelog (newest first)
 
+- 2026-06-18 — **C-039** Walking skeleton on `chunk/C-039-walking-skeleton`: temporary stub provider + fixture connector + JSON export + `jobhunter run` Click/Rich command prove profile → criteria → search → score → export wiring. 4 focused tests green via `tests/test_walking_skeleton.py`; full gate via `python tools/jh.py gate C-039 --ci`. Merge pending in PR.
 - 2026-06-18 — **C-042** CI-native opt-in auto-merge on `tools/ci-native-auto-merge`: CI runs `ci-auto-merge` after validations, skips unless `auto-merge` label or checked PR checkbox is present, and docs require the agent to ask for merge policy before starting work. 82/82 tests green; full gate via `python tools/jh.py gate C-040 --ci`. Merged `5e1ef5a` (PR #18).
 - 2026-06-18 — **C-041** CI-gated auto-merge command on `tools/ci-gated-auto-merge`: `python tools/jh.py merge-pr <PR_NUMBER>` checks PR state, mergeability, check runs/statuses, and exact head SHA before merging. Full gate via `python tools/jh.py gate C-040`. Merged `6886786` (PR #16).
 - 2026-06-18 — **C-040** Workflow automation harness on `chunk/C-040-workflow-automation-harness`: `tools/jh.py` (bootstrap/status/next/start/doctor/gate/pr-ready/create-pr/auth-status/auth-login/guide/after-merge), deterministic doctor checks, GitHub credential/OAuth resolution, CI workflow, and PR evidence generation. 70/70 tests green; full gate via `python tools/jh.py gate C-040`. Merged `796a012` (PR #14).

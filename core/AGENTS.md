@@ -10,6 +10,7 @@ pipeline runner, and shared infra. Pure logic stays side-effect-free; I/O lives 
 - `models/` — `Job`, `SearchCriteria` (see `models/AGENTS.md`). **[C-004 · present]**
 - `connectors/` — `BaseConnector` ABC (see `connectors/AGENTS.md`). **[C-005 · present]**
 - `ai_providers/` — `BaseAIProvider` ABC (see `ai_providers/AGENTS.md`). **[C-006 · present]**
+- `walking_skeleton.py` — C-039 stub profile -> criteria -> fixture search -> score -> JSON export.
 - `profile_inputs/`, `auth/`, `ai_engine/` — empty stubs until their chunks land.
 
 ## Conventions / contracts
@@ -23,6 +24,9 @@ pipeline runner, and shared infra. Pure logic stays side-effect-free; I/O lives 
   `new_run_id()` gives a per-run correlation id to thread via `bind(run_id=...)`. Secret-looking keys
   (token, api_key, password, authorization, cookie, …) are auto-redacted. Pure helpers: `format_record`,
   `redact`.
+- **Walking skeleton (`walking_skeleton.py`, C-039).** This is deliberately temporary integration
+  wiring, not the final runner/exporter/connector implementation. Keep it deterministic and side-effect
+  free except for explicit fixture loading and JSON export.
 
 ## Pointers
 - Parent: [../AGENTS.md](../AGENTS.md) · Spec: `../Documents/JobHunter_SDD_v1.1.md` · Logging std: dev plan §6.

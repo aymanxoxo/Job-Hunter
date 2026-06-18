@@ -45,9 +45,9 @@ Each module folder gets its own `AGENTS.md` (following the template below) when 
 | Connector drop-zone | `connectors/` | User-added connectors, auto-discovered |
 | Provider drop-zone | `ai_providers/` | User-added providers, auto-discovered |
 | Profile input *(new — see decisions)* | `profile_inputs/` (planned) | Pluggable profile parsers; v1 = text only, PDF/Word/image as future drop-ins |
-| CLI | `ui/cli/` | Click + Rich command interface |
+| CLI | `ui/cli/` | Click + Rich command interface; C-039 has a temporary walking-skeleton command |
 | Desktop | `ui/desktop/` | Tauri v2 (Rust) shell + Vue 3 frontend |
-| Fixtures | `fixtures/` | Mock connector data (`jobs.json`) |
+| Fixtures | `fixtures/` | Mock connector data (`jobs.json`); C-039 sample fixture present |
 | Output | `output/` | Generated results — **git-ignored** |
 | Config | `config.yaml` | User configuration |
 | Workflow tools | `tools/` | Deterministic AI workflow harness (`jh.py`) for bootstrap/status/gate/PR handoff |
@@ -138,7 +138,7 @@ Full detail in the [dev plan](Documents/JobHunter_DEV_PLAN_v1.0.md); the essenti
 python -m venv .venv && .venv\Scripts\activate && pip install -r requirements.txt
 playwright install chromium --with-deps
 # Run
-python -m ui.cli.cli run            # CLI only
+jobhunter run --profile "Senior Python developer seeking remote work"  # C-039 skeleton CLI
 # Desktop (needs Node 20+, Rust toolchain)
 cd ui/desktop && npm install && npm run tauri dev
 # Tests
