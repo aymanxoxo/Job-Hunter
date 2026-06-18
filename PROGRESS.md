@@ -9,8 +9,8 @@
 ## Orientation
 
 - **Phase:** Phase 1 — Foundation. **Next gate:** M-03 (chunk C-029).
-- **Last done:** **C-004** — data models Job + SearchCriteria (18/18 tests green, ruff clean; PR open on `chunk/C-004-models`). Prior: **C-002** logging (merged `5f1ae5f`, tag `C-002`).
-- **Next ready (once C-004 merges):** **C-003** (config), **C-005/006/007** (plugin ABCs), **C-039** (walking skeleton).
+- **Last done:** **C-003** — config models + loader (24/24 tests green, ruff clean; PR open on `chunk/C-003-config`). Prior: **C-004** data models (merged `d86d7aa`, tag `C-004`).
+- **Next ready (once C-003 merges):** **C-005/006/007** (plugin ABCs), **C-008** (auth resolver), **C-039** (walking skeleton).
 - **Blocked:** none.
 - **Notes:** Dev loop runs via the GitHub remote (the mount can't hold `.git`): the AI works in a
   sandbox clone, pushes one `chunk/C-XXX` branch per chunk with a risk read; the user reviews + merges the
@@ -30,8 +30,8 @@
 | C-001 | Repo scaffold + tooling | Foundation | C-000 | done | 808d1ca |
 | C-039 | Walking skeleton (stub end-to-end) | Skeleton | C-001 | todo | — |
 | C-002 | Logging & trace core | Foundation | C-001 | done | 5f1ae5f |
-| C-003 | Config models + loader | Foundation | C-001, C-002 | todo | — |
-| C-004 | Data models (Job, SearchCriteria) | Foundation | C-001 | done | (PR) |
+| C-003 | Config models + loader | Foundation | C-001, C-002 | done | (PR) |
+| C-004 | Data models (Job, SearchCriteria) | Foundation | C-001 | done | d86d7aa |
 | C-005 | BaseConnector ABC | Contracts | C-004 | todo | — |
 | C-006 | BaseAIProvider ABC | Contracts | C-004 | todo | — |
 | C-007 | BaseProfileInput ABC + text parser | Contracts | C-004 | todo | — |
@@ -69,6 +69,7 @@
 
 ## Changelog (newest first)
 
+- 2026-06-17 — **C-003** config on `chunk/C-003-config`: `core/config.py` (pydantic models, YAML loader, `KEY__SUBKEY` env overrides, no-secrets validator) + `config.yaml`; first `PRODUCT_NOTES.md` entry. 24/24 tests green, ruff clean. PR open. (C-004 merged `d86d7aa`, tagged.)
 - 2026-06-17 — **C-004** data models on `chunk/C-004-models`: frozen pydantic `Job` + `SearchCriteria` (score 0–100, bounds; `min_score_threshold` default 40 per ADR-006); `core/models/AGENTS.md`. 18/18 tests green, ruff clean. PR open. (C-002 merged `5f1ae5f`, tagged.)
 - 2026-06-17 — **C-002** logging & trace core on `chunk/C-002-logging`: `core/logging.py` (JSON logger, stderr-only, `run_id`, secret redaction; pure `format_record`/`redact`); `core/AGENTS.md` added. 10/10 tests green, ruff clean. PR open. (C-001 merged `808d1ca`, tagged.)
 - 2026-06-17 — **C-001** scaffold built on `chunk/C-001-scaffold`: package tree (`core/*`, `ui/cli`), user drop-zones, `pyproject.toml` + `requirements*.txt`, ruff + pytest-asyncio config; 3/3 scaffold tests green, ruff clean. PR open for review.

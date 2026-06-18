@@ -7,5 +7,13 @@
 
 ## Entries (newest first)
 
-_(none yet — first entries land with the Phase-1 chunks that encode product rules: criteria generation
-(C-014 / C-017), job scoring, and filter precedence.)_
+### C-003 — Configuration & the no-secrets guarantee
+
+JobHunter is configured through a single `config.yaml`: users choose the AI provider and model, the
+scoring batch size, the score threshold that filters results, per-connector enable/limits/delays, and
+the output format. Any setting can be overridden by an environment variable (e.g. `AI__PROVIDER=ollama`).
+
+**Trust / security rule:** `config.yaml` **never** holds secrets. The `auth.*` entries are environment-
+variable *names* (e.g. `GEMINI_API_KEY`), and a validator rejects anything that looks like a pasted key —
+so the config file is always safe to commit or share. Real credentials live only in env vars / the OS
+secret store (ADR-002, SDD §8).

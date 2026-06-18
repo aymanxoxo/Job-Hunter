@@ -1,0 +1,31 @@
+# JobHunter configuration. NEVER put secrets here — auth.* hold ENV VAR NAMES only (SDD §8).
+# Any field can be overridden by an env var using `__` for nesting, e.g. AI__PROVIDER=ollama (§9.2).
+ai:
+  provider: gemini          # gemini | ollama | openrouter
+  model: gemini-3-flash     # model id within the provider
+  batch_size: 15            # jobs per AI scoring call
+  min_score: 40             # seeds SearchCriteria.min_score_threshold (ADR-006)
+profile:
+  input: text               # active profile-input plugin (text | pdf | docx | image …)
+connectors:
+  linkedin:
+    enabled: true
+    max_results: 50
+    delay_min: 1.5
+    delay_max: 4.0
+  indeed:
+    enabled: true
+    max_results: 50
+    delay_min: 2.0
+    delay_max: 5.0
+  mock:
+    enabled: false
+    fixture_path: fixtures/jobs.json
+output:
+  format: both              # csv | json | both
+  directory: output/
+auth:
+  google_client_id_env: GOOGLE_CLIENT_ID
+  google_client_secret_env: GOOGLE_CLIENT_SECRET
+  gemini_api_key_env: GEMINI_API_KEY
+  openrouter_api_key_env: OPENROUTER_API_KEY

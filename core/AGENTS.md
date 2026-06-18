@@ -5,11 +5,16 @@ pipeline runner, and shared infra. Pure logic stays side-effect-free; I/O lives 
 (ADR-008, dev plan §5).
 
 ## Contents (filled chunk by chunk)
+- `config.py` — config models + YAML loader + env overrides + no-secrets validator. **[C-003 · present]**
 - `logging.py` — structured JSON logger. **[C-002 · present]**
-- `models/`, `connectors/`, `ai_providers/`, `profile_inputs/`, `auth/`, `ai_engine/` — empty stubs
-  until their chunks land.
+- `models/` — `Job`, `SearchCriteria` (see `models/AGENTS.md`). **[C-004 · present]**
+- `connectors/`, `ai_providers/`, `profile_inputs/`, `auth/`, `ai_engine/` — empty stubs until their chunks land.
 
 ## Conventions / contracts
+- **Config (`config.py`, SDD §9).** `load_config(path, env=None)` → a validated `Config`;
+  `apply_env_overrides` (pure) applies `KEY__SUBKEY` env overrides; `auth.*` fields must be env-var
+  NAMES (a validator rejects pasted secrets). Sub-models: AIConfig / ProfileConfig / ConnectorSettings
+  / OutputConfig / AuthConfig.
 - **Logging (`logging.py`, ADR-010 / dev plan §6).** `get_logger(name, **ctx)` → a `Logger`;
   `.bind(**ctx)` returns a **new** logger (immutable context); `.debug/.info/.warning/.error(msg,
   **fields)`. Output is **JSON lines to stderr only** — never stdout (it is the sidecar IPC channel).
