@@ -1,4 +1,6 @@
 """C-005 — BaseConnector ABC contract (SDD §4.1)."""
+import types
+
 import pytest
 
 from core.connectors import BaseConnector
@@ -43,3 +45,16 @@ async def test_search_meets_connector_contract():
     await assert_connector_returns_valid_jobs(connector, SearchCriteria())
     jobs = await connector.search(SearchCriteria())
     assert jobs[0].source == "dummy"
+
+
+async def test_contract_helper_rejects_non_job_items():
+    """A duck-typed object with the right fields must NOT pass the contract (it is not a Job)."""
+
+    class _DuckConnector(BaseConnector):
+        name = "duck"
+
+        async def search(self, criteria: SearchCriteria) -> list:
+            return [types.SimpleNamespace(id="1", title="t", company="c", url="u", source="duck")]
+
+    with pytest.raises(AssertionError):
+        await assert_connector_returns_valid_jobs(_DuckConnector(), SearchCriteria())

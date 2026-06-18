@@ -12,7 +12,7 @@
   fail-graceful).
 - Connectors are independent — never import another connector/provider (ADR-001).
 - Every connector must pass the reusable check in `tests/contracts/connector_contract.py` (SDD §12.2),
-  which is parametrised over all discovered connectors once plugin discovery (C-009) lands.
+  which is parametrised over all discovered connectors once plugin discovery (C-009) lands. It asserts each result is a `Job` instance (not just a duck-typed object).
 
 ## Pointers
 - Parent: [../AGENTS.md](../AGENTS.md) · Spec: SDD §4.1 · Auth strategy: ADR-002.
