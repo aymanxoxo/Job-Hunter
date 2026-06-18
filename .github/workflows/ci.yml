@@ -1,0 +1,21 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Bootstrap
+        run: python tools/jh.py bootstrap --ci
+      - name: Doctor
+        run: .venv/bin/python tools/jh.py doctor --ci
+      - name: Gate
+        run: .venv/bin/python tools/jh.py gate --ci

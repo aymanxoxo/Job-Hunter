@@ -50,6 +50,7 @@ Each module folder gets its own `AGENTS.md` (following the template below) when 
 | Fixtures | `fixtures/` | Mock connector data (`jobs.json`) |
 | Output | `output/` | Generated results — **git-ignored** |
 | Config | `config.yaml` | User configuration |
+| Workflow tools | `tools/` | Deterministic AI workflow harness (`jh.py`) for bootstrap/status/gate/PR handoff |
 | Design assets | `design/` | Versioned UI/UX (current `v1.1/`): `DESIGN.md`, `tokens.css`, wireframes — the UI source |
 
 ## Active design decisions (now folded into SDD/SOW v1.1)
@@ -112,6 +113,9 @@ describes must be reflected in that doc *as part of the same change* — never d
 
 Full detail in the [dev plan](Documents/JobHunter_DEV_PLAN_v1.0.md); the essentials:
 
+- **Use the deterministic harness for mechanical work.** After C-040, start with
+  `python tools/jh.py bootstrap`, `python tools/jh.py status`, and `python tools/jh.py next`; validate
+  with `python tools/jh.py gate C-XXX`; generate/create PR handoffs with `pr-ready` and `create-pr`.
 - **All work is AI-executed and chunk-based.** Not scrum — a dependency DAG of small chunks (`C-XXX`).
   A chunk is workable once its dependencies are `done`; pick any ready one from [`PROGRESS.md`](PROGRESS.md).
 - **The loop:** read `PROGRESS.md` orientation block → take the next ready chunk → read its row + linked

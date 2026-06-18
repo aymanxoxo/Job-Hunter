@@ -20,7 +20,7 @@ C-XXX — <title>
 ## Test evidence (paste real output)
 - Red (tests fail first):
 - Green (chunk tests pass):
-- Full suite + ruff:
+- Full gate (`python tools/jh.py gate C-XXX`, including full suite + ruff):
 
 ## Definition of Done (plan §3.1)
 - [ ] Chunk tests green
