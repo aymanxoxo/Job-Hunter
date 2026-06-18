@@ -9,8 +9,8 @@
 ## Orientation
 
 - **Phase:** Phase 1 — Foundation. **Next gate:** M-03 (chunk C-029).
-- **Last done:** **C-003** — config models + loader (24/24 tests green, ruff clean; PR open on `chunk/C-003-config`). Prior: **C-004** data models (merged `d86d7aa`, tag `C-004`).
-- **Next ready (once C-003 merges):** **C-005/006/007** (plugin ABCs), **C-008** (auth resolver), **C-039** (walking skeleton).
+- **Last done:** **C-003** — config (merged `b3e45f9`, tag `C-003`). Foundation **C-001–C-004 all merged & tagged**; config/model hardening (ADR-018) merged (`e758131`, PR #8).
+- **Next ready:** **C-005 / 006 / 007** (plugin ABCs), **C-008** (auth resolver — risk-flagged), **C-039** (walking skeleton).
 - **Blocked:** none.
 - **Notes:** Dev loop runs via the GitHub remote (the mount can't hold `.git`): the AI works in a
   sandbox clone, pushes one `chunk/C-XXX` branch per chunk with a risk read; the user reviews + merges the
@@ -69,11 +69,11 @@
 
 ## Changelog (newest first)
 
-- 2026-06-18 — **Hardening** (`fix/config-models-hardening`, review findings): config sub-models now `extra=forbid` (unknown/secret keys fail load), `output.format` enum, `delay_min <= delay_max`; `Job`/`SearchCriteria` containers are tuples (truly immutable). ADR-018. 30/30 tests green. (C-003 merged `b3e45f9`, tagged.)
-- 2026-06-17 — **C-003** config on `chunk/C-003-config`: `core/config.py` (pydantic models, YAML loader, `KEY__SUBKEY` env overrides, no-secrets validator) + `config.yaml`; first `PRODUCT_NOTES.md` entry. 24/24 tests green, ruff clean. PR open. (C-004 merged `d86d7aa`, tagged.)
-- 2026-06-17 — **C-004** data models on `chunk/C-004-models`: frozen pydantic `Job` + `SearchCriteria` (score 0–100, bounds; `min_score_threshold` default 40 per ADR-006); `core/models/AGENTS.md`. 18/18 tests green, ruff clean. PR open. (C-002 merged `5f1ae5f`, tagged.)
-- 2026-06-17 — **C-002** logging & trace core on `chunk/C-002-logging`: `core/logging.py` (JSON logger, stderr-only, `run_id`, secret redaction; pure `format_record`/`redact`); `core/AGENTS.md` added. 10/10 tests green, ruff clean. PR open. (C-001 merged `808d1ca`, tagged.)
-- 2026-06-17 — **C-001** scaffold built on `chunk/C-001-scaffold`: package tree (`core/*`, `ui/cli`), user drop-zones, `pyproject.toml` + `requirements*.txt`, ruff + pytest-asyncio config; 3/3 scaffold tests green, ruff clean. PR open for review.
+- 2026-06-18 — **Hardening** (`fix/config-models-hardening`, review findings): config sub-models now `extra=forbid` (unknown/secret keys fail load), `output.format` enum, `delay_min <= delay_max`; `Job`/`SearchCriteria` containers are tuples (truly immutable). ADR-018. 30/30 tests green, ruff clean. Merged `e758131` (PR #8).
+- 2026-06-17 — **C-003** config on `chunk/C-003-config`: `core/config.py` (pydantic models, YAML loader, `KEY__SUBKEY` env overrides, no-secrets validator) + `config.yaml`; first `PRODUCT_NOTES.md` entry. 24/24 tests green, ruff clean. Merged `b3e45f9`, tag `C-003`.
+- 2026-06-17 — **C-004** data models on `chunk/C-004-models`: frozen pydantic `Job` + `SearchCriteria` (score 0–100, bounds; `min_score_threshold` default 40 per ADR-006); `core/models/AGENTS.md`. 18/18 tests green, ruff clean. Merged `d86d7aa`, tag `C-004`.
+- 2026-06-17 — **C-002** logging & trace core on `chunk/C-002-logging`: `core/logging.py` (JSON logger, stderr-only, `run_id`, secret redaction; pure `format_record`/`redact`); `core/AGENTS.md` added. 10/10 tests green, ruff clean. Merged `5f1ae5f`, tag `C-002`.
+- 2026-06-17 — **C-001** scaffold built on `chunk/C-001-scaffold`: package tree (`core/*`, `ui/cli`), user drop-zones, `pyproject.toml` + `requirements*.txt`, ruff + pytest-asyncio config; 3/3 scaffold tests green, ruff clean. Merged `808d1ca`, tag `C-001`.
 - 2026-06-17 — Added per-chunk vertical protocol (ADR-016, §3.3), per-chunk dual docs — technical + business (ADR-017, §3.4, `Documents/PRODUCT_NOTES.md`), the PR template, and walking-skeleton chunk C-039; refreshed the workflow Notes.
 - 2026-06-17 — C-000 done: git initialized on `main`, initial snapshot committed (`5cf9ee3`). Added
   `Documents/DECISIONS.md` (ADR log). C-001 is the next ready chunk.
