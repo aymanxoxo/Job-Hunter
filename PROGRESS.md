@@ -37,7 +37,7 @@
 | C-040 | Workflow automation harness | Tooling | C-006 | done | 796a012 |
 | C-041 | CI-gated auto-merge command | Tooling | C-040 | done | 6886786 |
 | C-042 | CI-native opt-in auto-merge | Tooling | C-041 | done | 5e1ef5a |
-| C-007 | BaseProfileInput ABC + text parser | Contracts | C-004 | done | PR |
+| C-007 | BaseProfileInput ABC + text parser | Contracts | C-004 | done | ff83ca3 |
 | C-008 | Auth strategy resolver | Contracts | C-002, C-003 | todo | — |
 | C-009 | Plugin discovery | Contracts | C-005, C-006, C-007 | todo | — |
 | C-010 | Prompt builders (pure) | AI engine | C-004 | todo | — |
@@ -72,7 +72,7 @@
 
 ## Changelog (newest first)
 
-- 2026-06-18 — **C-007** BaseProfileInput ABC + text parser on `chunk/C-007-base-profile-input`: `core/profile_inputs/base_profile_input.py` defines async `to_text(source) -> str`, `TextProfileInput` preserves typed text unchanged, and reusable contract tests cover profile input plugins. 6 focused tests green via `tests/test_profile_inputs.py`; full gate via `python tools/jh.py gate C-007 --ci`. Merge pending in PR.
+- 2026-06-18 — **C-007** BaseProfileInput ABC + text parser on `chunk/C-007-base-profile-input`: `core/profile_inputs/base_profile_input.py` defines async `to_text(source) -> str`, `TextProfileInput` preserves typed text unchanged, and reusable contract tests cover profile input plugins. 6 focused tests green via `tests/test_profile_inputs.py`; full gate via `python tools/jh.py gate C-007 --ci`. Merged `ff83ca3` (PR #22).
 - 2026-06-18 — **C-039** Walking skeleton on `chunk/C-039-walking-skeleton`: temporary stub provider + fixture connector + JSON export + `jobhunter run` Click/Rich command prove profile → criteria → search → score → export wiring. 4 focused tests green via `tests/test_walking_skeleton.py`; full gate via `python tools/jh.py gate C-039 --ci`. Merged `a722329` (PR #20).
 - 2026-06-18 — **C-042** CI-native opt-in auto-merge on `tools/ci-native-auto-merge`: CI runs `ci-auto-merge` after validations, skips unless `auto-merge` label or checked PR checkbox is present, and docs require the agent to ask for merge policy before starting work. 82/82 tests green; full gate via `python tools/jh.py gate C-040 --ci`. Merged `5e1ef5a` (PR #18).
 - 2026-06-18 — **C-041** CI-gated auto-merge command on `tools/ci-gated-auto-merge`: `python tools/jh.py merge-pr <PR_NUMBER>` checks PR state, mergeability, check runs/statuses, and exact head SHA before merging. Full gate via `python tools/jh.py gate C-040`. Merged `6886786` (PR #16).
