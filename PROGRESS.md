@@ -9,7 +9,7 @@
 ## Orientation
 
 - **Phase:** Phase 1 — Foundation. **Next gate:** M-03 (chunk C-029).
-- **Last done:** **C-043** — async-by-default + idempotent long-running waits (tooling; PR pending). Prior merged: **C-007** BaseProfileInput ABC + TextProfileInput.
+- **Last done:** **C-045** — chunk registry single source of truth (tooling; PR pending). Prior merged: **C-043** async-by-default + idempotent long-running waits (`853a6bb`). Prior merged: **C-007** BaseProfileInput ABC + TextProfileInput.
 - **Next ready:** **C-008** (auth resolver — risk-flagged; pause for design sign-off), **C-009** (plugin discovery), **C-010**–**C-013** (AI-engine pure helpers), **C-018** (mock connector), **C-019** (session store), **C-022**–**C-024** (pipeline pure/output chunks), **C-038** (authoring docs).
 - **Blocked:** none.
 - **Notes:** Dev loop runs via the GitHub remote (the mount can't hold `.git`): the AI works in a
@@ -37,7 +37,8 @@
 | C-040 | Workflow automation harness | Tooling | C-006 | done | 796a012 |
 | C-041 | CI-gated auto-merge command | Tooling | C-040 | done | 6886786 |
 | C-042 | CI-native opt-in auto-merge | Tooling | C-041 | done | 5e1ef5a |
-| C-043 | Async/idempotent long-running waits | Tooling | C-042 | done | (PR) |
+| C-043 | Async/idempotent long-running waits | Tooling | C-042 | done | 853a6bb |
+| C-045 | Chunk registry single source of truth | Tooling | C-040 | done | (PR) |
 | C-007 | BaseProfileInput ABC + text parser | Contracts | C-004 | done | ff83ca3 |
 | C-008 | Auth strategy resolver | Contracts | C-002, C-003 | todo | — |
 | C-009 | Plugin discovery | Contracts | C-005, C-006, C-007 | todo | — |
@@ -73,7 +74,8 @@
 
 ## Changelog (newest first)
 
-- 2026-06-19 — **C-043** Async-by-default + idempotent long-running waits on `chunk/C-043-async-waits`: `wait_for_pr_merge_readiness` short-circuits on an already-merged PR (no poll/sleep) and reports `already_merged`; `merge-pr`/`ci-auto-merge` treat that as immediate success and delete the branch idempotently (an already-gone branch is success); `--wait` is hard-capped at 300s (`clamp_wait_seconds`), `merge-pr` defaults to async `--wait 0`; new non-blocking `pr-status <#>` poll. Fixes the reported "agent keeps waiting" hang (ADR-023). 9 focused tests added, 101/101 green; ruff clean. (PR pending.)
+- 2026-06-19 — **C-045** Chunk registry SSOT on `chunk/C-045-chunk-registry`: new `tools/chunks.json` holds per-chunk static metadata (stage/deps/risk/tests) + smoke imports and absorbs `jh_config.json`; `load_config` now derives its legacy shape from the registry (callers unchanged); `doctor` gains `check_registry_consistency` (registry vs PROGRESS ledger vs dev-plan §10, expanding dep ranges like `C-010–C-013`). Also backfilled the C-043 merge hash `853a6bb`. 9 tests added, 110/110 green; ruff clean; doctor PASS. (PR pending.) (ADR-024.)
+- 2026-06-19 — **C-043** Async-by-default + idempotent long-running waits on `chunk/C-043-async-waits`: `wait_for_pr_merge_readiness` short-circuits on an already-merged PR (no poll/sleep) and reports `already_merged`; `merge-pr`/`ci-auto-merge` treat that as immediate success and delete the branch idempotently (an already-gone branch is success); `--wait` is hard-capped at 300s (`clamp_wait_seconds`), `merge-pr` defaults to async `--wait 0`; new non-blocking `pr-status <#>` poll. Fixes the reported "agent keeps waiting" hang (ADR-023). 9 focused tests added, 101/101 green; ruff clean. Merged `853a6bb` (PR #24).
 - 2026-06-18 — **C-007** BaseProfileInput ABC + text parser on `chunk/C-007-base-profile-input`: `core/profile_inputs/base_profile_input.py` defines async `to_text(source) -> str`, `TextProfileInput` preserves typed text unchanged, and reusable contract tests cover profile input plugins. 6 focused tests green via `tests/test_profile_inputs.py`; full gate via `python tools/jh.py gate C-007 --ci`. Merged `ff83ca3` (PR #22).
 - 2026-06-18 — **C-039** Walking skeleton on `chunk/C-039-walking-skeleton`: temporary stub provider + fixture connector + JSON export + `jobhunter run` Click/Rich command prove profile → criteria → search → score → export wiring. 4 focused tests green via `tests/test_walking_skeleton.py`; full gate via `python tools/jh.py gate C-039 --ci`. Merged `a722329` (PR #20).
 - 2026-06-18 — **C-042** CI-native opt-in auto-merge on `tools/ci-native-auto-merge`: CI runs `ci-auto-merge` after validations, skips unless `auto-merge` label or checked PR checkbox is present, and docs require the agent to ask for merge policy before starting work. 82/82 tests green; full gate via `python tools/jh.py gate C-040 --ci`. Merged `5e1ef5a` (PR #18).

@@ -3,7 +3,7 @@
 ## Contents
 - `jh.py` - AI-facing workflow harness for bootstrap, status, next, start, doctor, gate, PR handoff,
   and post-merge cleanup.
-- `jh_config.json` - deterministic chunk metadata used by the harness.
+- `chunks.json` - the chunk registry: single source of truth for per-chunk metadata (stage/deps/risk/tests) + smoke imports (ADR-024); `doctor` checks it against the ledger and dev-plan §10.
 - `README.md` - command guide for any AI agent taking over the workflow.
 
 ## Contracts

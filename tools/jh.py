@@ -24,6 +24,7 @@ from urllib import error, parse, request
 ROOT = Path(__file__).resolve().parent.parent
 OUTPUT_DIR = ROOT / "output" / "agent"
 CONFIG_PATH = ROOT / "tools" / "jh_config.json"
+REGISTRY_PATH = ROOT / "tools" / "chunks.json"
 DEFAULT_RISK_FLAGGED = frozenset(
     {"C-008", "C-016", "C-017", "C-020", "C-021", "C-025", "C-031", "C-033"}
 )
@@ -142,15 +143,109 @@ def pr_already_merged(pr: dict[str, Any]) -> bool:
     return pr.get("state") == "closed" and bool(pr.get("merged_at"))
 
 
-def load_config(root: Path = ROOT) -> dict[str, Any]:
-    path = root / "tools" / "jh_config.json"
+def load_registry(root: Path = ROOT) -> dict[str, Any]:
+    """Load the chunk registry (tools/chunks.json) — the single source of truth for
+    per-chunk static metadata (stage, deps, risk, tests) and global smoke imports."""
+    path = root / "tools" / "chunks.json"
     if not path.exists():
+        return {"smoke_imports": ["core"], "chunks": {}}
+    data = json.loads(path.read_text(encoding="utf-8"))
+    data.setdefault("smoke_imports", ["core"])
+    data.setdefault("chunks", {})
+    return data
+
+
+def load_config(root: Path = ROOT) -> dict[str, Any]:
+    """Back-compat config view derived from the registry, so existing callers keep
+    the legacy {risk_flagged_chunks, chunk_tests, smoke_imports} shape (ADR-024)."""
+    registry = load_registry(root)
+    meta = registry.get("chunks", {})
+    if not meta:
         return {
             "risk_flagged_chunks": sorted(DEFAULT_RISK_FLAGGED),
             "chunk_tests": {},
-            "smoke_imports": ["core"],
+            "smoke_imports": registry.get("smoke_imports", ["core"]),
         }
-    return json.loads(path.read_text(encoding="utf-8"))
+    return {
+        "risk_flagged_chunks": sorted(cid for cid, m in meta.items() if m.get("risk_flagged")),
+        "chunk_tests": {cid: m["tests"] for cid, m in meta.items() if m.get("tests")},
+        "smoke_imports": registry.get("smoke_imports", ["core"]),
+    }
+
+
+def expand_dep_ids(cell: str) -> set[str]:
+    """Extract chunk ids from a dependency cell, expanding `C-0AA-C-0BB` ranges."""
+    ids: set[str] = set()
+    for match in re.finditer(r"C-(\d{3})\s*[–—]\s*(?:C-)?(\d{3})", cell):
+        for number in range(int(match.group(1)), int(match.group(2)) + 1):
+            ids.add(f"C-{number:03d}")
+    stripped = re.sub(r"C-\d{3}\s*[–—]\s*(?:C-)?\d{3}", " ", cell)
+    ids.update(re.findall(r"C-\d{3}", stripped))
+    return ids
+
+
+def parse_dev_plan_deps(text: str) -> dict[str, set[str]]:
+    """Map chunk id -> dependency id set for every row in the dev-plan section 10 tables."""
+    deps: dict[str, set[str]] = {}
+    for line in text.splitlines():
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if len(cells) < 4 or not re.fullmatch(r"C-\d{3}", cells[0]):
+            continue
+        deps[cells[0]] = expand_dep_ids(cells[3])
+    return deps
+
+
+def check_registry_consistency(
+    registry: dict[str, Any],
+    ledger_chunks: dict[str, Chunk],
+    dev_plan_text: str,
+) -> list[Issue]:
+    """Assert the registry, the PROGRESS ledger, and dev-plan section 10 agree (ADR-024)."""
+    issues: list[Issue] = []
+    meta = registry.get("chunks", {})
+    reg_ids, led_ids = set(meta), set(ledger_chunks)
+    for cid in sorted(led_ids - reg_ids):
+        issues.append(
+            Issue("registry.missing", f"{cid} is in the ledger but not tools/chunks.json")
+        )
+    for cid in sorted(reg_ids - led_ids):
+        issues.append(
+            Issue("registry.extra", f"{cid} is in tools/chunks.json but not the ledger")
+        )
+    for cid in sorted(reg_ids & led_ids):
+        entry, chunk = meta[cid], ledger_chunks[cid]
+        if entry.get("stage") != chunk.stage:
+            issues.append(
+                Issue("registry.stage", f"{cid} stage differs between registry and ledger")
+            )
+        if entry.get("title") != chunk.title:
+            issues.append(
+                Issue("registry.title", f"{cid} title differs between registry and ledger")
+            )
+        if tuple(entry.get("depends_on", [])) != chunk.depends_on:
+            issues.append(
+                Issue("registry.depends", f"{cid} dependencies differ from the ledger")
+            )
+        if bool(entry.get("risk_flagged", False)) != chunk.risk_flagged:
+            issues.append(
+                Issue("registry.risk", f"{cid} risk flag differs between registry and ledger")
+            )
+    dev_deps = parse_dev_plan_deps(dev_plan_text)
+    dev_ids = set(dev_deps)
+    for cid in sorted(dev_ids - reg_ids):
+        issues.append(
+            Issue("registry.devplan_extra", f"{cid} is in dev-plan but not the registry")
+        )
+    for cid in sorted(dev_ids & reg_ids):
+        reg_dep = set(meta[cid].get("depends_on", [])) & dev_ids
+        if reg_dep != (dev_deps[cid] & dev_ids):
+            issues.append(
+                Issue(
+                    "registry.devplan_depends",
+                    f"{cid} dependencies differ between registry and dev plan",
+                )
+            )
+    return issues
 
 
 def parse_progress(text: str, risk_flagged: set[str] | None = None) -> dict[str, Chunk]:
@@ -240,6 +335,10 @@ def run_doctor_checks(root: Path = ROOT, git_messages: list[str] | None = None) 
     else:
         chunks = parse_progress(progress.read_text(encoding="utf-8"))
         issues.extend(_check_ledger(chunks, git_messages))
+        if (root / "tools" / "chunks.json").exists():
+            dev_plan = root / "Documents" / "JobHunter_DEV_PLAN_v1.0.md"
+            dev_text = dev_plan.read_text(encoding="utf-8") if dev_plan.exists() else ""
+            issues.extend(check_registry_consistency(load_registry(root), chunks, dev_text))
 
     issues.extend(_check_pr_template(root))
     issues.extend(_check_markdown_links(root))
