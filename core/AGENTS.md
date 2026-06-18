@@ -9,7 +9,8 @@ pipeline runner, and shared infra. Pure logic stays side-effect-free; I/O lives 
 - `logging.py` — structured JSON logger. **[C-002 · present]**
 - `models/` — `Job`, `SearchCriteria` (see `models/AGENTS.md`). **[C-004 · present]**
 - `connectors/` — `BaseConnector` ABC (see `connectors/AGENTS.md`). **[C-005 · present]**
-- `ai_providers/`, `profile_inputs/`, `auth/`, `ai_engine/` — empty stubs until their chunks land.
+- `ai_providers/` — `BaseAIProvider` ABC (see `ai_providers/AGENTS.md`). **[C-006 · present]**
+- `profile_inputs/`, `auth/`, `ai_engine/` — empty stubs until their chunks land.
 
 ## Conventions / contracts
 - **Config (`config.py`, SDD §9).** `load_config(path, env=None)` → a validated `Config`;

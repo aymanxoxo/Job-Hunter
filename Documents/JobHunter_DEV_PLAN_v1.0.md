@@ -359,8 +359,8 @@ renderers. The Vue store maps events into the timeline model; the component is p
 
 | ID | Goal | Files | Depends on | Acceptance | SDD ref |
 |----|------|-------|-----------|------------|---------|
-| C-005 | BaseConnector ABC | `core/connectors/base_connector.py` | C-004 | Subclass must implement `search`; `auth_methods` default `['none']`; contract test scaffold | §4.1 |
-| C-006 | BaseAIProvider ABC | `core/ai_providers/base_provider.py` | C-004 | Subclass must implement `generate_criteria`+`score_jobs`; `auth_methods` declared | §4.2 |
+| C-005 | BaseConnector ABC | `core/connectors/base_connector.py` | C-004 | Subclass must implement `search`; `auth_methods` default `("none",)`; contract test scaffold | §4.1 |
+| C-006 | BaseAIProvider ABC | `core/ai_providers/base_provider.py` | C-004 | Subclass must implement `generate_criteria`+`score_jobs`; `auth_methods` default `("api_key",)`; contract test scaffold | §4.2 |
 | C-007 | BaseProfileInput ABC + text parser | `core/profile_inputs/base_profile_input.py`, `text_input.py` | C-004 | `TextProfileInput.to_text` returns input text; contract test for base | §3.3, §5.3 |
 | C-008 | Auth strategy resolver | `core/auth/auth_strategy.py` | C-002, C-003 | Resolves ordered `auth_methods` with injected fakes; first success wins; unmet → skip + warn | §8.1 |
 | C-009 | Plugin discovery | `core/runner.py` (discovery only) | C-005, C-006, C-007 | Discovers/loads/instantiates plugins from temp dirs; ignores `_`/`base_` files | §5.1 |

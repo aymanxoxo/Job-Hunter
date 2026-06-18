@@ -187,7 +187,7 @@ from core.models.search_criteria import SearchCriteria
 
 class BaseConnector(ABC):
     name: str = 'unnamed'                 # Display name, override in subclass
-    auth_methods: list[str] = ['none']    # ordered: e.g. ['oauth', 'session', 'none']
+    auth_methods: tuple[str, ...] = ('none',)  # ordered: e.g. ('oauth', 'session', 'none')
     enabled: bool = True
 
     @abstractmethod
@@ -216,7 +216,7 @@ from core.models.search_criteria import SearchCriteria
 
 class BaseAIProvider(ABC):
     name: str = 'unnamed'
-    auth_methods: list[str] = ['api_key']   # ordered: e.g. ['oauth', 'api_key']
+    auth_methods: tuple[str, ...] = ('api_key',)  # ordered: e.g. ('oauth', 'api_key')
     supports_local: bool = False
 
     @abstractmethod
