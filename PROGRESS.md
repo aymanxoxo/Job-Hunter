@@ -30,7 +30,7 @@
 | C-001 | Repo scaffold + tooling | Foundation | C-000 | done | 808d1ca |
 | C-039 | Walking skeleton (stub end-to-end) | Skeleton | C-001 | todo | — |
 | C-002 | Logging & trace core | Foundation | C-001 | done | 5f1ae5f |
-| C-003 | Config models + loader | Foundation | C-001, C-002 | done | (PR) |
+| C-003 | Config models + loader | Foundation | C-001, C-002 | done | b3e45f9 |
 | C-004 | Data models (Job, SearchCriteria) | Foundation | C-001 | done | d86d7aa |
 | C-005 | BaseConnector ABC | Contracts | C-004 | todo | — |
 | C-006 | BaseAIProvider ABC | Contracts | C-004 | todo | — |
@@ -69,6 +69,7 @@
 
 ## Changelog (newest first)
 
+- 2026-06-18 — **Hardening** (`fix/config-models-hardening`, review findings): config sub-models now `extra=forbid` (unknown/secret keys fail load), `output.format` enum, `delay_min <= delay_max`; `Job`/`SearchCriteria` containers are tuples (truly immutable). ADR-018. 30/30 tests green. (C-003 merged `b3e45f9`, tagged.)
 - 2026-06-17 — **C-003** config on `chunk/C-003-config`: `core/config.py` (pydantic models, YAML loader, `KEY__SUBKEY` env overrides, no-secrets validator) + `config.yaml`; first `PRODUCT_NOTES.md` entry. 24/24 tests green, ruff clean. PR open. (C-004 merged `d86d7aa`, tagged.)
 - 2026-06-17 — **C-004** data models on `chunk/C-004-models`: frozen pydantic `Job` + `SearchCriteria` (score 0–100, bounds; `min_score_threshold` default 40 per ADR-006); `core/models/AGENTS.md`. 18/18 tests green, ruff clean. PR open. (C-002 merged `5f1ae5f`, tagged.)
 - 2026-06-17 — **C-002** logging & trace core on `chunk/C-002-logging`: `core/logging.py` (JSON logger, stderr-only, `run_id`, secret redaction; pure `format_record`/`redact`); `core/AGENTS.md` added. 10/10 tests green, ruff clean. PR open. (C-001 merged `808d1ca`, tagged.)

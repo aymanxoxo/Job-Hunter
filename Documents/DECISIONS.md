@@ -25,6 +25,7 @@
 | 015 | Feature-branch per chunk; user reviews & merges PRs | Accepted | 2026-06-17 |
 | 016 | Per-chunk vertical protocol; risk-flagged design sign-off; walking skeleton | Accepted | 2026-06-17 |
 | 017 | Per-chunk dual documentation (technical + business) | Accepted | 2026-06-17 |
+| 018 | Strict config validation (`extra=forbid`) + immutable model containers | Accepted | 2026-06-18 |
 
 ---
 
@@ -286,3 +287,22 @@ both facets; the PR template prompts for each.
 **Consequences.** Tech and business knowledge persist in low-rot, discoverable places and the author
 decides explicitly each time. Cost: a per-chunk judgement on whether a note is warranted; `docs/tech/`
 and `docs/business/` are created lazily on first use.
+
+
+## ADR-018 — Strict config validation + immutable model containers
+
+**Context.** A review of C-003/C-004 found three gaps: (1) pydantic silently dropped unknown config
+keys, so a pasted secret (e.g. `auth.gemini_api_key: sk-…` or `connectors.linkedin.api_key`) stayed in
+`config.yaml` without error — breaking the "always safe to commit" promise; (2) `frozen=True` blocked
+attribute reassignment but `job.red_flags.append(...)` / `criteria.titles.append(...)` still mutated the
+list in place; (3) `output.format` accepted any string and `delay_min > delay_max` was allowed.
+
+**Decision.** (1) Every config sub-model and the root `Config` use `extra="forbid"`, so any unknown key
+(including a stray secret) fails `load_config` loudly. (2) `Job.red_flags` and all `SearchCriteria`
+sequence fields are `tuple[str, ...]` — construction still accepts lists (pydantic coerces), but the
+stored value cannot be mutated in place. (3) `output.format` is `Literal["csv","json","both"]` and a
+model validator enforces `delay_min <= delay_max`.
+
+**Consequences.** The no-secrets guarantee and the immutability promise (ADR-008, SDD §5.2) are now
+actually enforced, with tests. Cost: adding a new config field requires updating the model (extra is
+forbidden) — intentional. Strengthens, does not supersede, ADR-002 / 006 / 008.

@@ -14,7 +14,7 @@ pipeline runner, and shared infra. Pure logic stays side-effect-free; I/O lives 
 - **Config (`config.py`, SDD §9).** `load_config(path, env=None)` → a validated `Config`;
   `apply_env_overrides` (pure) applies `KEY__SUBKEY` env overrides; `auth.*` fields must be env-var
   NAMES (a validator rejects pasted secrets). Sub-models: AIConfig / ProfileConfig / ConnectorSettings
-  / OutputConfig / AuthConfig.
+  / OutputConfig / AuthConfig. All use `extra="forbid"` (unknown/secret keys fail load); `output.format` is a `csv|json|both` enum; `delay_min <= delay_max` (ADR-018).
 - **Logging (`logging.py`, ADR-010 / dev plan §6).** `get_logger(name, **ctx)` → a `Logger`;
   `.bind(**ctx)` returns a **new** logger (immutable context); `.debug/.info/.warning/.error(msg,
   **fields)`. Output is **JSON lines to stderr only** — never stdout (it is the sidecar IPC channel).

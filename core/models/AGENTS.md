@@ -13,7 +13,7 @@ data; no I/O. Re-exported so `from core.models import Job, SearchCriteria` works
   `DEFAULT_MAX_RESULTS`.
 
 ## Conventions
-- Frozen + validated (score 0–100; max_results ≥ 1; date_posted_days ≥ 1).
+- Frozen **and** tuple-backed containers (`red_flags`, criteria lists) — no in-place mutation (ADR-018). Validated (score 0–100; max_results ≥ 1; date_posted_days ≥ 1).
 
 ## Pointers
 - Parent: [../AGENTS.md](../AGENTS.md) · Spec: SDD §3 · Filter rule: ADR-006.

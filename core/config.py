@@ -2,8 +2,9 @@
 
 Loads ``config.yaml``, overlays ``KEY__SUBKEY`` environment overrides (§9.2), and validates with
 pydantic. Credentials are NEVER stored here — ``auth.*`` fields hold environment-variable *names*
-(e.g. ``GEMINI_API_KEY``), enforced by a validator (ADR-002 / SDD §8). ``apply_env_overrides`` is
-pure; the only side effect is reading the YAML file.
+(e.g. ``GEMINI_API_KEY``), enforced by a validator (ADR-002 / SDD §8). All sub-models use
+``extra="forbid"`` so a stray/secret key fails loudly rather than being silently dropped (ADR-018).
+``apply_env_overrides`` is pure; the only side effect is reading the YAML file.
 """
 from __future__ import annotations
 
@@ -11,16 +12,17 @@ import os
 import re
 from copy import deepcopy
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import yaml
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 _ENV_NAME = re.compile(r"^[A-Z][A-Z0-9_]*$")
 _SECTIONS = ("ai", "profile", "connectors", "output", "auth")
 
 
 class AIConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     provider: str = "gemini"
     model: str = "gemini-3-flash"
     batch_size: int = Field(default=15, ge=1)
@@ -28,23 +30,35 @@ class AIConfig(BaseModel):
 
 
 class ProfileConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     input: str = "text"
 
 
 class ConnectorSettings(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     enabled: bool = True
     max_results: int = Field(default=50, ge=1)
     delay_min: float = Field(default=2.0, ge=0)
     delay_max: float = Field(default=5.0, ge=0)
     fixture_path: str | None = None
 
+    @model_validator(mode="after")
+    def _delays_ordered(self) -> ConnectorSettings:
+        if self.delay_min > self.delay_max:
+            raise ValueError(
+                f"delay_min ({self.delay_min}) must be <= delay_max ({self.delay_max})"
+            )
+        return self
+
 
 class OutputConfig(BaseModel):
-    format: str = "both"
+    model_config = ConfigDict(extra="forbid")
+    format: Literal["csv", "json", "both"] = "both"
     directory: str = "output/"
 
 
 class AuthConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     google_client_id_env: str = "GOOGLE_CLIENT_ID"
     google_client_secret_env: str = "GOOGLE_CLIENT_SECRET"
     gemini_api_key_env: str = "GEMINI_API_KEY"
@@ -61,6 +75,7 @@ class AuthConfig(BaseModel):
 
 
 class Config(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     ai: AIConfig = Field(default_factory=AIConfig)
     profile: ProfileConfig = Field(default_factory=ProfileConfig)
     connectors: dict[str, ConnectorSettings] = Field(default_factory=dict)
