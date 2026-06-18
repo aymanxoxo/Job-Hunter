@@ -26,6 +26,7 @@
 | 016 | Per-chunk vertical protocol; risk-flagged design sign-off; walking skeleton | Accepted | 2026-06-17 |
 | 017 | Per-chunk dual documentation (technical + business) | Accepted | 2026-06-17 |
 | 018 | Strict config validation (`extra=forbid`) + immutable model containers | Accepted | 2026-06-18 |
+| 019 | Capability-based PR creation and handoff | Accepted | 2026-06-18 |
 
 ---
 
@@ -306,3 +307,23 @@ model validator enforces `delay_min <= delay_max`.
 **Consequences.** The no-secrets guarantee and the immutability promise (ADR-008, SDD §5.2) are now
 actually enforced, with tests. Cost: adding a new config field requires updating the model (extra is
 forbidden) — intentional. Strengthens, does not supersede, ADR-002 / 006 / 008.
+
+
+## ADR-019 — Capability-based PR creation and handoff
+
+**Context.** Different AI runtimes have different GitHub capabilities. Some can create a fully formed
+pull request; others can push a branch but cannot open a PR; others may only be able to hand off a diff.
+The project still needs consistent review quality and a clear user merge gate regardless of the agent.
+
+**Decision.** Each AI agent takes the workflow as far as its available git/GitHub access allows. If it
+can create a PR, it does so and gives the user the PR URL. If it cannot create a PR but can push a
+branch, it pushes the branch and gives the user the GitHub compare/new-PR URL. If it cannot push, it
+provides the diff/patch plus the exact PR title and description for manual creation. Every PR or manual
+handoff includes a clear title (with chunk ID when applicable), a human-readable description, the Design
+note, red→green test evidence, full gate evidence, and a one-line risk read. The user remains the
+review/merge gate.
+
+**Consequences.** Review handoffs are consistent across AI tools without baking in model-specific rules.
+More capable environments remove manual steps; constrained environments still preserve enough context for
+the user or another agent to create the same PR. This clarifies ADR-015 without changing its merge-gate
+rule.
