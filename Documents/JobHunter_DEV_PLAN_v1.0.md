@@ -359,6 +359,7 @@ renderers. The Vue store maps events into the timeline model; the component is p
 | ID | Goal | Files | Depends on | Acceptance | SDD ref |
 |----|------|-------|-----------|------------|---------|
 | C-040 | Deterministic workflow harness for AI agents: bootstrap, status, next, start, doctor, gate, GitHub auth status, PR handoff, and post-merge cleanup | `tools/jh.py`, `tools/jh_config.json`, CI workflow, harness tests/docs | C-006 | Harness unit tests cover ledger parsing, readiness, stale merge detection, doctor checks, PR body generation, GitHub credential fallback order, and dry-run planning; `python tools/jh.py gate C-040` passes. | ADR-020 |
+| C-041 | CI-gated auto-merge command for explicitly allowed PR classes | `tools/jh.py`, harness tests/docs | C-040 | `merge-pr` refuses draft/unmergeable/pending/failed/missing-CI PRs, merges only the checked head SHA after green checks, and supports dry-run/branch-delete paths. | ADR-021 |
 
 ### Foundation
 

@@ -111,6 +111,21 @@ class DeviceCode:
     interval: int
 
 
+@dataclass(frozen=True)
+class PullRequestCheck:
+    name: str
+    status: str
+    conclusion: str
+
+
+@dataclass(frozen=True)
+class PullRequestReadiness:
+    ready: bool
+    issues: tuple[str, ...]
+    head_sha: str
+    head_ref: str
+
+
 def load_config(root: Path = ROOT) -> dict[str, Any]:
     path = root / "tools" / "jh_config.json"
     if not path.exists():
@@ -439,6 +454,38 @@ def store_github_token(root: Path, token: str) -> None:
             "username": "x-access-token",
             "password": token,
         },
+    )
+
+
+def evaluate_pr_merge_readiness(
+    pr: dict[str, Any], checks: list[PullRequestCheck], statuses: list[dict[str, Any]]
+) -> PullRequestReadiness:
+    issues: list[str] = []
+    if pr.get("state") != "open":
+        issues.append(f"PR is not open: {pr.get('state')}")
+    if pr.get("draft"):
+        issues.append("PR is draft")
+    mergeable = pr.get("mergeable")
+    mergeable_state = pr.get("mergeable_state", "unknown")
+    if mergeable is not True:
+        issues.append(f"PR is not confirmed mergeable: {mergeable_state}")
+    if not checks:
+        issues.append("No CI check runs found for PR head")
+    for check in checks:
+        if check.status != "completed":
+            issues.append(f"Check '{check.name}' is {check.status}")
+        elif check.conclusion != "success":
+            issues.append(f"Check '{check.name}' concluded {check.conclusion}")
+    for status in statuses:
+        state = status.get("state", "")
+        context = status.get("context", "status")
+        if state != "success":
+            issues.append(f"Status '{context}' is {state}")
+    return PullRequestReadiness(
+        ready=not issues,
+        issues=tuple(issues),
+        head_sha=pr.get("head", {}).get("sha", ""),
+        head_ref=pr.get("head", {}).get("ref", ""),
     )
 
 
@@ -831,6 +878,48 @@ def command_create_pr(args: argparse.Namespace) -> int:
     return 0
 
 
+def command_merge_pr(args: argparse.Namespace) -> int:
+    root = Path(args.root).resolve()
+    credential = resolve_github_token(root)
+    remote = _github_remote(root)
+    if not credential:
+        print("Missing GitHub credential; run auth-login or set JH_GITHUB_TOKEN.")
+        return 1
+    if not remote:
+        print("Missing GitHub origin remote.")
+        return 1
+
+    readiness = wait_for_pr_merge_readiness(
+        remote=remote,
+        token=credential.token,
+        pr_number=args.pr,
+        wait_seconds=args.wait,
+        poll_seconds=args.poll,
+    )
+    if not readiness.ready:
+        print("PR is not safe to auto-merge:")
+        for issue in readiness.issues:
+            print(f"- {issue}")
+        return 1
+    if args.dry_run:
+        print(f"PR #{args.pr} is ready to merge at {readiness.head_sha[:7]}")
+        return 0
+
+    merge = merge_pr_via_api(
+        remote=remote,
+        token=credential.token,
+        pr_number=args.pr,
+        head_sha=readiness.head_sha,
+        method=args.method,
+    )
+    print(merge["html_url"])
+    print(f"merged: {merge['sha'][:7]}")
+    if args.delete_branch and readiness.head_ref:
+        deleted = delete_remote_branch_via_api(remote, credential.token, readiness.head_ref)
+        print(f"deleted branch: {readiness.head_ref}" if deleted else "branch delete skipped")
+    return 0
+
+
 def command_auth_status(args: argparse.Namespace) -> int:
     root = Path(args.root).resolve()
     branch = run(("git", "branch", "--show-current"), cwd=root, check=False).stdout.strip()
@@ -910,7 +999,8 @@ def command_guide(args: argparse.Namespace) -> int:
 7. python tools/jh.py pr-ready C-XXX
 8. python tools/jh.py auth-status
 9. python tools/jh.py create-pr C-XXX
-10. After user merges: python tools/jh.py after-merge C-XXX --branch chunk/C-XXX-slug
+10. Optional CI-gated merge: python tools/jh.py merge-pr <PR_NUMBER> --wait 600
+11. After merge: python tools/jh.py after-merge C-XXX --branch chunk/C-XXX-slug
 
 Credential options for direct PR creation:
 - gh CLI already authenticated, or
@@ -1043,6 +1133,111 @@ def _create_pr_via_api(remote: str, token: str, title: str, body: str, branch: s
     return data["html_url"]
 
 
+def wait_for_pr_merge_readiness(
+    *,
+    remote: str,
+    token: str,
+    pr_number: int,
+    wait_seconds: int,
+    poll_seconds: int,
+    sleep=time.sleep,
+) -> PullRequestReadiness:
+    deadline = time.monotonic() + wait_seconds
+    last_readiness = PullRequestReadiness(False, ("PR readiness not checked",), "", "")
+    while True:
+        pr = get_pull_request_via_api(remote, token, pr_number)
+        checks = get_check_runs_via_api(remote, token, pr["head"]["sha"])
+        statuses = get_statuses_via_api(remote, token, pr["head"]["sha"])
+        readiness = evaluate_pr_merge_readiness(pr, checks, statuses)
+        if readiness.ready:
+            return readiness
+        last_readiness = readiness
+        if wait_seconds <= 0 or time.monotonic() >= deadline:
+            return last_readiness
+        sleep(max(1, poll_seconds))
+
+
+def get_pull_request_via_api(remote: str, token: str, pr_number: int) -> dict[str, Any]:
+    return _github_api_json(remote, token, f"/pulls/{pr_number}")
+
+
+def get_check_runs_via_api(remote: str, token: str, sha: str) -> list[PullRequestCheck]:
+    data = _github_api_json(remote, token, f"/commits/{sha}/check-runs")
+    return [
+        PullRequestCheck(
+            name=run.get("name", "check"),
+            status=run.get("status", ""),
+            conclusion=run.get("conclusion") or "",
+        )
+        for run in data.get("check_runs", [])
+    ]
+
+
+def get_statuses_via_api(remote: str, token: str, sha: str) -> list[dict[str, Any]]:
+    data = _github_api_json(remote, token, f"/commits/{sha}/status")
+    return data.get("statuses", [])
+
+
+def merge_pr_via_api(
+    *, remote: str, token: str, pr_number: int, head_sha: str, method: str
+) -> dict[str, Any]:
+    payload = {"sha": head_sha, "merge_method": method}
+    data = _github_api_json(
+        remote, token, f"/pulls/{pr_number}/merge", method="PUT", payload=payload
+    )
+    if not data.get("merged"):
+        message = data.get("message", "unknown")
+        raise RuntimeError(f"GitHub merge refused PR #{pr_number}: {message}")
+    return {"sha": data["sha"], "html_url": f"{remote}/pull/{pr_number}"}
+
+
+def delete_remote_branch_via_api(remote: str, token: str, branch: str) -> bool:
+    try:
+        _github_api_json(
+            remote,
+            token,
+            f"/git/refs/heads/{parse.quote(branch, safe='')}",
+            method="DELETE",
+            allow_empty=True,
+        )
+    except RuntimeError:
+        return False
+    return True
+
+
+def _github_api_json(
+    remote: str,
+    token: str,
+    path: str,
+    *,
+    method: str = "GET",
+    payload: dict[str, Any] | None = None,
+    allow_empty: bool = False,
+) -> dict[str, Any]:
+    data = json.dumps(payload).encode() if payload is not None else None
+    req = request.Request(
+        f"https://api.github.com/repos/{_github_owner_repo(remote)}{path}",
+        data=data,
+        method=method,
+        headers={
+            "Accept": "application/vnd.github+json",
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+            "User-Agent": "jobhunter-workflow-harness",
+        },
+    )
+    try:
+        with request.urlopen(req, timeout=30) as response:
+            body = response.read().decode()
+    except error.HTTPError as exc:
+        raise RuntimeError(_github_api_error(exc)) from exc
+    if allow_empty and not body:
+        return {}
+    if not body:
+        return {}
+    return json.loads(body)
+
+
 def _github_form_request(url: str, payload: bytes) -> dict[str, Any]:
     req = request.Request(
         url,
@@ -1145,6 +1340,15 @@ def build_parser() -> argparse.ArgumentParser:
     create_pr.add_argument("chunk")
     create_pr.add_argument("--dry-run", action="store_true")
     create_pr.set_defaults(func=command_create_pr)
+
+    merge_pr = sub.add_parser("merge-pr")
+    merge_pr.add_argument("pr", type=int)
+    merge_pr.add_argument("--wait", type=int, default=0)
+    merge_pr.add_argument("--poll", type=int, default=10)
+    merge_pr.add_argument("--method", choices=["merge", "squash", "rebase"], default="merge")
+    merge_pr.add_argument("--delete-branch", action="store_true")
+    merge_pr.add_argument("--dry-run", action="store_true")
+    merge_pr.set_defaults(func=command_merge_pr)
 
     auth_status = sub.add_parser("auth-status")
     auth_status.add_argument("--json", action="store_true")

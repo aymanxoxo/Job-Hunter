@@ -51,6 +51,9 @@ uses authenticated `gh`, `auth-login` OAuth device flow, `JH_GITHUB_TOKEN`/`GH_T
 Git Credential Manager before it falls back to the compare URL or patch handoff. Validate with
 `python tools/jh.py gate C-XXX`, which runs the deterministic doctor, focused tests, full pytest, ruff,
 and import smoke checks.
+- Auto-merge is allowed only when the user has explicitly allowed it for the PR class. Use
+  `python tools/jh.py merge-pr <PR_NUMBER> --wait 600`; it refuses draft, unmergeable, pending, failed,
+  or missing-CI PRs.
 
 ## FIRST TASK — continue after C-040
 C-006 (BaseAIProvider ABC) is merged at `27dd173`. C-040 adds the deterministic workflow harness. If

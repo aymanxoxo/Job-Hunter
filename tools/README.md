@@ -23,6 +23,7 @@ python tools/jh.py gate C-XXX
 python tools/jh.py pr-ready C-XXX
 python tools/jh.py auth-status
 python tools/jh.py create-pr C-XXX
+python tools/jh.py merge-pr <PR_NUMBER> --wait 600
 python tools/jh.py after-merge C-XXX --branch chunk/C-XXX-slug
 ```
 
@@ -71,3 +72,16 @@ Use these when another tool or model needs structured state:
 python tools/jh.py status --json
 python tools/jh.py auth-status --json
 ```
+
+## CI-gated auto-merge
+
+Use auto-merge only when the user has allowed it for the PR class. The harness refuses to merge unless
+GitHub reports the PR is open, non-draft, mergeable, and every check run/status for the head commit has
+completed successfully.
+
+```bash
+python tools/jh.py merge-pr <PR_NUMBER> --wait 600 --delete-branch
+```
+
+If checks are pending, failed, missing, or mergeability is unknown, the command exits nonzero and prints
+the exact blocker. `--dry-run` verifies readiness without merging.

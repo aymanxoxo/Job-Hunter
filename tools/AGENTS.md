@@ -19,6 +19,8 @@
 - Direct PR creation should use every safe credential source before falling back: authenticated `gh`,
   OAuth device flow via `auth-login`, `JH_GITHUB_TOKEN`/`GH_TOKEN`/`GITHUB_TOKEN`, then Git Credential
   Manager via `git credential fill`.
+- Auto-merge must go through `merge-pr`; it only merges explicitly allowed PR classes after GitHub reports
+  the exact head SHA is mergeable and all checks succeeded.
 
 ## Pointers
 - Parent: [../AGENTS.md](../AGENTS.md)
