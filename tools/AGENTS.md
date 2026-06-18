@@ -21,6 +21,8 @@
   Manager via `git credential fill`.
 - Auto-merge must go through `merge-pr`; it only merges explicitly allowed PR classes after GitHub reports
   the exact head SHA is mergeable and all checks succeeded.
+- Before creating a branch for a chunk/code change, ask the user if this PR should opt into CI native
+  auto-merge. Record the answer in the PR body checkbox or `auto-merge` label.
 
 ## Pointers
 - Parent: [../AGENTS.md](../AGENTS.md)

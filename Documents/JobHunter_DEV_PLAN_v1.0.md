@@ -360,6 +360,7 @@ renderers. The Vue store maps events into the timeline model; the component is p
 |----|------|-------|-----------|------------|---------|
 | C-040 | Deterministic workflow harness for AI agents: bootstrap, status, next, start, doctor, gate, GitHub auth status, PR handoff, and post-merge cleanup | `tools/jh.py`, `tools/jh_config.json`, CI workflow, harness tests/docs | C-006 | Harness unit tests cover ledger parsing, readiness, stale merge detection, doctor checks, PR body generation, GitHub credential fallback order, and dry-run planning; `python tools/jh.py gate C-040` passes. | ADR-020 |
 | C-041 | CI-gated auto-merge command for explicitly allowed PR classes | `tools/jh.py`, harness tests/docs | C-040 | `merge-pr` refuses draft/unmergeable/pending/failed/missing-CI PRs, merges only the checked head SHA after green checks, and supports dry-run/branch-delete paths. | ADR-021 |
+| C-042 | CI-native opt-in auto-merge and pre-chunk merge-policy prompt | CI workflow, `tools/jh.py`, PR template, harness docs/tests | C-041 | GitHub Actions skips by default, auto-merges only PRs opted in by label/body checkbox after validations pass, and docs require agents to ask for merge policy before starting work. | ADR-022 |
 
 ### Foundation
 

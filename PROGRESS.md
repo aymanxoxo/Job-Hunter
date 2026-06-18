@@ -9,7 +9,7 @@
 ## Orientation
 
 - **Phase:** Phase 1 — Foundation. **Next gate:** M-03 (chunk C-029).
-- **Last done:** **C-041** — CI-gated auto-merge command for explicitly allowed PR classes. Prior: **C-040** Workflow automation harness merged `796a012`.
+- **Last done:** **C-042** — CI-native opt-in auto-merge and pre-chunk merge-policy prompt. Prior: **C-041** CI-gated auto-merge merged `6886786`.
 - **Next ready:** **C-007** (profile-input ABC), **C-008** (auth resolver — risk-flagged), **C-018** (mock connector), **C-039** (walking skeleton).
 - **Blocked:** none.
 - **Notes:** Dev loop runs via the GitHub remote (the mount can't hold `.git`): the AI works in a
@@ -36,6 +36,7 @@
 | C-006 | BaseAIProvider ABC | Contracts | C-004 | done | 27dd173 |
 | C-040 | Workflow automation harness | Tooling | C-006 | done | 796a012 |
 | C-041 | CI-gated auto-merge command | Tooling | C-040 | done | 6886786 |
+| C-042 | CI-native opt-in auto-merge | Tooling | C-041 | done | (PR) |
 | C-007 | BaseProfileInput ABC + text parser | Contracts | C-004 | todo | — |
 | C-008 | Auth strategy resolver | Contracts | C-002, C-003 | todo | — |
 | C-009 | Plugin discovery | Contracts | C-005, C-006, C-007 | todo | — |
@@ -71,6 +72,7 @@
 
 ## Changelog (newest first)
 
+- 2026-06-18 — **C-042** CI-native opt-in auto-merge on `tools/ci-native-auto-merge`: CI runs `ci-auto-merge` after validations, skips unless `auto-merge` label or checked PR checkbox is present, and docs require the agent to ask for merge policy before starting work. 82/82 tests green; full gate via `python tools/jh.py gate C-040 --ci`.
 - 2026-06-18 — **C-041** CI-gated auto-merge command on `tools/ci-gated-auto-merge`: `python tools/jh.py merge-pr <PR_NUMBER>` checks PR state, mergeability, check runs/statuses, and exact head SHA before merging. Full gate via `python tools/jh.py gate C-040`. Merged `6886786` (PR #16).
 - 2026-06-18 — **C-040** Workflow automation harness on `chunk/C-040-workflow-automation-harness`: `tools/jh.py` (bootstrap/status/next/start/doctor/gate/pr-ready/create-pr/auth-status/auth-login/guide/after-merge), deterministic doctor checks, GitHub credential/OAuth resolution, CI workflow, and PR evidence generation. 70/70 tests green; full gate via `python tools/jh.py gate C-040`. Merged `796a012` (PR #14).
 - 2026-06-18 — **C-006** BaseAIProvider ABC on `chunk/C-006-base-ai-provider`: `core/ai_providers/base_provider.py` (abstract `generate_criteria` + `score_jobs`, ordered `auth_methods`, `initialize`) + reusable provider contract checks; `core/ai_providers/AGENTS.md`. 44/44 tests green, ruff clean. Merged `27dd173` (PR #12).

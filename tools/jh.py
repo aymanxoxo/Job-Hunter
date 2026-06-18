@@ -458,9 +458,14 @@ def store_github_token(root: Path, token: str) -> None:
 
 
 def evaluate_pr_merge_readiness(
-    pr: dict[str, Any], checks: list[PullRequestCheck], statuses: list[dict[str, Any]]
+    pr: dict[str, Any],
+    checks: list[PullRequestCheck],
+    statuses: list[dict[str, Any]],
+    ignored_checks: set[str] | None = None,
 ) -> PullRequestReadiness:
     issues: list[str] = []
+    ignored_checks = ignored_checks or set()
+    effective_checks = [check for check in checks if check.name not in ignored_checks]
     if pr.get("state") != "open":
         issues.append(f"PR is not open: {pr.get('state')}")
     if pr.get("draft"):
@@ -469,9 +474,9 @@ def evaluate_pr_merge_readiness(
     mergeable_state = pr.get("mergeable_state", "unknown")
     if mergeable is not True:
         issues.append(f"PR is not confirmed mergeable: {mergeable_state}")
-    if not checks:
+    if not effective_checks:
         issues.append("No CI check runs found for PR head")
-    for check in checks:
+    for check in effective_checks:
         if check.status != "completed":
             issues.append(f"Check '{check.name}' is {check.status}")
         elif check.conclusion != "success":
@@ -489,6 +494,24 @@ def evaluate_pr_merge_readiness(
     )
 
 
+def pr_requests_auto_merge(
+    pr: dict[str, Any],
+    *,
+    label: str = "auto-merge",
+    body_flag: str = "Auto-merge after CI",
+) -> bool:
+    labels = {
+        item.get("name", "").strip().lower()
+        for item in pr.get("labels", [])
+        if isinstance(item, dict)
+    }
+    if label.lower() in labels:
+        return True
+    body = pr.get("body") or ""
+    flag_re = re.compile(rf"- \[[xX]\]\s*{re.escape(body_flag)}")
+    return flag_re.search(body) is not None
+
+
 def generate_pr_title(chunk_id: str, slug: str) -> str:
     return f"feat(workflow): add {slug}  [{chunk_id}]"
 
@@ -500,7 +523,9 @@ def generate_pr_body(
     design_note: str,
     evidence: GateEvidence,
     risk_read: str,
+    auto_merge: bool = False,
 ) -> str:
+    auto_merge_checkbox = "x" if auto_merge else " "
     return f"""## Chunk
 {chunk_id}
 
@@ -528,6 +553,9 @@ def generate_pr_body(
 
 ## Risk read
 {risk_read}
+
+## Merge policy
+- [{auto_merge_checkbox}] Auto-merge after CI
 """
 
 
@@ -818,6 +846,7 @@ def command_pr_ready(args: argparse.Namespace) -> int:
         design_note=args.design_note,
         evidence=evidence,
         risk_read=args.risk_read,
+        auto_merge=args.auto_merge,
     )
     _write_text(root / "output" / "agent" / f"{args.chunk}-pr.md", f"{title}\n\n{body}")
     print(title)
@@ -895,6 +924,7 @@ def command_merge_pr(args: argparse.Namespace) -> int:
         pr_number=args.pr,
         wait_seconds=args.wait,
         poll_seconds=args.poll,
+        ignored_checks=set(getattr(args, "ignore_check", [])),
     )
     if not readiness.ready:
         print("PR is not safe to auto-merge:")
@@ -916,6 +946,51 @@ def command_merge_pr(args: argparse.Namespace) -> int:
     print(f"merged: {merge['sha'][:7]}")
     if args.delete_branch and readiness.head_ref:
         deleted = delete_remote_branch_via_api(remote, credential.token, readiness.head_ref)
+        print(f"deleted branch: {readiness.head_ref}" if deleted else "branch delete skipped")
+    return 0
+
+
+def command_ci_auto_merge(args: argparse.Namespace) -> int:
+    event_path = Path(os.environ.get("GITHUB_EVENT_PATH", ""))
+    token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+    repository = os.environ.get("GITHUB_REPOSITORY", "")
+    if not event_path.exists() or not token or not repository:
+        print("CI auto-merge skipped: missing GitHub Actions event, token, or repository.")
+        return 0
+    event = json.loads(event_path.read_text(encoding="utf-8"))
+    pr_event = event.get("pull_request")
+    if not pr_event:
+        print("CI auto-merge skipped: event is not a pull_request.")
+        return 0
+    remote = f"https://github.com/{repository}"
+    pr_number = int(pr_event["number"])
+    pr = get_pull_request_via_api(remote, token, pr_number)
+    if not pr_requests_auto_merge(pr, label=args.label, body_flag=args.body_flag):
+        print("CI auto-merge skipped: PR did not opt in.")
+        return 0
+    readiness = wait_for_pr_merge_readiness(
+        remote=remote,
+        token=token,
+        pr_number=pr_number,
+        wait_seconds=args.wait,
+        poll_seconds=args.poll,
+        ignored_checks=set(args.ignore_check),
+    )
+    if not readiness.ready:
+        print("CI auto-merge blocked:")
+        for issue in readiness.issues:
+            print(f"- {issue}")
+        return 1
+    merge = merge_pr_via_api(
+        remote=remote,
+        token=token,
+        pr_number=pr_number,
+        head_sha=readiness.head_sha,
+        method=args.method,
+    )
+    print(f"CI auto-merged PR #{pr_number}: {merge['sha'][:7]}")
+    if args.delete_branch and readiness.head_ref:
+        deleted = delete_remote_branch_via_api(remote, token, readiness.head_ref)
         print(f"deleted branch: {readiness.head_ref}" if deleted else "branch delete skipped")
     return 0
 
@@ -1140,6 +1215,7 @@ def wait_for_pr_merge_readiness(
     pr_number: int,
     wait_seconds: int,
     poll_seconds: int,
+    ignored_checks: set[str] | None = None,
     sleep=time.sleep,
 ) -> PullRequestReadiness:
     deadline = time.monotonic() + wait_seconds
@@ -1148,7 +1224,9 @@ def wait_for_pr_merge_readiness(
         pr = get_pull_request_via_api(remote, token, pr_number)
         checks = get_check_runs_via_api(remote, token, pr["head"]["sha"])
         statuses = get_statuses_via_api(remote, token, pr["head"]["sha"])
-        readiness = evaluate_pr_merge_readiness(pr, checks, statuses)
+        readiness = evaluate_pr_merge_readiness(
+            pr, checks, statuses, ignored_checks=ignored_checks
+        )
         if readiness.ready:
             return readiness
         last_readiness = readiness
@@ -1334,6 +1412,7 @@ def build_parser() -> argparse.ArgumentParser:
     pr_ready.add_argument("--summary", default="Adds deterministic workflow automation.")
     pr_ready.add_argument("--design-note", default="Pure workflow checks with a thin CLI shell.")
     pr_ready.add_argument("--risk-read", default="Low: tooling-only chunk.")
+    pr_ready.add_argument("--auto-merge", action="store_true")
     pr_ready.set_defaults(func=command_pr_ready)
 
     create_pr = sub.add_parser("create-pr")
@@ -1346,9 +1425,20 @@ def build_parser() -> argparse.ArgumentParser:
     merge_pr.add_argument("--wait", type=int, default=0)
     merge_pr.add_argument("--poll", type=int, default=10)
     merge_pr.add_argument("--method", choices=["merge", "squash", "rebase"], default="merge")
+    merge_pr.add_argument("--ignore-check", action="append", default=[])
     merge_pr.add_argument("--delete-branch", action="store_true")
     merge_pr.add_argument("--dry-run", action="store_true")
     merge_pr.set_defaults(func=command_merge_pr)
+
+    ci_auto_merge = sub.add_parser("ci-auto-merge")
+    ci_auto_merge.add_argument("--label", default="auto-merge")
+    ci_auto_merge.add_argument("--body-flag", default="Auto-merge after CI")
+    ci_auto_merge.add_argument("--wait", type=int, default=600)
+    ci_auto_merge.add_argument("--poll", type=int, default=10)
+    ci_auto_merge.add_argument("--method", choices=["merge", "squash", "rebase"], default="merge")
+    ci_auto_merge.add_argument("--ignore-check", action="append", default=["auto-merge"])
+    ci_auto_merge.add_argument("--delete-branch", action="store_true")
+    ci_auto_merge.set_defaults(func=command_ci_auto_merge)
 
     auth_status = sub.add_parser("auth-status")
     auth_status.add_argument("--json", action="store_true")

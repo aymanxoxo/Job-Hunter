@@ -79,9 +79,18 @@ Use auto-merge only when the user has allowed it for the PR class. The harness r
 GitHub reports the PR is open, non-draft, mergeable, and every check run/status for the head commit has
 completed successfully.
 
+Before starting a chunk or code change, ask the user whether the resulting PR should auto-merge after
+green CI. Encode the answer with either:
+
+- the `auto-merge` label, or
+- the checked PR body line `- [x] Auto-merge after CI`.
+
 ```bash
 python tools/jh.py merge-pr <PR_NUMBER> --wait 600 --delete-branch
 ```
 
 If checks are pending, failed, missing, or mergeability is unknown, the command exits nonzero and prints
 the exact blocker. `--dry-run` verifies readiness without merging.
+
+The GitHub Actions workflow runs the same policy automatically after the validation job. PRs that do not
+opt in are skipped with a successful no-op.

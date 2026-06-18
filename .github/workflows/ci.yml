@@ -5,6 +5,9 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   python:
     runs-on: ubuntu-latest
@@ -19,3 +22,27 @@ jobs:
         run: .venv/bin/python tools/jh.py doctor --ci
       - name: Gate
         run: .venv/bin/python tools/jh.py gate --ci
+
+  auto-merge:
+    if: github.event_name == 'pull_request'
+    needs: python
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      checks: read
+      statuses: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: CI-gated auto-merge
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >
+          python tools/jh.py ci-auto-merge
+          --wait 600
+          --poll 10
+          --ignore-check auto-merge
+          --delete-branch
