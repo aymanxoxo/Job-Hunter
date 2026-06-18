@@ -1,4 +1,7 @@
-"""C-004 — Job and SearchCriteria data models (SDD §3)."""
+"""C-004 — Job and SearchCriteria data models (SDD §3).
+
+Includes hardening from review: list/tuple containers are immutable (no in-place append).
+"""
 import pytest
 from pydantic import ValidationError
 
@@ -22,13 +25,20 @@ def test_job_requires_core_fields():
 def test_job_optional_defaults():
     j = _job()
     assert j.location is None and j.description is None and j.score is None
-    assert j.red_flags == []
+    assert j.red_flags == ()
 
 
 def test_job_is_frozen():
     j = _job()
     with pytest.raises(FROZEN):
         j.title = "Other"
+
+
+def test_job_red_flags_is_immutable_tuple():
+    j = _job(red_flags=["a"])
+    assert j.red_flags == ("a",)
+    with pytest.raises(AttributeError):
+        j.red_flags.append("x")  # tuple has no append
 
 
 def test_job_score_must_be_0_to_100():
@@ -49,7 +59,7 @@ def test_job_scoring_does_not_mutate_input():
 
 def test_criteria_defaults():
     c = SearchCriteria()
-    assert c.titles == [] and c.keywords == [] and c.exclude_keywords == []
+    assert c.titles == () and c.keywords == () and c.exclude_keywords == ()
     assert c.min_score_threshold == DEFAULT_MIN_SCORE == 40
     assert c.max_results == DEFAULT_MAX_RESULTS == 50
     assert c.date_posted_days is None and c.raw_profile is None
@@ -57,9 +67,16 @@ def test_criteria_defaults():
 
 def test_criteria_accepts_values_and_is_frozen():
     c = SearchCriteria(titles=["DevOps Lead"], keywords=["k8s"], min_score_threshold=70)
-    assert c.titles == ["DevOps Lead"] and c.min_score_threshold == 70
+    assert c.titles == ("DevOps Lead",) and c.min_score_threshold == 70
     with pytest.raises(FROZEN):
         c.titles = ["x"]
+
+
+def test_criteria_lists_are_immutable_tuples():
+    c = SearchCriteria(titles=["a"], keywords=["b"])
+    assert c.titles == ("a",) and c.keywords == ("b",)
+    with pytest.raises(AttributeError):
+        c.titles.append("x")
 
 
 def test_criteria_bounds():

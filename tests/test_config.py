@@ -1,8 +1,18 @@
-"""C-003 — config models, YAML loader, env overrides, no-secrets rule (SDD §9)."""
+"""C-003 — config models, YAML loader, env overrides, no-secrets rule (SDD §9).
+
+Includes hardening from review (fix/config-models-hardening): strict unknown-key rejection,
+output.format enum, and delay_min <= delay_max.
+"""
 import pytest
 from pydantic import ValidationError
 
-from core.config import Config, apply_env_overrides, load_config
+from core.config import (
+    Config,
+    ConnectorSettings,
+    OutputConfig,
+    apply_env_overrides,
+    load_config,
+)
 
 
 def test_defaults():
@@ -55,3 +65,33 @@ def test_auth_must_be_env_var_names_not_secrets():
 def test_auth_accepts_valid_env_name():
     c = Config(auth={"gemini_api_key_env": "MY_GEMINI_KEY"})
     assert c.auth.gemini_api_key_env == "MY_GEMINI_KEY"
+
+
+def test_unknown_keys_are_rejected():
+    # a pasted secret under an unknown key must FAIL loudly — config.yaml stays safe to commit
+    with pytest.raises(ValidationError):
+        Config(auth={"gemini_api_key": "sk-secret"})   # unknown auth key (no _env)
+    with pytest.raises(ValidationError):
+        ConnectorSettings(api_key="sk-secret")          # unknown connector field
+    with pytest.raises(ValidationError):
+        Config(unknown_section={})                      # unknown top-level section
+
+
+def test_unknown_key_in_yaml_rejected(tmp_path):
+    p = tmp_path / "config.yaml"
+    p.write_text("connectors:\n  linkedin:\n    api_key: sk-LEAK\n")
+    with pytest.raises(ValidationError):
+        load_config(p, env={})
+
+
+def test_output_format_is_constrained():
+    for ok in ("csv", "json", "both"):
+        assert OutputConfig(format=ok).format == ok
+    with pytest.raises(ValidationError):
+        OutputConfig(format="banana")
+
+
+def test_connector_delay_min_le_max():
+    ConnectorSettings(delay_min=1.0, delay_max=1.0)
+    with pytest.raises(ValidationError):
+        ConnectorSettings(delay_min=9.0, delay_max=1.0)

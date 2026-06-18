@@ -15,5 +15,5 @@ the output format. Any setting can be overridden by an environment variable (e.g
 
 **Trust / security rule:** `config.yaml` **never** holds secrets. The `auth.*` entries are environment-
 variable *names* (e.g. `GEMINI_API_KEY`), and a validator rejects anything that looks like a pasted key —
-so the config file is always safe to commit or share. Real credentials live only in env vars / the OS
+so the config file is always safe to commit or share — enforced: unknown keys, including a pasted secret, fail `load_config` (ADR-018). Real credentials live only in env vars / the OS
 secret store (ADR-002, SDD §8).
