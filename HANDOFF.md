@@ -55,7 +55,7 @@ Git Credential Manager before it falls back to the compare URL or patch handoff.
 `python tools/jh.py gate C-XXX`, which runs the deterministic doctor, focused tests, full pytest, ruff,
 and import smoke checks.
 - Auto-merge is allowed only when the user has explicitly allowed it for the PR class. Use
-  `python tools/jh.py merge-pr <PR_NUMBER> --wait 600`; it refuses draft, unmergeable, pending, failed,
+  `python tools/jh.py merge-pr <PR_NUMBER>` (async; poll `pr-status <PR_NUMBER>`); it refuses draft, unmergeable, pending, failed,
   or missing-CI PRs.
 - CI also runs the same policy natively: when a PR has the `auto-merge` label or checked
   `Auto-merge after CI` PR-body box, the workflow merges it after all validation jobs pass.

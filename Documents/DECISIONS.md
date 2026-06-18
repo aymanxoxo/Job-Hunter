@@ -386,3 +386,26 @@ and encode the answer in the PR.
 **Consequences.** Green opted-in PRs can merge even if the agent disconnects. Manual review remains the
 default because no label/checkbox means the CI job skips. The cost is stricter PR metadata discipline:
 agents must capture the user's merge-policy choice before implementation.
+
+
+## ADR-023 — Long-running operations are async-by-default; `--wait` is opt-in and bounded
+
+**Context.** Agents hung for minutes inside a single tool call. `merge-pr <#> --wait 600` (the README's
+normal flow) polled CI for up to 600s, and because readiness treated an already-merged PR as "not open →
+not ready", an agent that ran `merge-pr` *after* CI had already merged the PR (and deleted the branch)
+re-polled a closed PR for the full timeout before giving up. Branch deletion and CI auto-merge showed the
+same "still waiting after it finished" symptom.
+
+**Decision.** Agent-facing long operations are **async-by-default and idempotent**, with a fast,
+non-blocking poll. `wait_for_pr_merge_readiness` short-circuits the moment a PR is already merged — no
+check/status polling, no sleep — and reports `already_merged`; `merge-pr` / `ci-auto-merge` treat that as
+immediate success and still run the (idempotent) branch delete. An already-absent branch is success, not
+an error (`branch already absent`). `--wait` is opt-in and **hard-capped** at `MAX_WAIT_SECONDS` (300s)
+via `clamp_wait_seconds`, so no agent path can block unbounded; `merge-pr` defaults to `--wait 0` (check
+once). A new `pr-status <#>` command does a single non-blocking readiness read (`merged` / `ready` /
+`pending`, `--json`) so agents poll between turns instead of holding the call open.
+
+**Consequences.** Agents never sit in an unbounded blocking call, and re-running a merge/delete after the
+op already completed returns success at once. Callers that want to block opt in with a bounded `--wait`;
+CI's `ci-auto-merge` keeps a bounded wait (default 300s). The cost is a small, documented protocol change
+(README/HANDOFF): poll `pr-status` rather than `merge-pr --wait 600`.
