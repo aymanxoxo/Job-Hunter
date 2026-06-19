@@ -40,7 +40,7 @@ Each module folder gets its own `AGENTS.md` (following the template below) when 
 | Connectors (built-in) | `core/connectors/` | `BaseConnector` ABC + Indeed / LinkedIn / Mock |
 | AI providers (built-in) | `core/ai_providers/` | `BaseAIProvider` ABC + Gemini / Ollama / OpenRouter |
 | Auth | `core/auth/` | Ordered auth strategy resolver; OAuth device flow and session store are later chunks |
-| Engine | `core/ai_engine/` | Pure prompt/parsing/scrub/batching helpers + later facade |
+| Engine | `core/ai_engine/` | AI facade + pure prompt/parsing/scrub/batching helpers |
 | Runner | `core/runner.py` | Plugin loader (importlib) + pipeline orchestrator |
 | Connector drop-zone | `connectors/` | User-added connectors, auto-discovered |
 | Provider drop-zone | `ai_providers/` | User-added providers, auto-discovered |
