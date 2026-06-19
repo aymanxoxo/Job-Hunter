@@ -12,6 +12,7 @@ pipeline runner, and shared infra. Pure logic stays side-effect-free; I/O lives 
 - `ai_providers/` — `BaseAIProvider` ABC + built-in Ollama provider (see `ai_providers/AGENTS.md`). **[C-006, C-015 · present]**
 - `walking_skeleton.py` — C-039 stub profile -> criteria -> fixture search -> score -> JSON export.
 - `pipeline.py` — pure merge/dedup/sort/filter transforms for runner pipeline results. **[C-022 · present]**
+- `progress.py` — stdout protocol progress events with matching stderr logs. **[C-023 · present]**
 - `profile_inputs/` — `BaseProfileInput` ABC + `TextProfileInput` (see `profile_inputs/AGENTS.md`). **[C-007 · present]**
 - `runner.py` — plugin discovery helper for built-in and user drop-zone modules. **[C-009 · present]**
 - `auth/` — ordered auth strategy resolver + encrypted session store (see `auth/AGENTS.md`). **[C-008, C-019 · present]**
@@ -59,6 +60,9 @@ pipeline runner, and shared infra. Pure logic stays side-effect-free; I/O lives 
 - **Pipeline transforms (`pipeline.py`, C-022).** `merge_results()`, `dedup_by_url()`,
   `sort_by_score()`, and `filter_below_threshold()` are pure helpers for runner steps 8-10; they do no
   config reads, logging, filesystem, or network work.
+- **Progress events (`progress.py`, C-023).** `ProgressEmitter` writes validated progress protocol
+  events to stdout and emits a matching INFO log to stderr; metric payloads are redacted before both
+  writes.
 
 ## Pointers
 - Parent: [../AGENTS.md](../AGENTS.md) · Spec: `../Documents/JobHunter_SDD_v1.1.md` · Logging std: dev plan §6.
