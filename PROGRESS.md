@@ -10,8 +10,8 @@
 
 <!-- jh:orientation:start -->
 - **Phase:** Phase 1 - Foundation. **Next gate:** M-03 (chunk C-029).
-- **Last done:** **C-048** - Deterministic PR review-comment fetch (`e5ba1d8`). Prior done: **C-047** - One-command chunk context brief (`6805055`); **C-046** - Generated PROGRESS orientation + sync (`75e1ae2`).
-- **Next ready:** **C-016** - Google OAuth device flow (risk-flagged; design sign-off required); **C-020** - Indeed connector (risk-flagged; design sign-off required); **C-021** - LinkedIn connector (risk-flagged; design sign-off required); **C-022** - Pure pipeline transforms; **C-023** - Progress event emitter; **C-024** - Output exporter; **C-030** - OpenRouter provider; **C-038** - Authoring docs — **M-06 gate**; **C-049** - Plugin-load fail-graceful + raw read-only.
+- **Last done:** **C-049** - Plugin-load fail-graceful + raw read-only (merge pending). Prior done: **C-048** - Deterministic PR review-comment fetch (`e5ba1d8`); **C-047** - One-command chunk context brief (`6805055`).
+- **Next ready:** **C-016** - Google OAuth device flow (risk-flagged; design sign-off required); **C-020** - Indeed connector (risk-flagged; design sign-off required); **C-021** - LinkedIn connector (risk-flagged; design sign-off required); **C-022** - Pure pipeline transforms; **C-023** - Progress event emitter; **C-024** - Output exporter; **C-030** - OpenRouter provider; **C-038** - Authoring docs — **M-06 gate**.
 - **Blocked:** none.
 - **Notes:** Dev loop runs through short-lived GitHub PR branches; the user reviews and merges. See [ADR-014/015/016](Documents/DECISIONS.md).
 - **Protocol:** each chunk runs design -> test -> impl -> gate -> verify -> land (plan section 3.3); risky chunks pause for Design sign-off.
@@ -42,7 +42,7 @@
 | C-046 | Generated PROGRESS orientation + sync | Tooling | C-044 | done | 75e1ae2 |
 | C-047 | One-command chunk context brief | Tooling | C-045 | done | 6805055 |
 | C-048 | Deterministic PR review-comment fetch | Tooling | C-043 | done | e5ba1d8 |
-| C-049 | Plugin-load fail-graceful + raw read-only | Hardening | C-004, C-009 | todo | — |
+| C-049 | Plugin-load fail-graceful + raw read-only | Hardening | C-004, C-009 | done | (PR) |
 | C-050 | Retire walking skeleton + re-point CLI | Cleanup | C-024, C-025, C-026 | todo | — |
 | C-007 | BaseProfileInput ABC + text parser | Contracts | C-004 | done | ff83ca3 |
 | C-008 | Auth strategy resolver | Contracts | C-002, C-003 | done | 7d96047 |
@@ -79,6 +79,7 @@
 
 ## Changelog (newest first)
 
+- 2026-06-19 - **C-049** Plugin-load fail-graceful + raw read-only on `chunk/C-049-review-hardening`: `core.runner.discover_plugins` now catches per-file import errors and warn+skips (one broken drop-in plugin no longer aborts discovery of the rest); `Job.raw` is a read-only mapping (`MappingProxyType`) with a dict serializer. From the C-019 review. 2 focused tests added; gate green (199 pytest, ruff, doctor). (PR pending.)
 - 2026-06-19 - **C-049** (urgent, todo) + **C-050** (todo) added from the C-019 code-review checkpoint: C-049 hardens plugin discovery to be fail-graceful (per-file import errors warn+skip) and makes `Job.raw` read-only; C-050 retires the walking-skeleton stubs and re-points the CLI once the real runner/output/CLI land (deps C-024/C-025/C-026).
 - 2026-06-19 - **C-019** Session store on `chunk/C-019-session-store`: `core.auth.SessionStore` encrypts Playwright storage-state dictionaries with Fernet, stores a PBKDF2HMAC-derived machine key through keyring, supports save/load/exists/delete, rejects unsafe session names, and keeps encrypted session files under `~/.jobhunter/sessions/*.enc` by default. Gate green (`197` pytest, `ruff`, import smoke). Merged `9fb5ce0` (PR #39).
 - 2026-06-19 - **C-018** Mock connector + fixtures on `chunk/C-018-mock-connector`: `core.connectors.MockConnector` loads deterministic jobs from `fixtures/jobs.json` or an injected fixture path, enforces `source = "mock"`, returns all jobs when no keywords are provided, and filters with a case-insensitive keyword match against title/description. Gate green (`188` pytest, `ruff`, import smoke). Merged `5acca79` (PR #38).

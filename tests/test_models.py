@@ -86,3 +86,12 @@ def test_criteria_bounds():
         SearchCriteria(max_results=0)
     with pytest.raises(ValidationError):
         SearchCriteria(date_posted_days=0)
+
+
+def test_job_raw_is_read_only():
+    # C-049: raw is a read-only mapping (frozen model already blocks reassignment).
+    job = _job(raw={"k": "v"})
+    assert dict(job.raw) == {"k": "v"}
+    with pytest.raises(FROZEN):
+        job.raw["k"] = "x"
+    assert job.model_dump()["raw"] == {"k": "v"}

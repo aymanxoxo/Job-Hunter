@@ -11,6 +11,8 @@ import inspect
 from pathlib import Path
 from typing import TypeVar
 
+from core.logging import get_logger
+
 T = TypeVar("T", bound=type)
 
 
@@ -20,11 +22,20 @@ def discover_plugins(directory: str | Path, base_class: T) -> list[T]:
     if not plugin_dir.exists():
         return []
 
+    log = get_logger("core.runner.discovery")
     plugins: list[T] = []
     for py_file in sorted(plugin_dir.glob("*.py")):
         if py_file.name.startswith("_") or py_file.name.startswith("base_"):
             continue
-        module = _load_module(py_file)
+        try:
+            module = _load_module(py_file)
+        except Exception as exc:
+            log.warning(
+                "plugin import failed; skipped",
+                plugin_file=py_file.name,
+                error=str(exc),
+            )
+            continue
         for _, obj in inspect.getmembers(module, inspect.isclass):
             if obj is base_class or inspect.isabstract(obj):
                 continue

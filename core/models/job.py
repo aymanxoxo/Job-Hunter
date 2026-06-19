@@ -5,9 +5,12 @@ engine produces a *new* scored copy via ``model_copy`` rather than mutating the 
 """
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import datetime
+from types import MappingProxyType
+from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
 
 class Job(BaseModel):
@@ -30,4 +33,13 @@ class Job(BaseModel):
     match_reason: str | None = None
     red_flags: tuple[str, ...] = ()
 
-    raw: dict | None = None
+    raw: Mapping[str, Any] | None = None
+
+    @field_validator("raw", mode="after")
+    @classmethod
+    def _freeze_raw(cls, value: Mapping[str, Any] | None) -> Mapping[str, Any] | None:
+        return None if value is None else MappingProxyType(dict(value))
+
+    @field_serializer("raw")
+    def _serialize_raw(self, value: Mapping[str, Any] | None) -> dict[str, Any] | None:
+        return None if value is None else dict(value)

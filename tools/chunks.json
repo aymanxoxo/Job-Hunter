@@ -745,7 +745,8 @@
       ],
       "risk_flagged": false,
       "tests": [
-        "tests/test_runner_plugin_discovery.py"
+        "tests/test_runner_plugin_discovery.py",
+        "tests/test_models.py"
       ],
       "sdd_anchor": "",
       "files": [
