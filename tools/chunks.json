@@ -735,6 +735,41 @@
         "tools/jh_engine.py",
         "tools/README.md"
       ]
+    },
+    "C-049": {
+      "title": "Plugin-load fail-graceful + raw read-only",
+      "stage": "Hardening",
+      "depends_on": [
+        "C-004",
+        "C-009"
+      ],
+      "risk_flagged": false,
+      "tests": [
+        "tests/test_runner_plugin_discovery.py"
+      ],
+      "sdd_anchor": "",
+      "files": [
+        "core/runner.py",
+        "core/models/job.py"
+      ]
+    },
+    "C-050": {
+      "title": "Retire walking skeleton + re-point CLI",
+      "stage": "Cleanup",
+      "depends_on": [
+        "C-024",
+        "C-025",
+        "C-026"
+      ],
+      "risk_flagged": false,
+      "tests": [
+        "tests/test_walking_skeleton.py"
+      ],
+      "sdd_anchor": "",
+      "files": [
+        "core/walking_skeleton.py",
+        "ui/cli/cli.py"
+      ]
     }
   }
 }
