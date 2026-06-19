@@ -425,7 +425,9 @@
         "C-002"
       ],
       "risk_flagged": false,
-      "tests": [],
+      "tests": [
+        "tests/test_progress.py"
+      ],
       "sdd_anchor": "§9 (this doc), §11.1",
       "files": [
         "core/progress.py"
