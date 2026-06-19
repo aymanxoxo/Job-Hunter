@@ -1066,6 +1066,11 @@ DEMO_PROJECT = jh_project.ProjectConfig(
     test_flags=("-v",),
     lint_command_tail=("-m", "flake8"),
     default_gate_chunk="T-01",
+    orientation_start_marker="<!-- demo:orientation:start -->",
+    orientation_end_marker="<!-- demo:orientation:end -->",
+    orientation_prelude_lines=("- **Phase:** Demo.",),
+    orientation_footer_lines=("- **Protocol:** Demo.",),
+    orientation_recent_done=2,
     cli_prog="demo",
     cli_description="Demo workflow",
     guide_text="demo guide",
@@ -1126,3 +1131,123 @@ def test_doctor_flags_engine_purity_violation(tmp_path):
     issues = jh._check_engine_purity(tmp_path)
     assert {i.code for i in issues} == {"engine.purity"}
     assert any("JobHunter" in i.message for i in issues)
+
+
+# --- C-046: generated PROGRESS orientation + merge-hash sync ---
+
+
+def test_engine_renders_orientation_from_chunk_graph():
+    chunks = {
+        "T-01": engine.Chunk("T-01", "One", "Setup", (), "done", "aaa1111", False),
+        "T-02": engine.Chunk("T-02", "Two", "Build", ("T-01",), "done", "bbb2222", False),
+        "T-03": engine.Chunk("T-03", "Three", "Build", ("T-02",), "todo", "-", False),
+        "T-04": engine.Chunk("T-04", "Four", "Build", ("T-02",), "blocked", "-", True),
+    }
+
+    orientation = engine.compute_orientation(chunks, recent_done_limit=2)
+    rendered = engine.render_orientation(
+        orientation,
+        prelude_lines=("- **Phase:** Demo phase.",),
+        footer_lines=("- **Protocol:** Demo protocol.",),
+    )
+
+    assert rendered == "\n".join(
+        [
+            "- **Phase:** Demo phase.",
+            "- **Last done:** **T-02** - Two (`bbb2222`). "
+            "Prior done: **T-01** - One (`aaa1111`).",
+            "- **Next ready:** **T-03** - Three.",
+            "- **Blocked:** **T-04** - Four (risk-flagged; design sign-off required).",
+            "- **Protocol:** Demo protocol.",
+        ]
+    )
+
+
+SYNC_PROGRESS = """\
+# PROGRESS
+
+## Orientation
+
+<!-- jh:orientation:start -->
+- stale manual text
+<!-- jh:orientation:end -->
+
+## Ledger
+
+| ID | Title | Stage | Depends on | Status | Merge |
+|----|-------|-------|-----------|--------|--------|
+| C-001 | One | Setup | - | done | aaa1111 |
+| C-002 | Two | Build | C-001 | done | (PR) |
+| C-003 | Three | Build | C-002 | todo | - |
+"""
+
+
+def test_sync_progress_rewrites_orientation_and_backfills_merge_hash(tmp_path):
+    progress = tmp_path / "PROGRESS.md"
+    progress.write_text(SYNC_PROGRESS, encoding="utf-8")
+
+    changed = jh.sync_progress(tmp_path, merge_hashes={"C-002": "bbb2222"})
+
+    text = progress.read_text(encoding="utf-8")
+    assert changed is True
+    assert "- stale manual text" not in text
+    assert "| C-002 | Two | Build | C-001 | done | bbb2222 |" in text
+    assert "- **Last done:** **C-002** - Two (`bbb2222`)." in text
+    assert "- **Next ready:** **C-003** - Three." in text
+
+
+def test_doctor_flags_stale_orientation_and_passes_after_sync(tmp_path):
+    (tmp_path / ".github").mkdir()
+    (tmp_path / ".github" / "PULL_REQUEST_TEMPLATE.md").write_text(
+        "## Design note\n## Test evidence\n## Definition of Done\n## Risk read\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "PROGRESS.md").write_text(
+        SYNC_PROGRESS.replace("(PR)", "bbb2222"), encoding="utf-8"
+    )
+
+    issues = jh.run_doctor_checks(tmp_path, git_messages=[], merge_hashes={})
+    assert any(issue.code == "progress.orientation_stale" for issue in issues)
+
+    assert jh.sync_progress(tmp_path, merge_hashes={}) is True
+    issues = jh.run_doctor_checks(tmp_path, git_messages=[], merge_hashes={})
+    assert not any(issue.code == "progress.orientation_stale" for issue in issues)
+
+
+def test_parse_chunk_merge_log_ignores_docs_sync_and_uses_chunk_merge_body():
+    log_text = (
+        "ddd4444\x1fMerge pull request #23 from owner/docs/C-007-merge-sync\n\n"
+        "docs(progress): record C-007 merge hash\n\x1e"
+        "ccc3333\x1fMerge pull request #22 from owner/chunk/C-007-base-profile-input\n\n"
+        "feat(profile): add profile input  [C-007]\n\x1e"
+    )
+
+    assert jh.parse_chunk_merge_log(log_text) == {"C-007": "ccc3333"}
+
+
+def test_sync_command_is_registered():
+    parser = jh.build_parser()
+    args = parser.parse_args(["sync"])
+    assert args.func is jh.command_sync
+
+
+def test_after_merge_invokes_progress_sync(monkeypatch, tmp_path, capsys):
+    synced = []
+
+    def fake_run(command, *, cwd=jh.ROOT, check=True):
+        if command[:3] == ("git", "log", "origin/main"):
+            return jh.CommandResult(command, 0, "abcdef1234567890\n", "")
+        return jh.CommandResult(command, 0, "", "")
+
+    monkeypatch.setattr(jh, "run", fake_run)
+    monkeypatch.setattr(jh, "sync_progress", lambda root: synced.append(root) or True)
+    args = SimpleNamespace(
+        root=str(tmp_path),
+        chunk="C-046",
+        branch="chunk/C-046-progress-sync",
+        dry_run=False,
+    )
+
+    assert jh.command_after_merge(args) == 0
+    assert synced == [tmp_path]
+    assert "synced PROGRESS.md" in capsys.readouterr().out

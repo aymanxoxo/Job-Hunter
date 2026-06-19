@@ -17,7 +17,8 @@ you productive fast; the repo is the source of truth.
 ## How to work — one chunk at a time, test-first
 - Start with the deterministic harness: `python tools/jh.py bootstrap`, then `python tools/jh.py status`
   and `python tools/jh.py next`. Use the docs for judgment and context, but let the harness do the
-  mechanical state discovery whenever possible.
+  mechanical state discovery whenever possible. Run `python tools/jh.py sync` after ledger edits; it
+  regenerates the sentinel-protected `PROGRESS.md` orientation and backfills merge placeholders.
 - Before starting a chunk or code change, ask the user whether the resulting PR should be auto-merged
   after green CI or held for manual review. Encode the answer in the PR body checkbox
   `Auto-merge after CI` or with the `auto-merge` label.
@@ -30,12 +31,13 @@ you productive fast; the repo is the source of truth.
   immutable models (frozen + tuples), structured logging via `core.logging`, **stderr only** (stdout is
   the sidecar IPC channel).
 - Each chunk = **one commit** on a `chunk/C-XXX-slug` branch: `<type>(<scope>): <summary>  [C-XXX]`;
-  update the `PROGRESS` ledger row to `done` in that commit; add tech/business docs where warranted
-  (ADR-017: module `AGENTS.md` + `Documents/PRODUCT_NOTES.md`).
+  update the `PROGRESS` ledger row to `done` and run `jh.py sync` in that commit; add tech/business docs
+  where warranted (ADR-017: module `AGENTS.md` + `Documents/PRODUCT_NOTES.md`).
 - PR descriptions: generate them with `python tools/jh.py pr-ready C-XXX` when possible; every handoff
   stays short and human-readable (design note + red→green test evidence + full gate evidence + a
   one-line risk read).
-  After the user merges a chunk's PR: pull `main`, tag the merge commit `C-XXX`, delete the branch.
+  After the user merges a chunk's PR: pull `main`, tag the merge commit `C-XXX`, delete the branch, and
+  let `after-merge` run `sync`.
 
 ## Environment (you run locally now)
 Git/GitHub capability can differ by AI runtime. Every agent should take the workflow as far as its

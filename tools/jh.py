@@ -206,10 +206,132 @@ def check_registry_consistency(
 
 
 
+def ordered_chunks_from_registry(
+    chunks: dict[str, Chunk], registry: dict[str, Any] | None = None
+) -> dict[str, Chunk]:
+    """Return chunks in registry order, preserving any ledger-only rows at the end."""
+    registry = registry or {}
+    ordered: dict[str, Chunk] = {}
+    for cid in registry.get("chunks", {}):
+        if cid in chunks:
+            ordered[cid] = chunks[cid]
+    for cid, chunk in chunks.items():
+        if cid not in ordered:
+            ordered[cid] = chunk
+    return ordered
+
+
 def read_chunks(root: Path = ROOT) -> dict[str, Chunk]:
     config = load_config(root)
     risks = set(config.get("risk_flagged_chunks", DEFAULT_RISK_FLAGGED))
-    return parse_progress((root / PROJECT.progress_filename).read_text(encoding="utf-8"), risks)
+    text = (root / PROJECT.progress_filename).read_text(encoding="utf-8")
+    return ordered_chunks_from_registry(parse_progress(text, risks), load_registry(root))
+
+
+def render_generated_orientation(chunks: dict[str, Chunk]) -> str:
+    orientation = engine.compute_orientation(
+        chunks, recent_done_limit=PROJECT.orientation_recent_done
+    )
+    return engine.render_orientation(
+        orientation,
+        prelude_lines=PROJECT.orientation_prelude_lines,
+        footer_lines=PROJECT.orientation_footer_lines,
+    )
+
+
+def replace_generated_orientation(progress_text: str, orientation: str) -> str:
+    start = PROJECT.orientation_start_marker
+    end = PROJECT.orientation_end_marker
+    start_at = progress_text.find(start)
+    if start_at == -1:
+        raise ValueError(f"Missing generated orientation start marker: {start}")
+    end_at = progress_text.find(end, start_at + len(start))
+    if end_at == -1:
+        raise ValueError(f"Missing generated orientation end marker: {end}")
+    prefix = progress_text[: start_at + len(start)]
+    suffix = progress_text[end_at:]
+    return f"{prefix}\n{orientation.rstrip()}\n{suffix.lstrip()}"
+
+
+def backfill_progress_merges(progress_text: str, merge_hashes: dict[str, str]) -> str:
+    lines = progress_text.splitlines()
+    updated: list[str] = []
+    for line in lines:
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if len(cells) >= 6 and re.fullmatch(PROJECT.chunk_id_regex, cells[0]):
+            cid, status, merge = cells[0], cells[4], cells[5]
+            if status == "done" and merge.strip().lower() in engine.MERGE_PLACEHOLDERS:
+                if cid in merge_hashes:
+                    cells[5] = merge_hashes[cid]
+                    line = "| " + " | ".join(cells[:6]) + " |"
+        updated.append(line)
+    ending = "\n" if progress_text.endswith("\n") else ""
+    return "\n".join(updated) + ending
+
+
+def sync_progress_text(
+    root: Path, progress_text: str, *, merge_hashes: dict[str, str] | None = None
+) -> str:
+    hashes = merge_hashes if merge_hashes is not None else git_merge_hashes_by_chunk(root)
+    backfilled = backfill_progress_merges(progress_text, hashes)
+    config = load_config(root)
+    risks = set(config.get("risk_flagged_chunks", DEFAULT_RISK_FLAGGED))
+    chunks = ordered_chunks_from_registry(parse_progress(backfilled, risks), load_registry(root))
+    return replace_generated_orientation(backfilled, render_generated_orientation(chunks))
+
+
+def sync_progress(root: Path = ROOT, *, merge_hashes: dict[str, str] | None = None) -> bool:
+    progress = root / PROJECT.progress_filename
+    original = progress.read_text(encoding="utf-8")
+    updated = sync_progress_text(root, original, merge_hashes=merge_hashes)
+    if updated == original:
+        return False
+    progress.write_text(updated, encoding="utf-8")
+    return True
+
+
+def check_generated_orientation(
+    root: Path, progress_text: str, *, merge_hashes: dict[str, str] | None = None
+) -> list[Issue]:
+    try:
+        expected = sync_progress_text(root, progress_text, merge_hashes=merge_hashes)
+    except ValueError as exc:
+        return [Issue("progress.orientation_markers", str(exc))]
+    if expected != progress_text:
+        return [
+            Issue(
+                "progress.orientation_stale",
+                f"{PROJECT.progress_filename} generated orientation is stale; run `jh.py sync`",
+            )
+        ]
+    return []
+
+
+def parse_chunk_merge_log(log_text: str) -> dict[str, str]:
+    hashes: dict[str, str] = {}
+    for record in log_text.split("\x1e"):
+        if not record.strip() or "\x1f" not in record:
+            continue
+        full_hash, body = record.split("\x1f", 1)
+        full_hash = full_hash.strip()
+        tagged = re.findall(rf"\[({PROJECT.chunk_id_regex})\]", body)
+        branch_ids = re.findall(rf"\bchunk/({PROJECT.chunk_id_regex})\b", body)
+        for cid in tagged or branch_ids:
+            hashes.setdefault(cid, full_hash[:7])
+    return hashes
+
+
+def git_merge_hashes_by_chunk(root: Path = ROOT) -> dict[str, str]:
+    result = run(
+        ("git", "log", "--merges", "--format=%H%x1f%B%x1e", "--max-count=400"),
+        cwd=root,
+        check=False,
+    )
+    if result.returncode != 0:
+        return {}
+    return parse_chunk_merge_log(result.stdout)
+
+
 
 
 
@@ -233,15 +355,21 @@ def _check_engine_purity(root: Path) -> list[Issue]:
     ]
 
 
-def run_doctor_checks(root: Path = ROOT, git_messages: list[str] | None = None) -> list[Issue]:
+def run_doctor_checks(
+    root: Path = ROOT,
+    git_messages: list[str] | None = None,
+    merge_hashes: dict[str, str] | None = None,
+) -> list[Issue]:
     git_messages = git_messages or []
     issues: list[Issue] = []
     progress = root / PROJECT.progress_filename
     if not progress.exists():
         issues.append(Issue("progress.missing", "PROGRESS.md is missing"))
     else:
-        chunks = parse_progress(progress.read_text(encoding="utf-8"))
+        progress_text = progress.read_text(encoding="utf-8")
+        chunks = parse_progress(progress_text)
         issues.extend(_check_ledger(chunks, git_messages))
+        issues.extend(check_generated_orientation(root, progress_text, merge_hashes=merge_hashes))
         if (root / PROJECT.registry_relpath).exists():
             dev_plan = root / PROJECT.dev_plan_relpath
             dev_text = dev_plan.read_text(encoding="utf-8") if dev_plan.exists() else ""
@@ -499,7 +627,7 @@ def generate_pr_body(
 {design_note}
 
 ## Test evidence
-- Red: captured before implementation in focused C-040 test run.
+- Red: captured before implementation in focused {chunk_id} test run.
 - Green: {evidence.focused}
 - Full suite: {evidence.full_pytest}
 - Ruff: {evidence.ruff}
@@ -773,6 +901,13 @@ def command_doctor(args: argparse.Namespace) -> int:
 
 def command_bootstrap(args: argparse.Namespace) -> int:
     print(bootstrap(Path(args.root).resolve(), ci=args.ci))
+    return 0
+
+
+def command_sync(args: argparse.Namespace) -> int:
+    root = Path(args.root).resolve()
+    changed = sync_progress(root)
+    print(f"{PROJECT.progress_filename} {'synced' if changed else 'already synced'}")
     return 0
 
 
@@ -1115,6 +1250,8 @@ def command_after_merge(args: argparse.Namespace) -> int:
         run(("git", "branch", "-D", args.branch), cwd=root, check=False)
         run(("git", "push", "origin", "--delete", args.branch), cwd=root, check=False)
         run(("git", "push", "origin", args.chunk), cwd=root, check=False)
+        if sync_progress(root):
+            print(f"synced {PROJECT.progress_filename}")
     print(f"{args.chunk} merge: {merge[:7]}")
     return 0
 
@@ -1408,6 +1545,9 @@ def build_parser() -> argparse.ArgumentParser:
     bootstrap_cmd = sub.add_parser("bootstrap")
     bootstrap_cmd.add_argument("--ci", action="store_true")
     bootstrap_cmd.set_defaults(func=command_bootstrap)
+
+    sync = sub.add_parser("sync")
+    sync.set_defaults(func=command_sync)
 
     doctor = sub.add_parser("doctor")
     doctor.add_argument("--ci", action="store_true")

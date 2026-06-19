@@ -109,6 +109,13 @@ class PullRequestReadiness:
     already_merged: bool = False
 
 
+@dataclass(frozen=True)
+class Orientation:
+    recent_done: tuple[Chunk, ...]
+    next_ready: tuple[Chunk, ...]
+    blocked: tuple[Chunk, ...]
+
+
 def clamp_wait_seconds(seconds: int, *, maximum: int = MAX_WAIT_SECONDS) -> int:
     """Bound a requested wait so no agent-facing op can block unbounded (ADR-023)."""
     return max(0, min(seconds, maximum))
@@ -153,6 +160,64 @@ def ready_chunks(chunks: dict[str, Chunk]) -> list[Chunk]:
         if chunk.status == "todo" and all(dep in done for dep in chunk.depends_on):
             ready.append(chunk)
     return ready
+
+
+def compute_orientation(
+    chunks: dict[str, Chunk], *, recent_done_limit: int = 3
+) -> Orientation:
+    """Compute generated progress orientation from an ordered chunk graph."""
+    done = [chunk for chunk in chunks.values() if chunk.status == "done"]
+    blocked = [chunk for chunk in chunks.values() if chunk.status == "blocked"]
+    limit = max(0, recent_done_limit)
+    return Orientation(
+        recent_done=tuple(reversed(done[-limit:])) if limit else (),
+        next_ready=tuple(ready_chunks(chunks)),
+        blocked=tuple(blocked),
+    )
+
+
+def render_orientation(
+    orientation: Orientation,
+    *,
+    prelude_lines: tuple[str, ...] = (),
+    footer_lines: tuple[str, ...] = (),
+) -> str:
+    """Render a deterministic Markdown orientation block."""
+    lines = list(prelude_lines)
+    lines.append(_render_recent_done(orientation.recent_done))
+    lines.append(_render_chunk_list("Next ready", orientation.next_ready))
+    lines.append(_render_chunk_list("Blocked", orientation.blocked))
+    lines.extend(footer_lines)
+    return "\n".join(lines)
+
+
+def _render_recent_done(chunks: tuple[Chunk, ...]) -> str:
+    if not chunks:
+        return "- **Last done:** none."
+    head, *tail = chunks
+    line = f"- **Last done:** {_render_chunk(head)}."
+    if tail:
+        prior = "; ".join(_render_chunk(chunk) for chunk in tail)
+        line += f" Prior done: {prior}."
+    return line
+
+
+def _render_chunk_list(label: str, chunks: tuple[Chunk, ...]) -> str:
+    if not chunks:
+        return f"- **{label}:** none."
+    rendered = "; ".join(_render_chunk(chunk) for chunk in chunks)
+    return f"- **{label}:** {rendered}."
+
+
+def _render_chunk(chunk: Chunk) -> str:
+    text = f"**{chunk.id}** - {chunk.title}"
+    if chunk.merge.strip().lower() not in MERGE_PLACEHOLDERS:
+        text += f" (`{chunk.merge}`)"
+    elif chunk.status == "done":
+        text += " (merge pending)"
+    if chunk.risk_flagged and chunk.status != "done":
+        text += " (risk-flagged; design sign-off required)"
+    return text
 
 
 def detect_stale_done_placeholders(

@@ -10,6 +10,7 @@ python tools/jh.py guide
 python tools/jh.py bootstrap
 python tools/jh.py status
 python tools/jh.py next
+python tools/jh.py sync
 ```
 
 If the shell does not expose `python`, use the available interpreter for the current runtime. On Windows,
@@ -20,6 +21,7 @@ If the shell does not expose `python`, use the available interpreter for the cur
 ```bash
 python tools/jh.py start C-XXX --branch chunk/C-XXX-slug
 python tools/jh.py gate C-XXX
+python tools/jh.py sync
 python tools/jh.py pr-ready C-XXX
 python tools/jh.py auth-status
 python tools/jh.py create-pr C-XXX
@@ -29,6 +31,10 @@ python tools/jh.py after-merge C-XXX --branch chunk/C-XXX-slug
 ```
 
 Generated logs and PR evidence are written under `output/agent/`, which is git-ignored.
+
+`sync` regenerates the sentinel-protected `PROGRESS.md` orientation block and backfills done-chunk
+merge placeholders from git history. `doctor` fails if the generated block is stale, and `after-merge`
+runs `sync` automatically after its tag/branch cleanup.
 
 Risk-flagged chunks are blocked by `start` until design sign-off is complete. After sign-off, use:
 
