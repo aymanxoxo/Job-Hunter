@@ -10,7 +10,7 @@
 
 <!-- jh:orientation:start -->
 - **Phase:** Phase 1 - Foundation. **Next gate:** M-03 (chunk C-029).
-- **Last done:** **C-049** - Plugin-load fail-graceful + raw read-only (merge pending). Prior done: **C-048** - Deterministic PR review-comment fetch (`e5ba1d8`); **C-047** - One-command chunk context brief (`6805055`).
+- **Last done:** **C-049** - Plugin-load fail-graceful + raw read-only (`88341c9`). Prior done: **C-048** - Deterministic PR review-comment fetch (`e5ba1d8`); **C-047** - One-command chunk context brief (`6805055`).
 - **Next ready:** **C-016** - Google OAuth device flow (risk-flagged; design sign-off required); **C-020** - Indeed connector (risk-flagged; design sign-off required); **C-021** - LinkedIn connector (risk-flagged; design sign-off required); **C-022** - Pure pipeline transforms; **C-023** - Progress event emitter; **C-024** - Output exporter; **C-030** - OpenRouter provider; **C-038** - Authoring docs — **M-06 gate**.
 - **Blocked:** none.
 - **Notes:** Dev loop runs through short-lived GitHub PR branches; the user reviews and merges. See [ADR-014/015/016](Documents/DECISIONS.md).
@@ -42,7 +42,7 @@
 | C-046 | Generated PROGRESS orientation + sync | Tooling | C-044 | done | 75e1ae2 |
 | C-047 | One-command chunk context brief | Tooling | C-045 | done | 6805055 |
 | C-048 | Deterministic PR review-comment fetch | Tooling | C-043 | done | e5ba1d8 |
-| C-049 | Plugin-load fail-graceful + raw read-only | Hardening | C-004, C-009 | done | (PR) |
+| C-049 | Plugin-load fail-graceful + raw read-only | Hardening | C-004, C-009 | done | 88341c9 |
 | C-050 | Retire walking skeleton + re-point CLI | Cleanup | C-024, C-025, C-026 | todo | — |
 | C-007 | BaseProfileInput ABC + text parser | Contracts | C-004 | done | ff83ca3 |
 | C-008 | Auth strategy resolver | Contracts | C-002, C-003 | done | 7d96047 |
