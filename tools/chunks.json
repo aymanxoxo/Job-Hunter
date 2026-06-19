@@ -352,7 +352,9 @@
         "C-005"
       ],
       "risk_flagged": false,
-      "tests": [],
+      "tests": [
+        "tests/test_mock_connector.py"
+      ],
       "sdd_anchor": "§6.3, §12",
       "files": [
         "core/connectors/mock_connector.py",

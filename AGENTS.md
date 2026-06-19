@@ -37,7 +37,7 @@ Each module folder gets its own `AGENTS.md` (following the template below) when 
 | Module | Path | Purpose |
 |--------|------|---------|
 | Models | `core/models/` | `Job` and `SearchCriteria` dataclasses |
-| Connectors (built-in) | `core/connectors/` | `BaseConnector` ABC + Indeed / LinkedIn / Mock |
+| Connectors (built-in) | `core/connectors/` | `BaseConnector` ABC + Mock (present); Indeed / LinkedIn planned |
 | AI providers (built-in) | `core/ai_providers/` | `BaseAIProvider` ABC + Ollama (present); Gemini / OpenRouter planned |
 | Auth | `core/auth/` | Ordered auth strategy resolver; OAuth device flow and session store are later chunks |
 | Engine | `core/ai_engine/` | AI facade + pure prompt/parsing/scrub/batching helpers |
@@ -48,7 +48,7 @@ Each module folder gets its own `AGENTS.md` (following the template below) when 
 | Profile input drop-zone | `profile_inputs/` | User-added profile parsers; PDF/Word/image are future drop-ins |
 | CLI | `ui/cli/` | Click + Rich command interface; C-039 has a temporary walking-skeleton command |
 | Desktop | `ui/desktop/` | Tauri v2 (Rust) shell + Vue 3 frontend |
-| Fixtures | `fixtures/` | Mock connector data (`jobs.json`); C-039 sample fixture present |
+| Fixtures | `fixtures/` | Mock connector data (`jobs.json`) |
 | Output | `output/` | Generated results — **git-ignored** |
 | Config | `config.yaml` | User configuration |
 | Workflow tools | `tools/` | Deterministic AI workflow harness (`jh.py`) for bootstrap/status/gate/PR handoff |

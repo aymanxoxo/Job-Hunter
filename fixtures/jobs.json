@@ -4,7 +4,7 @@
     "title": "Senior Python Developer",
     "company": "Acme",
     "url": "https://example.test/jobs/remote-python",
-    "source": "fixture",
+    "source": "mock",
     "location": "Remote",
     "description": "Build Python services with async APIs."
   },
@@ -13,7 +13,7 @@
     "title": "Data Analyst",
     "company": "Beta",
     "url": "https://example.test/jobs/data-analyst",
-    "source": "fixture",
+    "source": "mock",
     "location": "Cairo",
     "description": "Spreadsheet-heavy reporting and dashboard work."
   }
