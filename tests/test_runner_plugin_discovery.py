@@ -189,3 +189,27 @@ class UsableConnector(BaseConnector):
 
     assert isinstance(jobs[0], Job)
     assert jobs[0].source == "usable"
+
+
+def test_skips_plugin_file_that_fails_to_import(tmp_path):
+    # C-049: a single broken drop-in plugin must not abort discovery of the others.
+    _write(
+        tmp_path / "broken_connector.py",
+        "import a_module_that_does_not_exist_xyz\n",
+    )
+    _write(
+        tmp_path / "good_connector.py",
+        """
+from core.connectors import BaseConnector
+
+class GoodConnector(BaseConnector):
+    name = "good"
+
+    async def search(self, criteria):
+        return []
+""",
+    )
+
+    plugins = discover_plugins(tmp_path, BaseConnector)
+
+    assert [plugin.__name__ for plugin in plugins] == ["GoodConnector"]
