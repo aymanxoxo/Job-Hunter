@@ -11,7 +11,7 @@
 <!-- jh:orientation:start -->
 - **Phase:** Phase 1 - Foundation. **Next gate:** M-03 (chunk C-029).
 - **Last done:** **C-049** - Plugin-load fail-graceful + raw read-only (`88341c9`). Prior done: **C-048** - Deterministic PR review-comment fetch (`e5ba1d8`); **C-047** - One-command chunk context brief (`6805055`).
-- **Next ready:** **C-016** - Google OAuth device flow (risk-flagged; design sign-off required); **C-020** - Indeed connector (risk-flagged; design sign-off required); **C-021** - LinkedIn connector (risk-flagged; design sign-off required); **C-025** - Runner orchestrator (risk-flagged; design sign-off required); **C-028** - CLI config/list/export commands; **C-030** - OpenRouter provider; **C-038** - Authoring docs — **M-06 gate**.
+- **Next ready:** **C-016** - Google OAuth device flow (risk-flagged; design sign-off required); **C-020** - Indeed connector (risk-flagged; design sign-off required); **C-021** - LinkedIn connector (risk-flagged; design sign-off required); **C-026** - CLI skeleton + run + Rich render; **C-028** - CLI config/list/export commands; **C-030** - OpenRouter provider; **C-038** - Authoring docs — **M-06 gate**.
 - **Blocked:** none.
 - **Notes:** Dev loop runs through short-lived GitHub PR branches; the user reviews and merges. See [ADR-014/015/016](Documents/DECISIONS.md).
 - **Protocol:** each chunk runs design -> test -> impl -> gate -> verify -> land (plan section 3.3); risky chunks pause for Design sign-off.
@@ -62,7 +62,7 @@
 | C-022 | Pure pipeline transforms | Pipeline | C-004 | done | 26deae7 |
 | C-023 | Progress event emitter | Pipeline | C-002 | done | d5b7e06 |
 | C-024 | Output exporter | Pipeline | C-004 | done | 0313037 |
-| C-025 | Runner orchestrator | Pipeline | C-009, C-014, C-022, C-023, C-024, ≥1 provider, ≥1 connector | todo | — |
+| C-025 | Runner orchestrator | Pipeline | C-009, C-014, C-022, C-023, C-024, ≥1 provider, ≥1 connector | done | (PR) |
 | C-026 | CLI skeleton + run + Rich render | CLI | C-025 | todo | — |
 | C-027 | CLI auth commands | CLI | C-016, C-017, C-019, C-021 | todo | — |
 | C-028 | CLI config/list/export commands | CLI | C-003, C-009, C-024 | todo | — |
@@ -79,6 +79,7 @@
 
 ## Changelog (newest first)
 
+- 2026-06-20 - **C-025** Runner orchestrator on `chunk/C-025-runner-orchestrator`: `core.runner.Runner` wires the full SDD §5.1 pipeline (profile -> criteria -> parallel fail-graceful search -> merge/dedup -> score -> sort/filter by `min_score_threshold` -> export), emitting a progress event per stage; `build_runner` selects the configured provider + drop-zone connectors via discovery. All collaborators injected (clock/emitter/plugins). 4 focused tests (full flow, per-connector fail-graceful, empty, build_runner selection); gate green (210 pytest, ruff, doctor). Design sign-off in chat. (PR pending.)
 - 2026-06-19 - **C-024** Output exporter on `chunk/C-024-output-exporter`: `core.output` writes scored jobs to the configured `output/` dir as timestamped `results_<ts>.csv`/`.json` per `config.output.format` (SDD §5.4); pure `jobs_to_csv`/`jobs_to_json` + injected clock. 7 focused tests; gate green (206 pytest, ruff, doctor). Merged `0313037` (PR #45).
 - 2026-06-20 - **C-023** Progress event emitter on `chunk/C-023-progress-event-emitter`: `core.progress` adds a validated `ProgressEvent` schema plus `ProgressEmitter`/`emit_progress_event` for one-JSON-object-per-line stdout protocol events with matching INFO log twins on stderr; event metrics are redacted before emission and invalid stages/states/progress bounds are rejected. Gate green (`216` pytest, `ruff`, import smoke). Merged `d5b7e06` (PR #44).
 - 2026-06-19 - **C-022** Pure pipeline transforms on `chunk/C-022-pipeline-transforms`: `core.pipeline` adds pure `merge_results`, `dedup_by_url`, `sort_by_score`, and `filter_below_threshold` helpers for runner steps 8-10; transforms preserve first-seen order where relevant, keep first URL wins for dedupe, treat unscored jobs as zero for sorting, and exclude unscored jobs from threshold filtering. Gate green (`206` pytest, `ruff`, import smoke). Merged `26deae7` (PR #43).

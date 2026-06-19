@@ -459,7 +459,9 @@
         "C-024"
       ],
       "risk_flagged": true,
-      "tests": [],
+      "tests": [
+        "tests/test_runner_orchestrator.py"
+      ],
       "sdd_anchor": "§5.1",
       "files": [
         "core/runner.py"
