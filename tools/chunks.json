@@ -410,9 +410,7 @@
         "C-004"
       ],
       "risk_flagged": false,
-      "tests": [
-        "tests/test_pipeline.py"
-      ],
+      "tests": [],
       "sdd_anchor": "§5.1 steps 7–10",
       "files": [
         "core/pipeline.py"
@@ -425,9 +423,7 @@
         "C-002"
       ],
       "risk_flagged": false,
-      "tests": [
-        "tests/test_progress.py"
-      ],
+      "tests": [],
       "sdd_anchor": "§9 (this doc), §11.1",
       "files": [
         "core/progress.py"
@@ -440,7 +436,9 @@
         "C-004"
       ],
       "risk_flagged": false,
-      "tests": [],
+      "tests": [
+        "tests/test_output.py"
+      ],
       "sdd_anchor": "§5.4, §9 SDD",
       "files": [
         "core/output.py"
