@@ -273,7 +273,9 @@
         "C-004"
       ],
       "risk_flagged": false,
-      "tests": [],
+      "tests": [
+        "tests/ai_engine/test_batching.py"
+      ],
       "sdd_anchor": "§5.1 step 9",
       "files": [
         "core/ai_engine/batching.py"
