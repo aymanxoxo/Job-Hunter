@@ -14,7 +14,7 @@ pipeline runner, and shared infra. Pure logic stays side-effect-free; I/O lives 
 - `profile_inputs/` — `BaseProfileInput` ABC + `TextProfileInput` (see `profile_inputs/AGENTS.md`). **[C-007 · present]**
 - `runner.py` — plugin discovery helper for built-in and user drop-zone modules. **[C-009 · present]**
 - `auth/` — ordered auth strategy resolver (see `auth/AGENTS.md`). **[C-008 · present]**
-- `ai_engine/` — pure prompt builders, response parsers, job scrubbing, and batching (see `ai_engine/AGENTS.md`). **[C-010–C-013 · present]**
+- `ai_engine/` — AI facade plus pure prompt builders, response parsers, job scrubbing, and batching (see `ai_engine/AGENTS.md`). **[C-010–C-014 · present]**
 
 ## Conventions / contracts
 - **Config (`config.py`, SDD §9).** `load_config(path, env=None)` → a validated `Config`;
@@ -43,6 +43,9 @@ pipeline runner, and shared infra. Pure logic stays side-effect-free; I/O lives 
   `company`, and `description` before provider calls.
 - **AI batching (`ai_engine/batching.py`, C-013).** `batch_items()` splits sequences into
   order-preserving batches for later scoring calls.
+- **AI facade (`ai_engine/__init__.py`, C-014).** `AIEngine` wraps an injected async prompt provider,
+  builds prompts, batches scoring calls, parses provider JSON, raises `AIEngineError` for unrecoverable
+  output, and returns scored `Job` copies without mutating inputs.
 
 ## Pointers
 - Parent: [../AGENTS.md](../AGENTS.md) · Spec: `../Documents/JobHunter_SDD_v1.1.md` · Logging std: dev plan §6.

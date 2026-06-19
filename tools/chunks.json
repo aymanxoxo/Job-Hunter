@@ -292,7 +292,9 @@
         "C-013"
       ],
       "risk_flagged": false,
-      "tests": [],
+      "tests": [
+        "tests/ai_engine/test_facade.py"
+      ],
       "sdd_anchor": "§5.2",
       "files": [
         "core/ai_engine/__init__.py"
