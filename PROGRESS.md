@@ -11,7 +11,7 @@
 <!-- jh:orientation:start -->
 - **Phase:** Phase 1 - Foundation. **Next gate:** M-03 (chunk C-029).
 - **Last done:** **C-049** - Plugin-load fail-graceful + raw read-only (`88341c9`). Prior done: **C-048** - Deterministic PR review-comment fetch (`e5ba1d8`); **C-047** - One-command chunk context brief (`6805055`).
-- **Next ready:** **C-016** - Google OAuth device flow (risk-flagged; design sign-off required); **C-020** - Indeed connector (risk-flagged; design sign-off required); **C-021** - LinkedIn connector (risk-flagged; design sign-off required); **C-022** - Pure pipeline transforms; **C-023** - Progress event emitter; **C-028** - CLI config/list/export commands; **C-030** - OpenRouter provider; **C-038** - Authoring docs — **M-06 gate**.
+- **Next ready:** **C-016** - Google OAuth device flow (risk-flagged; design sign-off required); **C-020** - Indeed connector (risk-flagged; design sign-off required); **C-021** - LinkedIn connector (risk-flagged; design sign-off required); **C-025** - Runner orchestrator (risk-flagged; design sign-off required); **C-028** - CLI config/list/export commands; **C-030** - OpenRouter provider; **C-038** - Authoring docs — **M-06 gate**.
 - **Blocked:** none.
 - **Notes:** Dev loop runs through short-lived GitHub PR branches; the user reviews and merges. See [ADR-014/015/016](Documents/DECISIONS.md).
 - **Protocol:** each chunk runs design -> test -> impl -> gate -> verify -> land (plan section 3.3); risky chunks pause for Design sign-off.
@@ -59,9 +59,9 @@
 | C-019 | Session store | Connectors | C-002 | done | 9fb5ce0 |
 | C-020 | Indeed connector | Connectors | C-005 | todo | — |
 | C-021 | LinkedIn connector | Connectors | C-005, C-019 | todo | — |
-| C-022 | Pure pipeline transforms | Pipeline | C-004 | todo | — |
-| C-023 | Progress event emitter | Pipeline | C-002 | todo | — |
-| C-024 | Output exporter | Pipeline | C-004 | done | (PR) |
+| C-022 | Pure pipeline transforms | Pipeline | C-004 | done | 26deae7 |
+| C-023 | Progress event emitter | Pipeline | C-002 | done | d5b7e06 |
+| C-024 | Output exporter | Pipeline | C-004 | done | 0313037 |
 | C-025 | Runner orchestrator | Pipeline | C-009, C-014, C-022, C-023, C-024, ≥1 provider, ≥1 connector | todo | — |
 | C-026 | CLI skeleton + run + Rich render | CLI | C-025 | todo | — |
 | C-027 | CLI auth commands | CLI | C-016, C-017, C-019, C-021 | todo | — |
@@ -79,7 +79,9 @@
 
 ## Changelog (newest first)
 
-- 2026-06-19 - **C-024** Output exporter on `chunk/C-024-output-exporter`: `core.output` writes scored jobs to the configured `output/` dir as timestamped `results_<ts>.csv`/`.json` per `config.output.format` (SDD §5.4); pure `jobs_to_csv`/`jobs_to_json` + injected clock. 7 focused tests; gate green (206 pytest, ruff, doctor). (PR pending.)
+- 2026-06-19 - **C-024** Output exporter on `chunk/C-024-output-exporter`: `core.output` writes scored jobs to the configured `output/` dir as timestamped `results_<ts>.csv`/`.json` per `config.output.format` (SDD §5.4); pure `jobs_to_csv`/`jobs_to_json` + injected clock. 7 focused tests; gate green (206 pytest, ruff, doctor). Merged `0313037` (PR #45).
+- 2026-06-20 - **C-023** Progress event emitter on `chunk/C-023-progress-event-emitter`: `core.progress` adds a validated `ProgressEvent` schema plus `ProgressEmitter`/`emit_progress_event` for one-JSON-object-per-line stdout protocol events with matching INFO log twins on stderr; event metrics are redacted before emission and invalid stages/states/progress bounds are rejected. Gate green (`216` pytest, `ruff`, import smoke). Merged `d5b7e06` (PR #44).
+- 2026-06-19 - **C-022** Pure pipeline transforms on `chunk/C-022-pipeline-transforms`: `core.pipeline` adds pure `merge_results`, `dedup_by_url`, `sort_by_score`, and `filter_below_threshold` helpers for runner steps 8-10; transforms preserve first-seen order where relevant, keep first URL wins for dedupe, treat unscored jobs as zero for sorting, and exclude unscored jobs from threshold filtering. Gate green (`206` pytest, `ruff`, import smoke). Merged `26deae7` (PR #43).
 - 2026-06-19 - **C-049** Plugin-load fail-graceful + raw read-only on `chunk/C-049-review-hardening`: `core.runner.discover_plugins` now catches per-file import errors and warn+skips (one broken drop-in plugin no longer aborts discovery of the rest); `Job.raw` is a read-only mapping (`MappingProxyType`) with a dict serializer. From the C-019 review. 2 focused tests added; gate green (199 pytest, ruff, doctor). (PR pending.)
 - 2026-06-19 - **C-049** (urgent, todo) + **C-050** (todo) added from the C-019 code-review checkpoint: C-049 hardens plugin discovery to be fail-graceful (per-file import errors warn+skip) and makes `Job.raw` read-only; C-050 retires the walking-skeleton stubs and re-points the CLI once the real runner/output/CLI land (deps C-024/C-025/C-026).
 - 2026-06-19 - **C-019** Session store on `chunk/C-019-session-store`: `core.auth.SessionStore` encrypts Playwright storage-state dictionaries with Fernet, stores a PBKDF2HMAC-derived machine key through keyring, supports save/load/exists/delete, rejects unsafe session names, and keeps encrypted session files under `~/.jobhunter/sessions/*.enc` by default. Gate green (`197` pytest, `ruff`, import smoke). Merged `9fb5ce0` (PR #39).
