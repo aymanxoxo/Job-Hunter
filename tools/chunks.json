@@ -228,7 +228,9 @@
         "C-004"
       ],
       "risk_flagged": false,
-      "tests": [],
+      "tests": [
+        "tests/ai_engine/test_prompts.py"
+      ],
       "sdd_anchor": "§5.2",
       "files": [
         "core/ai_engine/prompts.py"

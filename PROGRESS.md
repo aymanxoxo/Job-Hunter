@@ -11,7 +11,7 @@
 <!-- jh:orientation:start -->
 - **Phase:** Phase 1 - Foundation. **Next gate:** M-03 (chunk C-029).
 - **Last done:** **C-048** - Deterministic PR review-comment fetch (`e5ba1d8`). Prior done: **C-047** - One-command chunk context brief (`6805055`); **C-046** - Generated PROGRESS orientation + sync (`75e1ae2`).
-- **Next ready:** **C-010** - Prompt builders (pure); **C-011** - Response parsers (pure); **C-012** - Job field-stripper (pure); **C-013** - Batching util (pure); **C-016** - Google OAuth device flow (risk-flagged; design sign-off required); **C-018** - Mock connector + fixtures; **C-019** - Session store; **C-020** - Indeed connector (risk-flagged; design sign-off required); **C-022** - Pure pipeline transforms; **C-023** - Progress event emitter; **C-024** - Output exporter; **C-038** - Authoring docs — **M-06 gate**.
+- **Next ready:** **C-011** - Response parsers (pure); **C-012** - Job field-stripper (pure); **C-013** - Batching util (pure); **C-016** - Google OAuth device flow (risk-flagged; design sign-off required); **C-018** - Mock connector + fixtures; **C-019** - Session store; **C-020** - Indeed connector (risk-flagged; design sign-off required); **C-022** - Pure pipeline transforms; **C-023** - Progress event emitter; **C-024** - Output exporter; **C-038** - Authoring docs — **M-06 gate**.
 - **Blocked:** none.
 - **Notes:** Dev loop runs through short-lived GitHub PR branches; the user reviews and merges. See [ADR-014/015/016](Documents/DECISIONS.md).
 - **Protocol:** each chunk runs design -> test -> impl -> gate -> verify -> land (plan section 3.3); risky chunks pause for Design sign-off.
@@ -43,9 +43,9 @@
 | C-047 | One-command chunk context brief | Tooling | C-045 | done | 6805055 |
 | C-048 | Deterministic PR review-comment fetch | Tooling | C-043 | done | e5ba1d8 |
 | C-007 | BaseProfileInput ABC + text parser | Contracts | C-004 | done | ff83ca3 |
-| C-008 | Auth strategy resolver | Contracts | C-002, C-003 | done | (PR) |
+| C-008 | Auth strategy resolver | Contracts | C-002, C-003 | done | 7d96047 |
 | C-009 | Plugin discovery | Contracts | C-005, C-006, C-007 | done | c1e32ad |
-| C-010 | Prompt builders (pure) | AI engine | C-004 | todo | — |
+| C-010 | Prompt builders (pure) | AI engine | C-004 | done | (PR) |
 | C-011 | Response parsers (pure) | AI engine | C-004 | todo | — |
 | C-012 | Job field-stripper (pure) | AI engine | C-004 | todo | — |
 | C-013 | Batching util (pure) | AI engine | C-004 | todo | — |
@@ -77,7 +77,8 @@
 
 ## Changelog (newest first)
 
-- 2026-06-19 - **C-008** Auth strategy resolver on `chunk/C-008-auth-strategy-resolver`: design sign-off accepted in chat for the contract-level resolver scope. `core.auth.auth_strategy.resolve_auth` now resolves ordered plugin `auth_methods` with injected OAuth/session providers and env-backed API keys, returns the first successful `AuthResult`, treats `none` as always authenticated, and warns + returns `None` when required auth is unmet. Gate green (`147` pytest, `ruff`, import smoke). (PR pending.)
+- 2026-06-19 - **C-010** Prompt builders on `chunk/C-010-prompt-builders`: `core.ai_engine.prompts` builds deterministic GENERATE_CRITERIA and SCORE_JOBS prompt strings from the SDD §5.2 contract, preserves profile text verbatim, emits compact criteria JSON, and limits job payloads to `id`, `title`, `company`, and `description`. Gate green (`152` pytest, `ruff`, import smoke). (PR pending.)
+- 2026-06-19 - **C-008** Auth strategy resolver on `chunk/C-008-auth-strategy-resolver`: design sign-off accepted in chat for the contract-level resolver scope. `core.auth.auth_strategy.resolve_auth` now resolves ordered plugin `auth_methods` with injected OAuth/session providers and env-backed API keys, returns the first successful `AuthResult`, treats `none` as always authenticated, and warns + returns `None` when required auth is unmet. Gate green (`147` pytest, `ruff`, import smoke). Merged `7d96047` (PR #31).
 - 2026-06-19 - **C-009** Plugin discovery on `chunk/C-009-plugin-discovery`: `core.runner.discover_plugins` loads concrete plugin classes from direct `*.py` files via importlib, skips private/base files, handles missing directories as empty, and keeps runner orchestration for later chunks. Added focused discovery tests across connector, provider, and profile-input contracts. Gate green (`140` pytest, `ruff`, import smoke). Merged `c1e32ad` (PR #30).
 - 2026-06-19 - **C-048** Deterministic PR review-comment fetch on `chunk/C-048-pr-comments`: `jh.py pr-comments <#>` fetches a PR's review threads + issue comments via the capability-tiered GitHub auth, renders them (pure engine helper) or `--json`, and degrades clearly without API access. Also backfilled the C-047 merge hash `6805055`. 6 focused tests added; full gate `python tools/jh.py gate C-048` all-green (131 pytest, ruff clean, doctor PASS). Merged `e5ba1d8` (PR #29).
 - 2026-06-19 - **C-047** One-command chunk context brief on `chunk/C-047-context-command`: `jh.py context C-XXX` assembles registry metadata, dev-plan-sourced files/SDD anchors, SDD excerpts, ADR titles, module AGENTS pointers, optional gate evidence, and JSON output. Gate green (`pytest`, `ruff`, import smoke). (PR pending.)
