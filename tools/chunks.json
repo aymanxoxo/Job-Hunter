@@ -1,5 +1,5 @@
 {
-  "_comment": "SSOT for chunk metadata (ADR-024). Static facts live here; live status/merge stay in PROGRESS.md; `jh.py sync` generates the orientation block and backfills merge placeholders.",
+  "_comment": "SSOT for chunk metadata (ADR-024). Static facts live here, including dev-plan-sourced files and sdd_anchor values for `jh.py context`; `jh.py sync` generates the orientation block and backfills merge placeholders.",
   "smoke_imports": [
     "core",
     "core.profile_inputs",
@@ -13,7 +13,8 @@
       "depends_on": [],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "",
+      "files": []
     },
     "C-001": {
       "title": "Repo scaffold + tooling",
@@ -23,7 +24,14 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "§2, §13.1",
+      "files": [
+        "pyproject.toml",
+        "requirements.txt",
+        "pytest.ini",
+        "ruff",
+        "__init__"
+      ]
     },
     "C-039": {
       "title": "Walking skeleton (stub end-to-end)",
@@ -35,7 +43,11 @@
       "tests": [
         "tests/test_walking_skeleton.py"
       ],
-      "sdd_anchor": ""
+      "sdd_anchor": "§1.2, §5.1",
+      "files": [
+        "core/*",
+        "ui/cli"
+      ]
     },
     "C-002": {
       "title": "Logging & trace core",
@@ -45,7 +57,10 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "§6 (this doc)",
+      "files": [
+        "core/logging.py"
+      ]
     },
     "C-003": {
       "title": "Config models + loader",
@@ -56,7 +71,11 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "§9",
+      "files": [
+        "core/config.py",
+        "config.yaml"
+      ]
     },
     "C-004": {
       "title": "Data models (Job, SearchCriteria)",
@@ -66,7 +85,11 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "§3",
+      "files": [
+        "core/models/job.py",
+        "core/models/search_criteria.py"
+      ]
     },
     "C-005": {
       "title": "BaseConnector ABC",
@@ -76,7 +99,10 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "§4.1",
+      "files": [
+        "core/connectors/base_connector.py"
+      ]
     },
     "C-006": {
       "title": "BaseAIProvider ABC",
@@ -86,7 +112,10 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "§4.2",
+      "files": [
+        "core/ai_providers/base_provider.py"
+      ]
     },
     "C-040": {
       "title": "Workflow automation harness",
@@ -98,7 +127,11 @@
       "tests": [
         "tests/test_workflow_harness.py"
       ],
-      "sdd_anchor": ""
+      "sdd_anchor": "ADR-020",
+      "files": [
+        "tools/jh.py",
+        "tools/chunks.json"
+      ]
     },
     "C-041": {
       "title": "CI-gated auto-merge command",
@@ -108,7 +141,10 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "ADR-021",
+      "files": [
+        "tools/jh.py"
+      ]
     },
     "C-042": {
       "title": "CI-native opt-in auto-merge",
@@ -118,7 +154,10 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "ADR-022",
+      "files": [
+        "tools/jh.py"
+      ]
     },
     "C-043": {
       "title": "Async/idempotent long-running waits",
@@ -128,7 +167,10 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "ADR-023",
+      "files": [
+        "tools/jh.py"
+      ]
     },
     "C-007": {
       "title": "BaseProfileInput ABC + text parser",
@@ -140,7 +182,11 @@
       "tests": [
         "tests/test_profile_inputs.py"
       ],
-      "sdd_anchor": ""
+      "sdd_anchor": "§3.3, §5.3",
+      "files": [
+        "core/profile_inputs/base_profile_input.py",
+        "text_input.py"
+      ]
     },
     "C-008": {
       "title": "Auth strategy resolver",
@@ -151,7 +197,10 @@
       ],
       "risk_flagged": true,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "§8.1",
+      "files": [
+        "core/auth/auth_strategy.py"
+      ]
     },
     "C-009": {
       "title": "Plugin discovery",
@@ -163,7 +212,10 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "§5.1",
+      "files": [
+        "core/runner.py"
+      ]
     },
     "C-010": {
       "title": "Prompt builders (pure)",
@@ -173,7 +225,10 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "§5.2",
+      "files": [
+        "core/ai_engine/prompts.py"
+      ]
     },
     "C-011": {
       "title": "Response parsers (pure)",
@@ -183,7 +238,10 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "§5.2",
+      "files": [
+        "core/ai_engine/parsing.py"
+      ]
     },
     "C-012": {
       "title": "Job field-stripper (pure)",
@@ -193,7 +251,10 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "§5.2 IMPORTANT",
+      "files": [
+        "core/ai_engine/scrub.py"
+      ]
     },
     "C-013": {
       "title": "Batching util (pure)",
@@ -203,7 +264,10 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "§5.1 step 9",
+      "files": [
+        "core/ai_engine/batching.py"
+      ]
     },
     "C-014": {
       "title": "AI engine facade",
@@ -217,7 +281,10 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "§5.2",
+      "files": [
+        "core/ai_engine/__init__.py"
+      ]
     },
     "C-015": {
       "title": "Ollama provider",
@@ -228,7 +295,10 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "§7.2",
+      "files": [
+        "core/ai_providers/ollama_provider.py"
+      ]
     },
     "C-016": {
       "title": "Google OAuth device flow",
@@ -239,7 +309,10 @@
       ],
       "risk_flagged": true,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "§7.1, §8.2",
+      "files": [
+        "core/auth/google_oauth.py"
+      ]
     },
     "C-017": {
       "title": "Gemini provider",
@@ -251,7 +324,10 @@
       ],
       "risk_flagged": true,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "§7.1",
+      "files": [
+        "core/ai_providers/gemini_provider.py"
+      ]
     },
     "C-018": {
       "title": "Mock connector + fixtures",
@@ -261,7 +337,11 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "§6.3, §12",
+      "files": [
+        "core/connectors/mock_connector.py",
+        "fixtures/jobs.json"
+      ]
     },
     "C-019": {
       "title": "Session store",
@@ -271,7 +351,10 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "§8.3",
+      "files": [
+        "core/auth/session_store.py"
+      ]
     },
     "C-020": {
       "title": "Indeed connector",
@@ -281,7 +364,10 @@
       ],
       "risk_flagged": true,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "§6.1",
+      "files": [
+        "core/connectors/indeed_connector.py"
+      ]
     },
     "C-021": {
       "title": "LinkedIn connector",
@@ -292,7 +378,10 @@
       ],
       "risk_flagged": true,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "§6.2",
+      "files": [
+        "core/connectors/linkedin_connector.py"
+      ]
     },
     "C-022": {
       "title": "Pure pipeline transforms",
@@ -302,7 +391,10 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "§5.1 steps 7–10",
+      "files": [
+        "core/pipeline.py"
+      ]
     },
     "C-023": {
       "title": "Progress event emitter",
@@ -312,7 +404,10 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "§9 (this doc), §11.1",
+      "files": [
+        "core/progress.py"
+      ]
     },
     "C-024": {
       "title": "Output exporter",
@@ -322,7 +417,10 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "§5.4, §9 SDD",
+      "files": [
+        "core/output.py"
+      ]
     },
     "C-025": {
       "title": "Runner orchestrator",
@@ -336,7 +434,10 @@
       ],
       "risk_flagged": true,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "§5.1",
+      "files": [
+        "core/runner.py"
+      ]
     },
     "C-026": {
       "title": "CLI skeleton + run + Rich render",
@@ -346,7 +447,10 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "§10",
+      "files": [
+        "ui/cli/cli.py"
+      ]
     },
     "C-027": {
       "title": "CLI auth commands",
@@ -359,7 +463,10 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "§10.1, §8",
+      "files": [
+        "ui/cli/auth.py"
+      ]
     },
     "C-028": {
       "title": "CLI config/list/export commands",
@@ -371,7 +478,10 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "§10.1",
+      "files": [
+        "ui/cli/config_cmd.py"
+      ]
     },
     "C-029": {
       "title": "E2E CLI test — **M-03 gate**",
@@ -383,7 +493,10 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "§12 E2E, **M-03**",
+      "files": [
+        "tests/e2e/test_cli_run.py"
+      ]
     },
     "C-030": {
       "title": "OpenRouter provider",
@@ -394,7 +507,10 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "§7.3",
+      "files": [
+        "core/ai_providers/openrouter_provider.py"
+      ]
     },
     "C-031": {
       "title": "Tauri shell + sidecar + IPC",
@@ -405,7 +521,10 @@
       ],
       "risk_flagged": true,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "§11.1",
+      "files": [
+        "ui/desktop/src-tauri/**"
+      ]
     },
     "C-032": {
       "title": "Vue app scaffold",
@@ -415,7 +534,10 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "§11",
+      "files": [
+        "ui/desktop/src/**"
+      ]
     },
     "C-033": {
       "title": "Live Pipeline Progress UX",
@@ -426,7 +548,10 @@
       ],
       "risk_flagged": true,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "§9 (this doc), §11.2",
+      "files": [
+        "ui/desktop/src/components/PipelineProgress.vue"
+      ]
     },
     "C-034": {
       "title": "Criteria View",
@@ -436,7 +561,10 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "§11.2",
+      "files": [
+        "ui/desktop/src/views/CriteriaView.vue"
+      ]
     },
     "C-035": {
       "title": "Results View",
@@ -446,7 +574,10 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "§11.2",
+      "files": [
+        "ui/desktop/src/views/ResultsView.vue"
+      ]
     },
     "C-036": {
       "title": "Settings View",
@@ -457,7 +588,10 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "§11.2",
+      "files": [
+        "ui/desktop/src/views/SettingsView.vue"
+      ]
     },
     "C-037": {
       "title": "Windows installer",
@@ -471,7 +605,10 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "§13.2",
+      "files": [
+        "ui/desktop/src-tauri/tauri.conf.json"
+      ]
     },
     "C-038": {
       "title": "Authoring docs — **M-06 gate**",
@@ -483,7 +620,13 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": ""
+      "sdd_anchor": "§14, **M-06**",
+      "files": [
+        "README.md",
+        "CONNECTOR_GUIDE.md",
+        "PROVIDER_GUIDE.md",
+        "PROFILE_INPUT_GUIDE.md"
+      ]
     },
     "C-045": {
       "title": "Chunk registry single source of truth",
@@ -495,7 +638,11 @@
       "tests": [
         "tests/test_workflow_harness.py"
       ],
-      "sdd_anchor": ""
+      "sdd_anchor": "ADR-024",
+      "files": [
+        "tools/chunks.json",
+        "tools/jh.py"
+      ]
     },
     "C-044": {
       "title": "Decouple engine from project business",
@@ -507,7 +654,12 @@
       "tests": [
         "tests/test_workflow_harness.py"
       ],
-      "sdd_anchor": ""
+      "sdd_anchor": "ADR-025",
+      "files": [
+        "tools/jh_engine.py",
+        "tools/jh_project.py",
+        "tools/jh.py"
+      ]
     },
     "C-046": {
       "title": "Generated PROGRESS orientation + sync",
@@ -519,7 +671,33 @@
       "tests": [
         "tests/test_workflow_harness.py"
       ],
-      "sdd_anchor": ""
+      "sdd_anchor": "ADR-026",
+      "files": [
+        "tools/jh_engine.py",
+        "tools/jh_project.py",
+        "tools/jh.py",
+        "PROGRESS.md",
+        "tools/README.md"
+      ]
+    },
+    "C-047": {
+      "title": "One-command chunk context brief",
+      "stage": "Tooling",
+      "depends_on": [
+        "C-045"
+      ],
+      "risk_flagged": false,
+      "tests": [
+        "tests/test_workflow_harness.py"
+      ],
+      "sdd_anchor": "ADR-026",
+      "files": [
+        "tools/jh.py",
+        "tools/jh_engine.py",
+        "tools/jh_project.py",
+        "tools/chunks.json",
+        "tools/README.md"
+      ]
     }
   }
 }

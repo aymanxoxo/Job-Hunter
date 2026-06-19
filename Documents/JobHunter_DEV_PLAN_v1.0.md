@@ -366,6 +366,7 @@ renderers. The Vue store maps events into the timeline model; the component is p
 | C-045 | Chunk registry single source of truth | `tools/chunks.json`, `tools/jh.py`, harness tests/docs | C-040 | Registry, PROGRESS ledger, and dev-plan chunk metadata stay consistent; `doctor` catches drift. | ADR-024 |
 | C-044 | Decouple engine from project business | `tools/jh_engine.py`, `tools/jh_project.py`, `tools/jh.py`, harness tests/docs | C-045 | Generic engine logic contains no JobHunter project identifiers; adapter-supplied config drives a non-JobHunter fixture. | ADR-025 |
 | C-046 | Generated PROGRESS orientation + sync | `tools/jh_engine.py`, `tools/jh_project.py`, `tools/jh.py`, `PROGRESS.md`, `tools/README.md`, harness tests/docs | C-044 | `jh.py sync` regenerates the sentinel-protected PROGRESS orientation, backfills done-chunk merge placeholders from git history, `after-merge` invokes it, and `doctor` fails stale generated orientation. | ADR-026 |
+| C-047 | One-command chunk context brief | `tools/jh.py`, `tools/jh_engine.py`, `tools/jh_project.py`, `tools/chunks.json`, `tools/README.md`, harness tests/docs | C-045 | `jh.py context C-XXX` prints registry metadata, resolved SDD excerpts, relevant ADR titles, module `AGENTS.md`, optional gate evidence, and supports `--json`. | ADR-026 |
 
 ### Foundation
 

@@ -17,8 +17,9 @@ you productive fast; the repo is the source of truth.
 ## How to work — one chunk at a time, test-first
 - Start with the deterministic harness: `python tools/jh.py bootstrap`, then `python tools/jh.py status`
   and `python tools/jh.py next`. Use the docs for judgment and context, but let the harness do the
-  mechanical state discovery whenever possible. Run `python tools/jh.py sync` after ledger edits; it
-  regenerates the sentinel-protected `PROGRESS.md` orientation and backfills merge placeholders.
+  mechanical state discovery whenever possible. Use `python tools/jh.py context C-XXX` for the chunk
+  brief before implementation. Run `python tools/jh.py sync` after ledger edits; it regenerates the
+  sentinel-protected `PROGRESS.md` orientation and backfills merge placeholders.
 - Before starting a chunk or code change, ask the user whether the resulting PR should be auto-merged
   after green CI or held for manual review. Encode the answer in the PR body checkbox
   `Auto-merge after CI` or with the `auto-merge` label.

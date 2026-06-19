@@ -116,6 +116,23 @@ class Orientation:
     blocked: tuple[Chunk, ...]
 
 
+@dataclass(frozen=True)
+class ChunkBrief:
+    chunk_id: str
+    title: str
+    stage: str
+    status: str
+    files: tuple[str, ...]
+    depends_on: tuple[str, ...]
+    risk_flagged: bool
+    tests: tuple[str, ...]
+    sdd_anchor: str
+    sdd_excerpt: str
+    adr_titles: tuple[str, ...]
+    agents_path: str
+    gate_evidence: str | None = None
+
+
 def clamp_wait_seconds(seconds: int, *, maximum: int = MAX_WAIT_SECONDS) -> int:
     """Bound a requested wait so no agent-facing op can block unbounded (ADR-023)."""
     return max(0, min(seconds, maximum))
@@ -218,6 +235,60 @@ def _render_chunk(chunk: Chunk) -> str:
     if chunk.risk_flagged and chunk.status != "done":
         text += " (risk-flagged; design sign-off required)"
     return text
+
+
+def render_chunk_brief(brief: ChunkBrief) -> str:
+    """Render a human-readable chunk context brief from already-loaded inputs."""
+    lines = [
+        f"# Chunk Context: {brief.chunk_id} - {brief.title}",
+        "",
+        "## Metadata",
+        f"- Stage: {brief.stage}",
+        f"- Status: {brief.status}",
+        f"- Risk flagged: {'yes' if brief.risk_flagged else 'no'}",
+        f"- Dependencies: {_render_values(brief.depends_on)}",
+        f"- Files: {_render_values(brief.files)}",
+        f"- Tests: {_render_values(brief.tests)}",
+        f"- SDD anchor: {brief.sdd_anchor or 'not configured'}",
+        f"- Module guide: {brief.agents_path or 'not found'}",
+        "",
+        "## Relevant ADRs",
+        _render_values(brief.adr_titles),
+        "",
+        "## SDD Excerpt",
+        brief.sdd_excerpt or "No SDD excerpt found.",
+        "",
+        "## Gate Evidence",
+        brief.gate_evidence or "Gate evidence: not found",
+    ]
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def chunk_brief_to_dict(brief: ChunkBrief) -> dict[str, Any]:
+    """Return the machine-readable form used by the context command's JSON mode."""
+    return {
+        "chunk": {
+            "id": brief.chunk_id,
+            "title": brief.title,
+            "stage": brief.stage,
+            "status": brief.status,
+            "depends_on": list(brief.depends_on),
+            "risk_flagged": brief.risk_flagged,
+        },
+        "metadata": {
+            "files": list(brief.files),
+            "tests": list(brief.tests),
+            "sdd_anchor": brief.sdd_anchor,
+        },
+        "sdd_excerpt": brief.sdd_excerpt,
+        "adr_titles": list(brief.adr_titles),
+        "agents_path": brief.agents_path,
+        "gate_evidence": brief.gate_evidence,
+    }
+
+
+def _render_values(values: tuple[str, ...]) -> str:
+    return ", ".join(values) if values else "none"
 
 
 def detect_stale_done_placeholders(

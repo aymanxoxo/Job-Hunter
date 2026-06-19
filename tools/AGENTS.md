@@ -1,7 +1,7 @@
 # tools - deterministic workflow automation
 
 ## Contents
-- `jh.py` - imperative CLI shell: wires the project adapter into the engine and runs git/GitHub effects (bootstrap, status, next, start, sync, doctor, gate, PR handoff, post-merge cleanup).
+- `jh.py` - imperative CLI shell: wires the project adapter into the engine and runs git/GitHub effects (bootstrap, status, next, context, start, sync, doctor, gate, PR handoff, post-merge cleanup).
 - `jh_engine.py` - generic, project-agnostic workflow engine: value types + pure planning/eval logic, no project identifiers (ADR-025). `doctor` enforces its purity.
 - `jh_project.py` - the JobHunter `ProjectConfig` adapter; the only place project-specific values (paths, gate commands, id formats, plugin dirs, risk list) live (ADR-025).
 - `chunks.json` - the chunk registry: single source of truth for per-chunk metadata (stage/deps/risk/tests) + smoke imports (ADR-024); `doctor` checks it against the ledger and dev-plan §10.
@@ -27,6 +27,8 @@
   auto-merge. Record the answer in the PR body checkbox or `auto-merge` label.
 - `PROGRESS.md` orientation is generated between `jh:orientation` sentinels. Run `jh.py sync` after
   ledger edits; `doctor` fails stale generated orientation.
+- `jh.py context C-XXX` is the one-command chunk brief. It reads registry metadata, SDD anchors,
+  module `AGENTS.md` pointers, ADR titles, SDD excerpts, and optional gate evidence.
 
 ## Pointers
 - Parent: [../AGENTS.md](../AGENTS.md)

@@ -10,7 +10,7 @@
 
 <!-- jh:orientation:start -->
 - **Phase:** Phase 1 - Foundation. **Next gate:** M-03 (chunk C-029).
-- **Last done:** **C-046** - Generated PROGRESS orientation + sync (merge pending). Prior done: **C-044** - Decouple engine from project business (`655c483`); **C-045** - Chunk registry single source of truth (`d0c007e`).
+- **Last done:** **C-047** - One-command chunk context brief (merge pending). Prior done: **C-046** - Generated PROGRESS orientation + sync (`75e1ae2`); **C-044** - Decouple engine from project business (`655c483`).
 - **Next ready:** **C-008** - Auth strategy resolver (risk-flagged; design sign-off required); **C-009** - Plugin discovery; **C-010** - Prompt builders (pure); **C-011** - Response parsers (pure); **C-012** - Job field-stripper (pure); **C-013** - Batching util (pure); **C-018** - Mock connector + fixtures; **C-019** - Session store; **C-020** - Indeed connector (risk-flagged; design sign-off required); **C-022** - Pure pipeline transforms; **C-023** - Progress event emitter; **C-024** - Output exporter; **C-038** - Authoring docs — **M-06 gate**.
 - **Blocked:** none.
 - **Notes:** Dev loop runs through short-lived GitHub PR branches; the user reviews and merges. See [ADR-014/015/016](Documents/DECISIONS.md).
@@ -39,7 +39,8 @@
 | C-043 | Async/idempotent long-running waits | Tooling | C-042 | done | 853a6bb |
 | C-045 | Chunk registry single source of truth | Tooling | C-040 | done | d0c007e |
 | C-044 | Decouple engine from project business | Tooling | C-045 | done | 655c483 |
-| C-046 | Generated PROGRESS orientation + sync | Tooling | C-044 | done | (PR) |
+| C-046 | Generated PROGRESS orientation + sync | Tooling | C-044 | done | 75e1ae2 |
+| C-047 | One-command chunk context brief | Tooling | C-045 | done | (PR) |
 | C-007 | BaseProfileInput ABC + text parser | Contracts | C-004 | done | ff83ca3 |
 | C-008 | Auth strategy resolver | Contracts | C-002, C-003 | todo | — |
 | C-009 | Plugin discovery | Contracts | C-005, C-006, C-007 | todo | — |
@@ -75,6 +76,7 @@
 
 ## Changelog (newest first)
 
+- 2026-06-19 - **C-047** One-command chunk context brief on `chunk/C-047-context-command`: `jh.py context C-XXX` assembles registry metadata, dev-plan-sourced files/SDD anchors, SDD excerpts, ADR titles, module AGENTS pointers, optional gate evidence, and JSON output. Gate green (`pytest`, `ruff`, import smoke). (PR pending.)
 - 2026-06-19 - **C-046** Generated PROGRESS orientation + sync on `chunk/C-046-progress-sync`: `jh.py sync` regenerates the sentinel-protected PROGRESS orientation from the chunk graph, backfills done-chunk merge placeholders from git merge commits, and is invoked by `after-merge`; `doctor` now fails stale generated orientation. Added pure engine orientation helpers plus shell sync/backfill tests. 66 focused harness tests green; full gate `python tools/jh.py gate C-046` all-green (120/120 pytest, ruff clean, doctor PASS). (PR pending.) (ADR-026.)
 - 2026-06-19 — **C-044** Decouple engine from project business on `chunk/C-044-decouple-engine`: split `tools/jh.py` into `tools/jh_engine.py` (generic, project-agnostic engine — value types + pure planning/eval logic, no project identifiers) + `tools/jh_project.py` (the `ProjectConfig` adapter; `JOBHUNTER` holds every project-specific value) + `jh.py` (thin CLI shell wiring adapter into engine, re-exporting names so the public surface is unchanged). New `doctor` engine-purity check + a fixture-adapter test driving the engine with a non-JobHunter config prove the decoupling. Also backfilled the C-045 merge hash `d0c007e`. 4 tests added, 114/114 green; ruff clean; doctor PASS; gate all-green. (PR pending.) (ADR-025.)
 - 2026-06-19 — **C-045** Chunk registry SSOT on `chunk/C-045-chunk-registry`: new `tools/chunks.json` holds per-chunk static metadata (stage/deps/risk/tests) + smoke imports and absorbs `jh_config.json`; `load_config` now derives its legacy shape from the registry (callers unchanged); `doctor` gains `check_registry_consistency` (registry vs PROGRESS ledger vs dev-plan §10, expanding dep ranges like `C-010–C-013`). Also backfilled the C-043 merge hash `853a6bb`. 9 tests added, 110/110 green; ruff clean; doctor PASS. (PR pending.) (ADR-024.)

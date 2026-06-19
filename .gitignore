@@ -1,6 +1,9 @@
 # Generated results (per SDD §2 — git-ignored)
 output/
 
+# Local helper repos/tools that are not part of JobHunter
+github-pr-mcp/
+
 # Secrets / credentials — never commit
 .env
 .env.*
