@@ -410,7 +410,9 @@
         "C-004"
       ],
       "risk_flagged": false,
-      "tests": [],
+      "tests": [
+        "tests/test_pipeline.py"
+      ],
       "sdd_anchor": "§5.1 steps 7–10",
       "files": [
         "core/pipeline.py"

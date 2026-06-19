@@ -42,6 +42,7 @@ Each module folder gets its own `AGENTS.md` (following the template below) when 
 | Auth | `core/auth/` | Ordered auth strategy resolver + encrypted session store; OAuth device flow planned |
 | Engine | `core/ai_engine/` | AI facade + pure prompt/parsing/scrub/batching helpers |
 | Runner | `core/runner.py` | Plugin loader (importlib) + pipeline orchestrator |
+| Pipeline transforms | `core/pipeline.py` | Pure merge, URL dedup, score sort, and threshold filter helpers |
 | Connector drop-zone | `connectors/` | User-added connectors, auto-discovered |
 | Provider drop-zone | `ai_providers/` | User-added providers, auto-discovered |
 | Profile inputs (built-in) | `core/profile_inputs/` | `BaseProfileInput` ABC + `TextProfileInput` text passthrough |
