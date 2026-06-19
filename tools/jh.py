@@ -151,6 +151,31 @@ def parse_dev_plan_deps(text: str) -> dict[str, set[str]]:
     return deps
 
 
+def parse_dev_plan_chunks(text: str) -> dict[str, dict[str, Any]]:
+    """Extract per-chunk file and SDD-ref metadata from dev-plan section 10 rows."""
+    chunks: dict[str, dict[str, Any]] = {}
+    for line in text.splitlines():
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if len(cells) < 6 or not re.fullmatch(PROJECT.chunk_id_regex, cells[0]):
+            continue
+        chunks[cells[0]] = {
+            "goal": cells[1],
+            "files": list(_extract_plan_files(cells[2])),
+            "sdd_anchor": cells[5],
+        }
+    return chunks
+
+
+def _extract_plan_files(cell: str) -> tuple[str, ...]:
+    files = re.findall(r"`([^`]+)`", cell)
+    if files:
+        return tuple(files)
+    cleaned = cell.strip()
+    if not cleaned or cleaned in {"-", "--", "---", "â€”", "—"}:
+        return ()
+    return (cleaned,)
+
+
 def check_registry_consistency(
     registry: dict[str, Any],
     ledger_chunks: dict[str, Chunk],
@@ -187,6 +212,7 @@ def check_registry_consistency(
                 Issue("registry.risk", f"{cid} risk flag differs between registry and ledger")
             )
     dev_deps = parse_dev_plan_deps(dev_plan_text)
+    dev_meta = parse_dev_plan_chunks(dev_plan_text)
     dev_ids = set(dev_deps)
     for cid in sorted(dev_ids - reg_ids):
         issues.append(
@@ -199,6 +225,21 @@ def check_registry_consistency(
                 Issue(
                     "registry.devplan_depends",
                     f"{cid} dependencies differ between registry and dev plan",
+                )
+            )
+        entry = meta[cid]
+        if "sdd_anchor" in entry and entry.get("sdd_anchor", "") != dev_meta[cid]["sdd_anchor"]:
+            issues.append(
+                Issue(
+                    "registry.sdd_anchor",
+                    f"{cid} SDD anchor differs between registry and dev plan",
+                )
+            )
+        if "files" in entry and tuple(entry.get("files", [])) != tuple(dev_meta[cid]["files"]):
+            issues.append(
+                Issue(
+                    "registry.files",
+                    f"{cid} files differ between registry and dev plan",
                 )
             )
     return issues
@@ -330,6 +371,113 @@ def git_merge_hashes_by_chunk(root: Path = ROOT) -> dict[str, str]:
     if result.returncode != 0:
         return {}
     return parse_chunk_merge_log(result.stdout)
+
+
+def build_chunk_context(root: Path, chunk_id: str) -> engine.ChunkBrief:
+    registry = load_registry(root)
+    chunks = read_chunks(root)
+    if chunk_id not in chunks:
+        raise ValueError(f"Unknown chunk {chunk_id}")
+
+    dev_meta = _dev_plan_metadata(root).get(chunk_id, {})
+    meta = registry.get("chunks", {}).get(chunk_id, {})
+    chunk = chunks[chunk_id]
+    files = tuple(meta.get("files") or dev_meta.get("files", ()))
+    tests = tuple(meta.get("tests", ()))
+    sdd_anchor = str(meta.get("sdd_anchor") or dev_meta.get("sdd_anchor", ""))
+    sdd_excerpt = extract_sdd_excerpt(_read_optional(root / PROJECT.sdd_relpath), sdd_anchor)
+    decisions_text = _read_optional(root / PROJECT.decisions_relpath)
+    return engine.ChunkBrief(
+        chunk_id=chunk.id,
+        title=chunk.title,
+        stage=chunk.stage,
+        status=chunk.status,
+        files=files,
+        depends_on=chunk.depends_on,
+        risk_flagged=chunk.risk_flagged,
+        tests=tests,
+        sdd_anchor=sdd_anchor,
+        sdd_excerpt=sdd_excerpt,
+        adr_titles=relevant_adr_titles(decisions_text, sdd_anchor),
+        agents_path=resolve_agents_path(root, files, chunk.stage),
+        gate_evidence=read_gate_evidence(root, chunk_id),
+    )
+
+
+def _dev_plan_metadata(root: Path) -> dict[str, dict[str, Any]]:
+    dev_plan = root / PROJECT.dev_plan_relpath
+    if not dev_plan.exists():
+        return {}
+    return parse_dev_plan_chunks(dev_plan.read_text(encoding="utf-8"))
+
+
+def _read_optional(path: Path) -> str:
+    return path.read_text(encoding="utf-8") if path.exists() else ""
+
+
+def extract_sdd_excerpt(sdd_text: str, sdd_anchor: str) -> str:
+    sections = [
+        section
+        for ref in extract_sdd_refs(sdd_anchor)
+        if (section := extract_markdown_section(sdd_text, ref))
+    ]
+    return "\n\n".join(sections)
+
+
+def extract_sdd_refs(sdd_anchor: str) -> tuple[str, ...]:
+    refs = []
+    for match in re.finditer(r"§\s*(\d+(?:\.\d+)*)", sdd_anchor):
+        refs.append(match.group(1))
+    return tuple(refs)
+
+
+def extract_markdown_section(text: str, section_ref: str) -> str:
+    if not text:
+        return ""
+    match = re.search(
+        rf"^(?P<hashes>##+)\s+{re.escape(section_ref)}(?:\s|$).*",
+        text,
+        re.MULTILINE,
+    )
+    if not match:
+        return ""
+    level = len(match.group("hashes"))
+    next_heading = re.search(rf"^#{{2,{level}}}\s+", text[match.end() :], re.MULTILINE)
+    end = match.end() + next_heading.start() if next_heading else len(text)
+    return text[match.start() : end].strip()
+
+
+def relevant_adr_titles(decisions_text: str, sdd_anchor: str) -> tuple[str, ...]:
+    titles = parse_adr_titles(decisions_text)
+    refs = tuple(dict.fromkeys(re.findall(r"ADR-\d{3}", sdd_anchor)))
+    return tuple(f"{ref} - {titles[ref]}" for ref in refs if ref in titles)
+
+
+def parse_adr_titles(decisions_text: str) -> dict[str, str]:
+    titles: dict[str, str] = {}
+    for match in re.finditer(r"^## (ADR-\d{3})\s+(?:—|-)\s+(.+)$", decisions_text, re.MULTILINE):
+        titles[match.group(1)] = match.group(2).strip()
+    return titles
+
+
+def resolve_agents_path(root: Path, files: tuple[str, ...], stage: str) -> str:
+    for file_path in files:
+        normalized = file_path.replace("\\", "/")
+        for prefix, agents_path in PROJECT.module_agent_paths:
+            if normalized == prefix or normalized.startswith(prefix.rstrip("/") + "/"):
+                return agents_path if (root / agents_path).exists() else ""
+    for stage_name, agents_path in PROJECT.stage_agent_paths:
+        if stage == stage_name:
+            return agents_path if (root / agents_path).exists() else ""
+    root_agents = "AGENTS.md"
+    return root_agents if (root / root_agents).exists() else ""
+
+
+def read_gate_evidence(root: Path, chunk_id: str) -> str | None:
+    gate_log = root / PROJECT.output_agent_relpath / f"{chunk_id}-gate.md"
+    if not gate_log.exists():
+        return None
+    return gate_log.read_text(encoding="utf-8").strip()
 
 
 
@@ -908,6 +1056,16 @@ def command_sync(args: argparse.Namespace) -> int:
     root = Path(args.root).resolve()
     changed = sync_progress(root)
     print(f"{PROJECT.progress_filename} {'synced' if changed else 'already synced'}")
+    return 0
+
+
+def command_context(args: argparse.Namespace) -> int:
+    root = Path(args.root).resolve()
+    brief = build_chunk_context(root, args.chunk)
+    if args.json:
+        print(json.dumps(engine.chunk_brief_to_dict(brief), indent=2))
+    else:
+        print(engine.render_chunk_brief(brief), end="")
     return 0
 
 
@@ -1548,6 +1706,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     sync = sub.add_parser("sync")
     sync.set_defaults(func=command_sync)
+
+    context = sub.add_parser("context")
+    context.add_argument("chunk")
+    context.add_argument("--json", action="store_true")
+    context.set_defaults(func=command_context)
 
     doctor = sub.add_parser("doctor")
     doctor.add_argument("--ci", action="store_true")

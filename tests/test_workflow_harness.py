@@ -1003,6 +1003,19 @@ def test_registry_consistency_flags_devplan_dependency_mismatch():
     assert any(i.code == "registry.devplan_depends" and "C-008" in i.message for i in issues)
 
 
+def test_registry_consistency_flags_sdd_anchor_mismatch():
+    registry = json.loads(json.dumps(REGISTRY_FIXTURE))
+    registry["chunks"]["C-008"]["sdd_anchor"] = "§9.9"
+    plan = DEV_PLAN_OK.replace(
+        "| C-008 | x | y | C-001 | a | Â§1 |",
+        "| C-008 | x | y | C-001 | a | §8.1 |",
+    )
+
+    issues = jh.check_registry_consistency(registry, _consistent_ledger(), plan)
+
+    assert any(i.code == "registry.sdd_anchor" and "C-008" in i.message for i in issues)
+
+
 def test_registry_consistency_expands_dev_plan_ranges():
     registry = {
         "smoke_imports": ["core"],
@@ -1055,7 +1068,10 @@ DEMO_PROJECT = jh_project.ProjectConfig(
     progress_filename="TASKS.md",
     registry_relpath="meta/tasks.json",
     dev_plan_relpath="docs/PLAN.md",
+    sdd_relpath="docs/SDD.md",
+    decisions_relpath="docs/DECISIONS.md",
     pr_template_relpath=".github/PR.md",
+    output_agent_relpath="out/agent",
     source_check_dir="src",
     chunk_id_regex=r"T-\d{2}",
     branch_regex=r"task/T-\d{2}-[a-z0-9-]+",
@@ -1071,6 +1087,8 @@ DEMO_PROJECT = jh_project.ProjectConfig(
     orientation_prelude_lines=("- **Phase:** Demo.",),
     orientation_footer_lines=("- **Protocol:** Demo.",),
     orientation_recent_done=2,
+    module_agent_paths=(("src", "src/AGENTS.md"),),
+    stage_agent_paths=(("Build", "src/AGENTS.md"),),
     cli_prog="demo",
     cli_description="Demo workflow",
     guide_text="demo guide",
@@ -1251,3 +1269,78 @@ def test_after_merge_invokes_progress_sync(monkeypatch, tmp_path, capsys):
     assert jh.command_after_merge(args) == 0
     assert synced == [tmp_path]
     assert "synced PROGRESS.md" in capsys.readouterr().out
+
+
+# --- C-047: one-command chunk context brief ---
+
+
+def test_engine_renders_chunk_brief_with_optional_gate_absent():
+    brief = engine.ChunkBrief(
+        chunk_id="T-02",
+        title="Risky task",
+        stage="Build",
+        status="todo",
+        files=("src/task.py",),
+        depends_on=("T-01",),
+        risk_flagged=True,
+        tests=("tests/test_task.py",),
+        sdd_anchor="S-1",
+        sdd_excerpt="## S-1\nSpec text.",
+        adr_titles=("ADR-001 - First decision",),
+        agents_path="src/AGENTS.md",
+        gate_evidence=None,
+    )
+
+    rendered = engine.render_chunk_brief(brief)
+    data = engine.chunk_brief_to_dict(brief)
+
+    assert "T-02 - Risky task" in rendered
+    assert "Risk flagged: yes" in rendered
+    assert "tests/test_task.py" in rendered
+    assert "## S-1" in rendered
+    assert "ADR-001 - First decision" in rendered
+    assert "Gate evidence: not found" in rendered
+    assert data["chunk"]["id"] == "T-02"
+    assert data["gate_evidence"] is None
+
+
+def test_context_c007_prints_complete_brief_with_sdd_and_missing_gate(capsys):
+    args = SimpleNamespace(root=str(jh.ROOT), chunk="C-007", json=False)
+
+    assert jh.command_context(args) == 0
+    output = capsys.readouterr().out
+
+    assert "C-007 - BaseProfileInput ABC + text parser" in output
+    assert "Stage: Contracts" in output
+    assert "Risk flagged: no" in output
+    assert "Tests:" in output
+    assert "tests/test_profile_inputs.py" in output
+    assert "### 3.3 Profile Input (new)" in output
+    assert "### 5.3 Profile Input layer (new)" in output
+    assert "core/profile_inputs/AGENTS.md" in output
+    assert "Gate evidence: not found" in output
+
+
+def test_context_json_emits_structured_fields(capsys):
+    args = SimpleNamespace(root=str(jh.ROOT), chunk="C-007", json=True)
+
+    assert jh.command_context(args) == 0
+    data = json.loads(capsys.readouterr().out)
+
+    assert data["chunk"]["id"] == "C-007"
+    assert data["chunk"]["status"] == "done"
+    assert data["chunk"]["risk_flagged"] is False
+    assert data["chunk"]["depends_on"] == ["C-004"]
+    assert data["metadata"]["sdd_anchor"] == "§3.3, §5.3"
+    assert "Profile Input" in data["sdd_excerpt"]
+    assert data["agents_path"].endswith("core/profile_inputs/AGENTS.md")
+    assert data["gate_evidence"] is None
+
+
+def test_context_command_is_registered():
+    parser = jh.build_parser()
+    args = parser.parse_args(["context", "C-007", "--json"])
+
+    assert args.func is jh.command_context
+    assert args.chunk == "C-007"
+    assert args.json is True

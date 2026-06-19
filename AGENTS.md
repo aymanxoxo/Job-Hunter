@@ -115,9 +115,10 @@ describes must be reflected in that doc *as part of the same change* — never d
 Full detail in the [dev plan](Documents/JobHunter_DEV_PLAN_v1.0.md); the essentials:
 
 - **Use the deterministic harness for mechanical work.** After C-040, start with
-  `python tools/jh.py bootstrap`, `python tools/jh.py status`, and `python tools/jh.py next`; sync
-  generated progress state with `python tools/jh.py sync`; validate with `python tools/jh.py gate C-XXX`;
-  generate/create PR handoffs with `pr-ready` and `create-pr`.
+  `python tools/jh.py bootstrap`, `python tools/jh.py status`, and `python tools/jh.py next`; get the
+  chunk brief with `python tools/jh.py context C-XXX`; sync generated progress state with
+  `python tools/jh.py sync`; validate with `python tools/jh.py gate C-XXX`; generate/create PR handoffs
+  with `pr-ready` and `create-pr`.
 - **All work is AI-executed and chunk-based.** Not scrum — a dependency DAG of small chunks (`C-XXX`).
   A chunk is workable once its dependencies are `done`; pick any ready one from [`PROGRESS.md`](PROGRESS.md).
 - **The loop:** read `PROGRESS.md` orientation block → take the next ready chunk → read its row + linked

@@ -10,6 +10,7 @@ python tools/jh.py guide
 python tools/jh.py bootstrap
 python tools/jh.py status
 python tools/jh.py next
+python tools/jh.py context C-XXX
 python tools/jh.py sync
 ```
 
@@ -20,6 +21,7 @@ If the shell does not expose `python`, use the available interpreter for the cur
 
 ```bash
 python tools/jh.py start C-XXX --branch chunk/C-XXX-slug
+python tools/jh.py context C-XXX
 python tools/jh.py gate C-XXX
 python tools/jh.py sync
 python tools/jh.py pr-ready C-XXX
@@ -35,6 +37,10 @@ Generated logs and PR evidence are written under `output/agent/`, which is git-i
 `sync` regenerates the sentinel-protected `PROGRESS.md` orientation block and backfills done-chunk
 merge placeholders from git history. `doctor` fails if the generated block is stale, and `after-merge`
 runs `sync` automatically after its tag/branch cleanup.
+
+`context C-XXX` prints the one-command chunk brief: registry metadata, dev-plan-sourced file and SDD
+anchors, resolved SDD excerpts, relevant ADR titles, the owning module `AGENTS.md`, and any cached gate
+evidence. Add `--json` for machine-readable output.
 
 Risk-flagged chunks are blocked by `start` until design sign-off is complete. After sign-off, use:
 
@@ -77,6 +83,7 @@ Use these when another tool or model needs structured state:
 
 ```bash
 python tools/jh.py status --json
+python tools/jh.py context C-XXX --json
 python tools/jh.py auth-status --json
 ```
 
