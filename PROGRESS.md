@@ -50,7 +50,7 @@
 | C-012 | Job field-stripper (pure) | AI engine | C-004 | done | d5565b6 |
 | C-013 | Batching util (pure) | AI engine | C-004 | done | 7bef68d |
 | C-014 | AI engine facade | AI engine | C-006, C-010, C-011, C-012, C-013 | done | a9138e2 |
-| C-015 | Ollama provider | Providers | C-006, C-014 | done | (PR) |
+| C-015 | Ollama provider | Providers | C-006, C-014 | done | 70c71f6 |
 | C-016 | Google OAuth device flow | Providers | C-002, C-008 | todo | — |
 | C-017 | Gemini provider | Providers | C-006, C-008, C-016 | todo | — |
 | C-018 | Mock connector + fixtures | Connectors | C-005 | todo | — |
@@ -77,7 +77,7 @@
 
 ## Changelog (newest first)
 
-- 2026-06-19 - **C-015** Ollama provider on `chunk/C-015-ollama-provider`: `core.ai_providers.OllamaProvider` calls the local Ollama `/api/generate` endpoint with default model `llama3`, no auth, `stream: false`, and delegates prompt orchestration/parsing/scored immutable job copies to `AIEngine`; tests fake HTTP with `httpx.MockTransport`. Gate green (`182` pytest, `ruff`, import smoke). (PR pending.)
+- 2026-06-19 - **C-015** Ollama provider on `chunk/C-015-ollama-provider`: `core.ai_providers.OllamaProvider` calls the local Ollama `/api/generate` endpoint with default model `llama3`, no auth, `stream: false`, and delegates prompt orchestration/parsing/scored immutable job copies to `AIEngine`; tests fake HTTP with `httpx.MockTransport`. Gate green (`182` pytest, `ruff`, import smoke). Merged `70c71f6` (PR #37).
 - 2026-06-19 - **C-014** AI engine facade on `chunk/C-014-ai-engine-facade`: `core.ai_engine.AIEngine` wraps an injected async prompt provider, builds criteria/scoring prompts, batches score requests, parses provider JSON into JobHunter models, raises `AIEngineError` for invalid provider output, and returns scored `Job` copies without mutating inputs. Gate green (`176` pytest, `ruff`, import smoke). Merged `a9138e2` (PR #36).
 - 2026-06-19 - **C-013** Batching util on `chunk/C-013-batching-util`: `core.ai_engine.batching.batch_items` splits sequences into order-preserving list batches, handles empty/exact/remainder cases, preserves item identity, and rejects non-positive batch sizes. Gate green (`170` pytest, `ruff`, import smoke). Merged `7bef68d` (PR #35).
 - 2026-06-19 - **C-012** Job field-stripper on `chunk/C-012-job-field-stripper`: `core.ai_engine.scrub` exposes pure helpers that strip jobs to `id`, `title`, `company`, and `description` before provider calls; `build_score_jobs_prompt` now uses the shared scrubber. Gate green (`163` pytest, `ruff`, import smoke). Merged `d5565b6` (PR #34).
