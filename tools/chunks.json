@@ -496,6 +496,18 @@
         "tests/test_workflow_harness.py"
       ],
       "sdd_anchor": ""
+    },
+    "C-044": {
+      "title": "Decouple engine from project business",
+      "stage": "Tooling",
+      "depends_on": [
+        "C-045"
+      ],
+      "risk_flagged": false,
+      "tests": [
+        "tests/test_workflow_harness.py"
+      ],
+      "sdd_anchor": ""
     }
   }
 }
