@@ -368,7 +368,9 @@
         "C-002"
       ],
       "risk_flagged": false,
-      "tests": [],
+      "tests": [
+        "tests/test_session_store.py"
+      ],
       "sdd_anchor": "§8.3",
       "files": [
         "core/auth/session_store.py"
