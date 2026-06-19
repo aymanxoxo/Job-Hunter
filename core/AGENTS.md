@@ -13,7 +13,8 @@ pipeline runner, and shared infra. Pure logic stays side-effect-free; I/O lives 
 - `walking_skeleton.py` — C-039 stub profile -> criteria -> fixture search -> score -> JSON export.
 - `profile_inputs/` — `BaseProfileInput` ABC + `TextProfileInput` (see `profile_inputs/AGENTS.md`). **[C-007 · present]**
 - `runner.py` — plugin discovery helper for built-in and user drop-zone modules. **[C-009 · present]**
-- `auth/`, `ai_engine/` — empty stubs until their chunks land.
+- `auth/` — ordered auth strategy resolver (see `auth/AGENTS.md`). **[C-008 · present]**
+- `ai_engine/` — empty stub until its chunks land.
 
 ## Conventions / contracts
 - **Config (`config.py`, SDD §9).** `load_config(path, env=None)` → a validated `Config`;
@@ -31,6 +32,9 @@ pipeline runner, and shared infra. Pure logic stays side-effect-free; I/O lives 
   free except for explicit fixture loading and JSON export.
 - **Runner (`runner.py`, C-009).** Discovery is importlib-based and direct-directory only: skip `_*.py`
   and `base_*.py`, return plugin classes rather than instances, and keep orchestration for later chunks.
+- **Auth (`auth/auth_strategy.py`, C-008).** `resolve_auth()` consumes ordered plugin
+  `auth_methods`, tries injected providers/env in order, returns `AuthResult` for the first success, and
+  warns + returns `None` when required auth is unmet.
 
 ## Pointers
 - Parent: [../AGENTS.md](../AGENTS.md) · Spec: `../Documents/JobHunter_SDD_v1.1.md` · Logging std: dev plan §6.

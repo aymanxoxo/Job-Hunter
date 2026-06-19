@@ -196,7 +196,9 @@
         "C-003"
       ],
       "risk_flagged": true,
-      "tests": [],
+      "tests": [
+        "tests/test_auth_strategy.py"
+      ],
       "sdd_anchor": "§8.1",
       "files": [
         "core/auth/auth_strategy.py"

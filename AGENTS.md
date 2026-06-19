@@ -39,7 +39,7 @@ Each module folder gets its own `AGENTS.md` (following the template below) when 
 | Models | `core/models/` | `Job` and `SearchCriteria` dataclasses |
 | Connectors (built-in) | `core/connectors/` | `BaseConnector` ABC + Indeed / LinkedIn / Mock |
 | AI providers (built-in) | `core/ai_providers/` | `BaseAIProvider` ABC + Gemini / Ollama / OpenRouter |
-| Auth | `core/auth/` | OAuth device flow + keyring; Playwright session store |
+| Auth | `core/auth/` | Ordered auth strategy resolver; OAuth device flow and session store are later chunks |
 | Engine | `core/ai_engine.py` | Facade: `generate_criteria` + `score_jobs` |
 | Runner | `core/runner.py` | Plugin loader (importlib) + pipeline orchestrator |
 | Connector drop-zone | `connectors/` | User-added connectors, auto-discovered |
