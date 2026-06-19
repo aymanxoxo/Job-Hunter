@@ -8,7 +8,7 @@ pipeline runner, and shared infra. Pure logic stays side-effect-free; I/O lives 
 - `config.py` — config models + YAML loader + env overrides + no-secrets validator. **[C-003 · present]**
 - `logging.py` — structured JSON logger. **[C-002 · present]**
 - `models/` — `Job`, `SearchCriteria` (see `models/AGENTS.md`). **[C-004 · present]**
-- `connectors/` — `BaseConnector` ABC (see `connectors/AGENTS.md`). **[C-005 · present]**
+- `connectors/` — `BaseConnector` ABC + built-in Mock connector (see `connectors/AGENTS.md`). **[C-005, C-018 · present]**
 - `ai_providers/` — `BaseAIProvider` ABC + built-in Ollama provider (see `ai_providers/AGENTS.md`). **[C-006, C-015 · present]**
 - `walking_skeleton.py` — C-039 stub profile -> criteria -> fixture search -> score -> JSON export.
 - `profile_inputs/` — `BaseProfileInput` ABC + `TextProfileInput` (see `profile_inputs/AGENTS.md`). **[C-007 · present]**
@@ -32,6 +32,9 @@ pipeline runner, and shared infra. Pure logic stays side-effect-free; I/O lives 
   free except for explicit fixture loading and JSON export.
 - **Runner (`runner.py`, C-009).** Discovery is importlib-based and direct-directory only: skip `_*.py`
   and `base_*.py`, return plugin classes rather than instances, and keep orchestration for later chunks.
+- **Mock connector (`connectors/mock_connector.py`, C-018).** `MockConnector` loads deterministic jobs
+  from `fixtures/jobs.json` or an injected fixture path, forces `source = "mock"`, and filters by a
+  case-insensitive keyword match against title/description.
 - **Auth (`auth/auth_strategy.py`, C-008).** `resolve_auth()` consumes ordered plugin
   `auth_methods`, tries injected providers/env in order, returns `AuthResult` for the first success, and
   warns + returns `None` when required auth is unmet.
