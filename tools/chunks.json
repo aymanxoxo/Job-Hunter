@@ -1,5 +1,5 @@
 {
-  "_comment": "SSOT for chunk metadata (ADR-024). Static facts live here; live status/merge stay in PROGRESS.md until C-046 adds generation. `jh.py doctor` fails if this, the PROGRESS ledger, and dev-plan §10 disagree.",
+  "_comment": "SSOT for chunk metadata (ADR-024). Static facts live here; live status/merge stay in PROGRESS.md; `jh.py sync` generates the orientation block and backfills merge placeholders.",
   "smoke_imports": [
     "core",
     "core.profile_inputs",
@@ -502,6 +502,18 @@
       "stage": "Tooling",
       "depends_on": [
         "C-045"
+      ],
+      "risk_flagged": false,
+      "tests": [
+        "tests/test_workflow_harness.py"
+      ],
+      "sdd_anchor": ""
+    },
+    "C-046": {
+      "title": "Generated PROGRESS orientation + sync",
+      "stage": "Tooling",
+      "depends_on": [
+        "C-044"
       ],
       "risk_flagged": false,
       "tests": [

@@ -269,10 +269,11 @@ than one chunk id, it's too big — split it.
 
 ## 8. Progress ledger convention (`PROGRESS.md`)
 
-The ledger is the at-a-glance state. It has two parts, both updated as part of a chunk's commit:
+The ledger is the at-a-glance state. It has two parts, both synced as part of a chunk's commit:
 
-1. **Orientation block** (top): `Last done`, `Next ready`, `Blocked`, `Phase/gate`. This is what a cold
-   model reads first — keep it to a few lines.
+1. **Generated orientation block** (top): `Last done`, `Next ready`, `Blocked`, `Phase/gate`. This is
+   what a cold model reads first. It lives between `jh:orientation` sentinels and is regenerated with
+   `python tools/jh.py sync`; `doctor` fails if it is stale.
 2. **Chunk ledger table**: one row per chunk — `ID | Title | Stage | Depends on | Status | Commit`.
    `Status` ∈ `todo | in-progress | done | blocked`. `Commit` holds the short hash once done.
 
@@ -361,6 +362,10 @@ renderers. The Vue store maps events into the timeline model; the component is p
 | C-040 | Deterministic workflow harness for AI agents: bootstrap, status, next, start, doctor, gate, GitHub auth status, PR handoff, and post-merge cleanup | `tools/jh.py`, `tools/chunks.json`, CI workflow, harness tests/docs | C-006 | Harness unit tests cover ledger parsing, readiness, stale merge detection, doctor checks, PR body generation, GitHub credential fallback order, and dry-run planning; `python tools/jh.py gate C-040` passes. | ADR-020 |
 | C-041 | CI-gated auto-merge command for explicitly allowed PR classes | `tools/jh.py`, harness tests/docs | C-040 | `merge-pr` refuses draft/unmergeable/pending/failed/missing-CI PRs, merges only the checked head SHA after green checks, and supports dry-run/branch-delete paths. | ADR-021 |
 | C-042 | CI-native opt-in auto-merge and pre-chunk merge-policy prompt | CI workflow, `tools/jh.py`, PR template, harness docs/tests | C-041 | GitHub Actions skips by default, auto-merges only PRs opted in by label/body checkbox after validations pass, and docs require agents to ask for merge policy before starting work. | ADR-022 |
+| C-043 | Async/idempotent long-running waits | `tools/jh.py`, harness tests/docs | C-042 | Long-running merge paths are async-by-default, bounded, idempotent for already-merged PRs and already-deleted branches, and expose a non-blocking `pr-status` poll. | ADR-023 |
+| C-045 | Chunk registry single source of truth | `tools/chunks.json`, `tools/jh.py`, harness tests/docs | C-040 | Registry, PROGRESS ledger, and dev-plan chunk metadata stay consistent; `doctor` catches drift. | ADR-024 |
+| C-044 | Decouple engine from project business | `tools/jh_engine.py`, `tools/jh_project.py`, `tools/jh.py`, harness tests/docs | C-045 | Generic engine logic contains no JobHunter project identifiers; adapter-supplied config drives a non-JobHunter fixture. | ADR-025 |
+| C-046 | Generated PROGRESS orientation + sync | `tools/jh_engine.py`, `tools/jh_project.py`, `tools/jh.py`, `PROGRESS.md`, `tools/README.md`, harness tests/docs | C-044 | `jh.py sync` regenerates the sentinel-protected PROGRESS orientation, backfills done-chunk merge placeholders from git history, `after-merge` invokes it, and `doctor` fails stale generated orientation. | ADR-026 |
 
 ### Foundation
 

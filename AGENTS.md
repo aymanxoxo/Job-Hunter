@@ -115,16 +115,17 @@ describes must be reflected in that doc *as part of the same change* — never d
 Full detail in the [dev plan](Documents/JobHunter_DEV_PLAN_v1.0.md); the essentials:
 
 - **Use the deterministic harness for mechanical work.** After C-040, start with
-  `python tools/jh.py bootstrap`, `python tools/jh.py status`, and `python tools/jh.py next`; validate
-  with `python tools/jh.py gate C-XXX`; generate/create PR handoffs with `pr-ready` and `create-pr`.
+  `python tools/jh.py bootstrap`, `python tools/jh.py status`, and `python tools/jh.py next`; sync
+  generated progress state with `python tools/jh.py sync`; validate with `python tools/jh.py gate C-XXX`;
+  generate/create PR handoffs with `pr-ready` and `create-pr`.
 - **All work is AI-executed and chunk-based.** Not scrum — a dependency DAG of small chunks (`C-XXX`).
   A chunk is workable once its dependencies are `done`; pick any ready one from [`PROGRESS.md`](PROGRESS.md).
 - **The loop:** read `PROGRESS.md` orientation block → take the next ready chunk → read its row + linked
   SDD § → write tests first (**TDD**) → implement until green → run the §3.2 validation sequence → set
   the ledger row to `done` (+ hash) → **one commit** on `main`.
 - **Definition of Done (every chunk):** chunk tests green; full `pytest` green; `ruff` clean; FP +
-  logging conventions honoured; only the chunk's scope touched; docs synced; ledger updated; exactly one
-  commit. A chunk is not done while any of these is outstanding.
+  logging conventions honoured; only the chunk's scope touched; docs synced; ledger updated and
+  `jh.py sync` run; exactly one commit. A chunk is not done while any of these is outstanding.
 - **Commit format:** `<type>(<scope>): <summary>  [C-XXX]` with body lines `Tests:` and `Ledger: C-XXX → done`.
   The `[C-XXX]` tag joins plan ↔ ledger ↔ history, so `git log` reads as a progress diary.
 - **Code style:** functional core / imperative shell — pure, single-job, testable functions; effects

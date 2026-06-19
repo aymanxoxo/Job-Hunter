@@ -16,13 +16,14 @@ GUIDE_TEXT = """JobHunter AI workflow quick guide
 3. python tools/jh.py next
 4. python tools/jh.py start C-XXX --branch chunk/C-XXX-slug
 5. Write red tests, implement, then run: python tools/jh.py gate C-XXX
-6. Commit once with: <type>(<scope>): <summary>  [C-XXX]
-7. python tools/jh.py pr-ready C-XXX
-8. python tools/jh.py auth-status
-9. python tools/jh.py create-pr C-XXX
-10. Merge async (do not block): python tools/jh.py merge-pr <PR_NUMBER>
+6. python tools/jh.py sync
+7. Commit once with: <type>(<scope>): <summary>  [C-XXX]
+8. python tools/jh.py pr-ready C-XXX
+9. python tools/jh.py auth-status
+10. python tools/jh.py create-pr C-XXX
+11. Merge async (do not block): python tools/jh.py merge-pr <PR_NUMBER>
     then poll: python tools/jh.py pr-status <PR_NUMBER>
-11. After merge: python tools/jh.py after-merge C-XXX --branch chunk/C-XXX-slug
+12. After merge: python tools/jh.py after-merge C-XXX --branch chunk/C-XXX-slug
 
 Credential options for direct PR creation:
 - gh CLI already authenticated, or
@@ -53,6 +54,11 @@ class ProjectConfig:
     test_flags: tuple[str, ...]
     lint_command_tail: tuple[str, ...]
     default_gate_chunk: str
+    orientation_start_marker: str
+    orientation_end_marker: str
+    orientation_prelude_lines: tuple[str, ...]
+    orientation_footer_lines: tuple[str, ...]
+    orientation_recent_done: int
     cli_prog: str
     cli_description: str
     guide_text: str
@@ -82,6 +88,18 @@ JOBHUNTER = ProjectConfig(
     test_flags=("-q", "--asyncio-mode=auto"),
     lint_command_tail=("-m", "ruff", "check", "."),
     default_gate_chunk="C-040",
+    orientation_start_marker="<!-- jh:orientation:start -->",
+    orientation_end_marker="<!-- jh:orientation:end -->",
+    orientation_prelude_lines=(
+        "- **Phase:** Phase 1 - Foundation. **Next gate:** M-03 (chunk C-029).",
+    ),
+    orientation_footer_lines=(
+        "- **Notes:** Dev loop runs through short-lived GitHub PR branches; the user reviews "
+        "and merges. See [ADR-014/015/016](Documents/DECISIONS.md).",
+        "- **Protocol:** each chunk runs design -> test -> impl -> gate -> verify -> land "
+        "(plan section 3.3); risky chunks pause for Design sign-off.",
+    ),
+    orientation_recent_done=3,
     cli_prog="jh",
     cli_description="JobHunter deterministic workflow harness",
     guide_text=GUIDE_TEXT,
