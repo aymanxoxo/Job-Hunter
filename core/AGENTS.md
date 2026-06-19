@@ -14,7 +14,7 @@ pipeline runner, and shared infra. Pure logic stays side-effect-free; I/O lives 
 - `profile_inputs/` — `BaseProfileInput` ABC + `TextProfileInput` (see `profile_inputs/AGENTS.md`). **[C-007 · present]**
 - `runner.py` — plugin discovery helper for built-in and user drop-zone modules. **[C-009 · present]**
 - `auth/` — ordered auth strategy resolver (see `auth/AGENTS.md`). **[C-008 · present]**
-- `ai_engine/` — empty stub until its chunks land.
+- `ai_engine/` — pure prompt builders (see `ai_engine/AGENTS.md`). **[C-010 · present]**
 
 ## Conventions / contracts
 - **Config (`config.py`, SDD §9).** `load_config(path, env=None)` → a validated `Config`;
@@ -35,6 +35,8 @@ pipeline runner, and shared infra. Pure logic stays side-effect-free; I/O lives 
 - **Auth (`auth/auth_strategy.py`, C-008).** `resolve_auth()` consumes ordered plugin
   `auth_methods`, tries injected providers/env in order, returns `AuthResult` for the first success, and
   warns + returns `None` when required auth is unmet.
+- **AI engine prompts (`ai_engine/prompts.py`, C-010).** Prompt builders are deterministic and pure.
+  Score prompts include structured criteria plus only job `id`, `title`, `company`, and `description`.
 
 ## Pointers
 - Parent: [../AGENTS.md](../AGENTS.md) · Spec: `../Documents/JobHunter_SDD_v1.1.md` · Logging std: dev plan §6.
