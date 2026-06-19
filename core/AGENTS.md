@@ -9,7 +9,7 @@ pipeline runner, and shared infra. Pure logic stays side-effect-free; I/O lives 
 - `logging.py` — structured JSON logger. **[C-002 · present]**
 - `models/` — `Job`, `SearchCriteria` (see `models/AGENTS.md`). **[C-004 · present]**
 - `connectors/` — `BaseConnector` ABC (see `connectors/AGENTS.md`). **[C-005 · present]**
-- `ai_providers/` — `BaseAIProvider` ABC (see `ai_providers/AGENTS.md`). **[C-006 · present]**
+- `ai_providers/` — `BaseAIProvider` ABC + built-in Ollama provider (see `ai_providers/AGENTS.md`). **[C-006, C-015 · present]**
 - `walking_skeleton.py` — C-039 stub profile -> criteria -> fixture search -> score -> JSON export.
 - `profile_inputs/` — `BaseProfileInput` ABC + `TextProfileInput` (see `profile_inputs/AGENTS.md`). **[C-007 · present]**
 - `runner.py` — plugin discovery helper for built-in and user drop-zone modules. **[C-009 · present]**
@@ -46,6 +46,9 @@ pipeline runner, and shared infra. Pure logic stays side-effect-free; I/O lives 
 - **AI facade (`ai_engine/__init__.py`, C-014).** `AIEngine` wraps an injected async prompt provider,
   builds prompts, batches scoring calls, parses provider JSON, raises `AIEngineError` for unrecoverable
   output, and returns scored `Job` copies without mutating inputs.
+- **Ollama provider (`ai_providers/ollama_provider.py`, C-015).** `OllamaProvider` calls local
+  `http://localhost:11434/api/generate` with `stream: false`, default model `llama3`, no auth, and
+  delegates prompt orchestration/parsing to `AIEngine`.
 
 ## Pointers
 - Parent: [../AGENTS.md](../AGENTS.md) · Spec: `../Documents/JobHunter_SDD_v1.1.md` · Logging std: dev plan §6.
