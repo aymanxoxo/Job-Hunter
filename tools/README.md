@@ -29,6 +29,7 @@ python tools/jh.py auth-status
 python tools/jh.py create-pr C-XXX
 python tools/jh.py merge-pr <PR_NUMBER>          # async: one readiness check, no long block (ADR-023)
 python tools/jh.py pr-status <PR_NUMBER>         # non-blocking poll between turns
+python tools/jh.py pr-comments <PR_NUMBER>       # fetch PR review threads (+ --json)
 python tools/jh.py after-merge C-XXX --branch chunk/C-XXX-slug
 ```
 
@@ -84,6 +85,7 @@ Use these when another tool or model needs structured state:
 ```bash
 python tools/jh.py status --json
 python tools/jh.py context C-XXX --json
+python tools/jh.py pr-comments <PR_NUMBER> --json
 python tools/jh.py auth-status --json
 ```
 

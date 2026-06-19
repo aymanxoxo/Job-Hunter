@@ -291,6 +291,21 @@ def _render_values(values: tuple[str, ...]) -> str:
     return ", ".join(values) if values else "none"
 
 
+def render_pr_comments(comments: list[dict[str, Any]]) -> str:
+    """Render PR review threads + issue comments for human reading."""
+    if not comments:
+        return "No review or issue comments."
+    lines: list[str] = []
+    for comment in comments:
+        kind = comment.get("kind", "comment")
+        user = comment.get("user") or "unknown"
+        path = comment.get("path")
+        location = f" ({path})" if path else ""
+        body = (comment.get("body") or "").strip()
+        lines.append(f"- [{kind}] {user}{location}: {body}")
+    return "\n".join(lines)
+
+
 def detect_stale_done_placeholders(
     chunks: dict[str, Chunk], git_messages: list[str]
 ) -> list[Issue]:
