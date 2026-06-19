@@ -12,6 +12,7 @@ pipeline runner, and shared infra. Pure logic stays side-effect-free; I/O lives 
 - `ai_providers/` — `BaseAIProvider` ABC (see `ai_providers/AGENTS.md`). **[C-006 · present]**
 - `walking_skeleton.py` — C-039 stub profile -> criteria -> fixture search -> score -> JSON export.
 - `profile_inputs/` — `BaseProfileInput` ABC + `TextProfileInput` (see `profile_inputs/AGENTS.md`). **[C-007 · present]**
+- `runner.py` — plugin discovery helper for built-in and user drop-zone modules. **[C-009 · present]**
 - `auth/`, `ai_engine/` — empty stubs until their chunks land.
 
 ## Conventions / contracts
@@ -28,6 +29,8 @@ pipeline runner, and shared infra. Pure logic stays side-effect-free; I/O lives 
 - **Walking skeleton (`walking_skeleton.py`, C-039).** This is deliberately temporary integration
   wiring, not the final runner/exporter/connector implementation. Keep it deterministic and side-effect
   free except for explicit fixture loading and JSON export.
+- **Runner (`runner.py`, C-009).** Discovery is importlib-based and direct-directory only: skip `_*.py`
+  and `base_*.py`, return plugin classes rather than instances, and keep orchestration for later chunks.
 
 ## Pointers
 - Parent: [../AGENTS.md](../AGENTS.md) · Spec: `../Documents/JobHunter_SDD_v1.1.md` · Logging std: dev plan §6.
