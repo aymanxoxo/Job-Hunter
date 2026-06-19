@@ -16,20 +16,54 @@ import subprocess
 import sys
 import time
 import webbrowser
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 from urllib import error, parse, request
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from tools import jh_engine as engine  # noqa: E402
+from tools import jh_project  # noqa: E402
+from tools.jh_engine import (  # noqa: E402
+    MAX_WAIT_SECONDS,
+    VALID_STATUSES,
+    Chunk,
+    CommandResult,
+    DeviceCode,
+    GateEvidence,
+    GitHubCapability,
+    GitHubCredential,
+    Issue,
+    PullRequestCheck,
+    PullRequestReadiness,
+    StartPlan,
+    choose_handoff,
+    clamp_wait_seconds,
+    detect_stale_done_placeholders,
+    evaluate_pr_merge_readiness,
+    gate_commands,
+    pr_already_merged,
+    pr_requests_auto_merge,
+    ready_chunks,
+    validate_commit_subject,
+)
+
+PROJECT = jh_project.JOBHUNTER
+DEFAULT_RISK_FLAGGED = PROJECT.default_risk_flagged
+
+
+def parse_progress(text, risk_flagged=None):
+    risks = risk_flagged or set(PROJECT.default_risk_flagged)
+    return engine.parse_ledger(text, risk_flagged=risks, id_pattern=PROJECT.chunk_id_regex)
+
+
+def validate_branch_name(branch):
+    return engine.validate_branch_name(branch, pattern=PROJECT.branch_regex)
 
 ROOT = Path(__file__).resolve().parent.parent
 OUTPUT_DIR = ROOT / "output" / "agent"
 CONFIG_PATH = ROOT / "tools" / "jh_config.json"
 REGISTRY_PATH = ROOT / "tools" / "chunks.json"
-DEFAULT_RISK_FLAGGED = frozenset(
-    {"C-008", "C-016", "C-017", "C-020", "C-021", "C-025", "C-031", "C-033"}
-)
-VALID_STATUSES = frozenset({"todo", "in-progress", "done", "blocked"})
-MERGE_PLACEHOLDERS = frozenset({"", "-", "--", "---", "—", "(pr)", "pr", "pending"})
 SECRET_RE = re.compile(
     r"(?i)\b(?:token|api[_-]?key|password|secret)\b\s*[:=]\s*"
     r"[\"']?(?:sk-[A-Za-z0-9_-]{8,}|gh[pousr]_[A-Za-z0-9_]{20,}|[A-Za-z0-9+/=]{32,})"
@@ -37,120 +71,42 @@ SECRET_RE = re.compile(
 LINK_RE = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
 
 
-@dataclass(frozen=True)
-class Chunk:
-    id: str
-    title: str
-    stage: str
-    depends_on: tuple[str, ...]
-    status: str
-    merge: str
-    risk_flagged: bool = False
 
 
-@dataclass(frozen=True)
-class Issue:
-    code: str
-    message: str
 
 
-@dataclass(frozen=True)
-class GateEvidence:
-    chunk_id: str
-    doctor: str
-    focused: str
-    full_pytest: str
-    ruff: str
-    smoke: str
 
 
-@dataclass(frozen=True)
-class Handoff:
-    method: str
-    message: str
 
 
-@dataclass(frozen=True)
-class StartPlan:
-    chunk: Chunk
-    branch: str
-    commands: tuple[str, ...]
 
 
-@dataclass(frozen=True)
-class CommandResult:
-    command: tuple[str, ...]
-    returncode: int
-    stdout: str
-    stderr: str
 
 
-@dataclass(frozen=True)
-class GitHubCredential:
-    source: str
-    token: str
 
 
-@dataclass(frozen=True)
-class GitHubCapability:
-    remote: str
-    gh_available: bool
-    token_source: str
-    can_push: bool
-
-    @property
-    def can_create_pr(self) -> bool:
-        return self.gh_available or bool(self.token_source)
 
 
-@dataclass(frozen=True)
-class DeviceCode:
-    device_code: str
-    user_code: str
-    verification_uri: str
-    expires_in: int
-    interval: int
 
 
-@dataclass(frozen=True)
-class PullRequestCheck:
-    name: str
-    status: str
-    conclusion: str
 
 
-@dataclass(frozen=True)
-class PullRequestReadiness:
-    ready: bool
-    issues: tuple[str, ...]
-    head_sha: str
-    head_ref: str
-    already_merged: bool = False
 
 
-MAX_WAIT_SECONDS = 300
 
 
-def clamp_wait_seconds(seconds: int, *, maximum: int = MAX_WAIT_SECONDS) -> int:
-    """Bound a requested wait so no agent-facing op can block unbounded (ADR-023)."""
-    return max(0, min(seconds, maximum))
 
 
-def pr_already_merged(pr: dict[str, Any]) -> bool:
-    """True when the PR is already merged, so merge/delete can no-op idempotently."""
-    if pr.get("merged") is True:
-        return True
-    return pr.get("state") == "closed" and bool(pr.get("merged_at"))
 
 
 def load_registry(root: Path = ROOT) -> dict[str, Any]:
     """Load the chunk registry (tools/chunks.json) — the single source of truth for
     per-chunk static metadata (stage, deps, risk, tests) and global smoke imports."""
-    path = root / "tools" / "chunks.json"
+    path = root / PROJECT.registry_relpath
     if not path.exists():
-        return {"smoke_imports": ["core"], "chunks": {}}
+        return {"smoke_imports": list(PROJECT.default_smoke_imports), "chunks": {}}
     data = json.loads(path.read_text(encoding="utf-8"))
-    data.setdefault("smoke_imports", ["core"])
+    data.setdefault("smoke_imports", list(PROJECT.default_smoke_imports))
     data.setdefault("chunks", {})
     return data
 
@@ -164,12 +120,12 @@ def load_config(root: Path = ROOT) -> dict[str, Any]:
         return {
             "risk_flagged_chunks": sorted(DEFAULT_RISK_FLAGGED),
             "chunk_tests": {},
-            "smoke_imports": registry.get("smoke_imports", ["core"]),
+            "smoke_imports": registry.get("smoke_imports", list(PROJECT.default_smoke_imports)),
         }
     return {
         "risk_flagged_chunks": sorted(cid for cid, m in meta.items() if m.get("risk_flagged")),
         "chunk_tests": {cid: m["tests"] for cid, m in meta.items() if m.get("tests")},
-        "smoke_imports": registry.get("smoke_imports", ["core"]),
+        "smoke_imports": registry.get("smoke_imports", list(PROJECT.default_smoke_imports)),
     }
 
 
@@ -248,95 +204,46 @@ def check_registry_consistency(
     return issues
 
 
-def parse_progress(text: str, risk_flagged: set[str] | None = None) -> dict[str, Chunk]:
-    risks = risk_flagged or set(DEFAULT_RISK_FLAGGED)
-    chunks: dict[str, Chunk] = {}
-    for line in text.splitlines():
-        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
-        if len(cells) < 6 or not re.fullmatch(r"C-\d{3}", cells[0]):
-            continue
-        depends_on = tuple(re.findall(r"C-\d{3}", cells[3]))
-        chunks[cells[0]] = Chunk(
-            id=cells[0],
-            title=cells[1],
-            stage=cells[2],
-            depends_on=depends_on,
-            status=cells[4],
-            merge=cells[5],
-            risk_flagged=cells[0] in risks,
-        )
-    return chunks
 
 
 def read_chunks(root: Path = ROOT) -> dict[str, Chunk]:
     config = load_config(root)
     risks = set(config.get("risk_flagged_chunks", DEFAULT_RISK_FLAGGED))
-    return parse_progress((root / "PROGRESS.md").read_text(encoding="utf-8"), risks)
+    return parse_progress((root / PROJECT.progress_filename).read_text(encoding="utf-8"), risks)
 
 
-def ready_chunks(chunks: dict[str, Chunk]) -> list[Chunk]:
-    done = {chunk_id for chunk_id, chunk in chunks.items() if chunk.status == "done"}
-    ready: list[Chunk] = []
-    for chunk in chunks.values():
-        if chunk.status == "todo" and all(dep in done for dep in chunk.depends_on):
-            ready.append(chunk)
-    return ready
 
 
-def detect_stale_done_placeholders(
-    chunks: dict[str, Chunk], git_messages: list[str]
-) -> list[Issue]:
-    issues: list[Issue] = []
-    joined_messages = "\n".join(
-        message for message in git_messages if "Merge pull request" in message
+
+
+
+
+
+
+def _check_engine_purity(root: Path) -> list[Issue]:
+    engine_path = root / "tools" / "jh_engine.py"
+    if not engine_path.exists():
+        return []
+    leaked = engine.find_project_identifiers(
+        engine_path.read_text(encoding="utf-8"), PROJECT.forbidden_engine_identifiers
     )
-    for chunk in chunks.values():
-        if chunk.status != "done" or chunk.merge.strip().lower() not in MERGE_PLACEHOLDERS:
-            continue
-        if chunk.id in joined_messages:
-            issues.append(
-                Issue(
-                    code="progress.stale_merge",
-                    message=f"{chunk.id} is done but still has merge placeholder '{chunk.merge}'",
-                )
-            )
-    return issues
-
-
-def validate_branch_name(branch: str) -> list[Issue]:
-    if re.fullmatch(r"chunk/C-\d{3}-[a-z0-9][a-z0-9-]*", branch):
-        return []
     return [
-        Issue(
-            code="git.branch",
-            message="Chunk branches must look like chunk/C-XXX-short-slug",
-        )
-    ]
-
-
-def validate_commit_subject(subject: str, chunk_id: str) -> list[Issue]:
-    pattern = rf"^(feat|test|refactor|fix|docs|chore|build)\([a-z0-9-]+\): .+  \[{chunk_id}\]$"
-    if re.fullmatch(pattern, subject):
-        return []
-    return [
-        Issue(
-            code="git.commit_subject",
-            message=f"Commit subject must follow '<type>(<scope>): <summary>  [{chunk_id}]'",
-        )
+        Issue("engine.purity", f"tools/jh_engine.py leaks project identifier '{token}'")
+        for token in leaked
     ]
 
 
 def run_doctor_checks(root: Path = ROOT, git_messages: list[str] | None = None) -> list[Issue]:
     git_messages = git_messages or []
     issues: list[Issue] = []
-    progress = root / "PROGRESS.md"
+    progress = root / PROJECT.progress_filename
     if not progress.exists():
         issues.append(Issue("progress.missing", "PROGRESS.md is missing"))
     else:
         chunks = parse_progress(progress.read_text(encoding="utf-8"))
         issues.extend(_check_ledger(chunks, git_messages))
-        if (root / "tools" / "chunks.json").exists():
-            dev_plan = root / "Documents" / "JobHunter_DEV_PLAN_v1.0.md"
+        if (root / PROJECT.registry_relpath).exists():
+            dev_plan = root / PROJECT.dev_plan_relpath
             dev_text = dev_plan.read_text(encoding="utf-8") if dev_plan.exists() else ""
             issues.extend(check_registry_consistency(load_registry(root), chunks, dev_text))
 
@@ -345,6 +252,7 @@ def run_doctor_checks(root: Path = ROOT, git_messages: list[str] | None = None) 
     issues.extend(_check_python_stdout(root))
     issues.extend(_check_plugin_boundaries(root))
     issues.extend(_check_literal_secrets(root))
+    issues.extend(_check_engine_purity(root))
     return issues
 
 
@@ -362,7 +270,7 @@ def _check_ledger(chunks: dict[str, Chunk], git_messages: list[str]) -> list[Iss
 
 
 def _check_pr_template(root: Path) -> list[Issue]:
-    template = root / ".github" / "PULL_REQUEST_TEMPLATE.md"
+    template = root / PROJECT.pr_template_relpath
     if not template.exists():
         return [Issue("pr_template.missing", ".github/PULL_REQUEST_TEMPLATE.md is missing")]
     text = template.read_text(encoding="utf-8").lower()
@@ -426,7 +334,7 @@ def _is_external_or_anchor(target: str) -> bool:
 
 def _check_python_stdout(root: Path) -> list[Issue]:
     issues: list[Issue] = []
-    core = root / "core"
+    core = root / PROJECT.source_check_dir
     if not core.exists():
         return issues
     for path in _iter_text_files(core, ("*.py",)):
@@ -441,10 +349,7 @@ def _check_python_stdout(root: Path) -> list[Issue]:
 def _check_plugin_boundaries(root: Path) -> list[Issue]:
     issues: list[Issue] = []
     boundary_roots = [
-        (root / "core" / "connectors", "ai_providers"),
-        (root / "connectors", "ai_providers"),
-        (root / "core" / "ai_providers", "connectors"),
-        (root / "ai_providers", "connectors"),
+        (root / subpath, forbidden) for subpath, forbidden in PROJECT.plugin_boundaries
     ]
     for folder, forbidden in boundary_roots:
         if not folder.exists():
@@ -474,12 +379,6 @@ def _check_literal_secrets(root: Path) -> list[Issue]:
     return issues
 
 
-def choose_handoff(can_create_pr: bool, can_push: bool) -> Handoff:
-    if can_create_pr:
-        return Handoff("create-pr", "Create the pull request directly.")
-    if can_push:
-        return Handoff("compare-url", "Push the branch and provide a GitHub compare URL.")
-    return Handoff("patch", "Provide a diff/patch plus exact PR title and body.")
 
 
 def resolve_github_token(root: Path = ROOT) -> GitHubCredential | None:
@@ -572,59 +471,8 @@ def store_github_token(root: Path, token: str) -> None:
     )
 
 
-def evaluate_pr_merge_readiness(
-    pr: dict[str, Any],
-    checks: list[PullRequestCheck],
-    statuses: list[dict[str, Any]],
-    ignored_checks: set[str] | None = None,
-) -> PullRequestReadiness:
-    issues: list[str] = []
-    ignored_checks = ignored_checks or set()
-    effective_checks = [check for check in checks if check.name not in ignored_checks]
-    if pr.get("state") != "open":
-        issues.append(f"PR is not open: {pr.get('state')}")
-    if pr.get("draft"):
-        issues.append("PR is draft")
-    mergeable = pr.get("mergeable")
-    mergeable_state = pr.get("mergeable_state", "unknown")
-    if mergeable is not True:
-        issues.append(f"PR is not confirmed mergeable: {mergeable_state}")
-    if not effective_checks:
-        issues.append("No CI check runs found for PR head")
-    for check in effective_checks:
-        if check.status != "completed":
-            issues.append(f"Check '{check.name}' is {check.status}")
-        elif check.conclusion != "success":
-            issues.append(f"Check '{check.name}' concluded {check.conclusion}")
-    for status in statuses:
-        state = status.get("state", "")
-        context = status.get("context", "status")
-        if state != "success":
-            issues.append(f"Status '{context}' is {state}")
-    return PullRequestReadiness(
-        ready=not issues,
-        issues=tuple(issues),
-        head_sha=pr.get("head", {}).get("sha", ""),
-        head_ref=pr.get("head", {}).get("ref", ""),
-    )
 
 
-def pr_requests_auto_merge(
-    pr: dict[str, Any],
-    *,
-    label: str = "auto-merge",
-    body_flag: str = "Auto-merge after CI",
-) -> bool:
-    labels = {
-        item.get("name", "").strip().lower()
-        for item in pr.get("labels", [])
-        if isinstance(item, dict)
-    }
-    if label.lower() in labels:
-        return True
-    body = pr.get("body") or ""
-    flag_re = re.compile(rf"- \[[xX]\]\s*{re.escape(body_flag)}")
-    return flag_re.search(body) is not None
 
 
 def generate_pr_title(chunk_id: str, slug: str) -> str:
@@ -755,7 +603,7 @@ def project_python(root: Path = ROOT) -> str:
 
 
 def run_gate(root: Path = ROOT, *, chunk_id: str | None = None, ci: bool = False) -> GateEvidence:
-    chunk_id = chunk_id or "C-040"
+    chunk_id = chunk_id or PROJECT.default_gate_chunk
     output_dir = root / "output" / "agent"
     output_dir.mkdir(parents=True, exist_ok=True)
     cache_file = output_dir / f"{chunk_id}-gate.sha256"
@@ -777,12 +625,17 @@ def run_gate(root: Path = ROOT, *, chunk_id: str | None = None, ci: bool = False
     config = load_config(root)
     focused_targets = config.get("chunk_tests", {}).get(chunk_id, [])
     python = project_python(root)
-    focused = _run_and_summarize(
-        (python, "-m", "pytest", *focused_targets, "-q", "--asyncio-mode=auto"), root
+    commands = gate_commands(
+        python=python,
+        focused_targets=focused_targets,
+        test_command_tail=PROJECT.test_command_tail,
+        test_flags=PROJECT.test_flags,
+        lint_command_tail=PROJECT.lint_command_tail,
     )
-    full_pytest = _run_and_summarize((python, "-m", "pytest", "-q", "--asyncio-mode=auto"), root)
-    ruff = _run_and_summarize((python, "-m", "ruff", "check", "."), root)
-    smoke = _import_smoke(config.get("smoke_imports", ["core"]), root)
+    focused = _run_and_summarize(commands["focused"], root)
+    full_pytest = _run_and_summarize(commands["full"], root)
+    ruff = _run_and_summarize(commands["lint"], root)
+    smoke = _import_smoke(config.get("smoke_imports", list(PROJECT.default_smoke_imports)), root)
     evidence = GateEvidence(chunk_id, doctor_summary, focused, full_pytest, ruff, smoke)
     _write_gate_log(log_file, evidence)
     _write_text(cache_file, input_hash)
@@ -1242,30 +1095,7 @@ def command_auth_login(args: argparse.Namespace) -> int:
 
 
 def command_guide(args: argparse.Namespace) -> int:
-    print(
-        """JobHunter AI workflow quick guide
-
-1. python tools/jh.py bootstrap
-2. python tools/jh.py status
-3. python tools/jh.py next
-4. python tools/jh.py start C-XXX --branch chunk/C-XXX-slug
-5. Write red tests, implement, then run: python tools/jh.py gate C-XXX
-6. Commit once with: <type>(<scope>): <summary>  [C-XXX]
-7. python tools/jh.py pr-ready C-XXX
-8. python tools/jh.py auth-status
-9. python tools/jh.py create-pr C-XXX
-10. Optional CI-gated merge: python tools/jh.py merge-pr <PR_NUMBER> --wait 600
-11. After merge: python tools/jh.py after-merge C-XXX --branch chunk/C-XXX-slug
-
-Credential options for direct PR creation:
-- gh CLI already authenticated, or
-- python tools/jh.py auth-login with a GitHub OAuth app client ID, or
-- JH_GITHUB_TOKEN / GH_TOKEN / GITHUB_TOKEN with Pull requests: read/write, or
-- Git Credential Manager storing a GitHub token usable by the GitHub API.
-
-The harness never prints token values and writes generated evidence under output/agent/.
-"""
-    )
+    print(PROJECT.guide_text)
     return 0
 
 
@@ -1563,7 +1393,7 @@ def _github_api_error(exc: error.HTTPError) -> str:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="jh", description="JobHunter deterministic workflow harness"
+        prog=PROJECT.cli_prog, description=PROJECT.cli_description
     )
     parser.add_argument("--root", default=str(ROOT), help="Repository root")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -1591,7 +1421,7 @@ def build_parser() -> argparse.ArgumentParser:
     start.set_defaults(func=command_start)
 
     gate = sub.add_parser("gate")
-    gate.add_argument("chunk", nargs="?", default="C-040")
+    gate.add_argument("chunk", nargs="?", default=PROJECT.default_gate_chunk)
     gate.add_argument("--ci", action="store_true")
     gate.set_defaults(func=command_gate)
 

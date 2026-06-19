@@ -1,0 +1,282 @@
+"""Generic workflow engine — project-agnostic core for the chunk/TDD/gate/PR loop.
+
+This module holds the reusable workflow logic and value types. It contains **no**
+project-specific knowledge (no file names, gate commands, id formats, or project
+identifiers) — everything project-specific is supplied by a ProjectConfig adapter
+(see tools/jh_project.py) and passed in as parameters. `jh.py doctor` enforces this
+purity via `find_project_identifiers` (ADR-025).
+"""
+
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass
+from typing import Any
+
+VALID_STATUSES = frozenset({"todo", "in-progress", "done", "blocked"})
+MERGE_PLACEHOLDERS = frozenset({"", "-", "--", "---", "—", "(pr)", "pr", "pending"})
+MAX_WAIT_SECONDS = 300
+
+
+@dataclass(frozen=True)
+class Chunk:
+    id: str
+    title: str
+    stage: str
+    depends_on: tuple[str, ...]
+    status: str
+    merge: str
+    risk_flagged: bool = False
+
+
+@dataclass(frozen=True)
+class Issue:
+    code: str
+    message: str
+
+
+@dataclass(frozen=True)
+class GateEvidence:
+    chunk_id: str
+    doctor: str
+    focused: str
+    full_pytest: str
+    ruff: str
+    smoke: str
+
+
+@dataclass(frozen=True)
+class Handoff:
+    method: str
+    message: str
+
+
+@dataclass(frozen=True)
+class StartPlan:
+    chunk: Chunk
+    branch: str
+    commands: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class CommandResult:
+    command: tuple[str, ...]
+    returncode: int
+    stdout: str
+    stderr: str
+
+
+@dataclass(frozen=True)
+class GitHubCredential:
+    source: str
+    token: str
+
+
+@dataclass(frozen=True)
+class GitHubCapability:
+    remote: str
+    gh_available: bool
+    token_source: str
+    can_push: bool
+
+    @property
+    def can_create_pr(self) -> bool:
+        return self.gh_available or bool(self.token_source)
+
+
+@dataclass(frozen=True)
+class DeviceCode:
+    device_code: str
+    user_code: str
+    verification_uri: str
+    expires_in: int
+    interval: int
+
+
+@dataclass(frozen=True)
+class PullRequestCheck:
+    name: str
+    status: str
+    conclusion: str
+
+
+@dataclass(frozen=True)
+class PullRequestReadiness:
+    ready: bool
+    issues: tuple[str, ...]
+    head_sha: str
+    head_ref: str
+    already_merged: bool = False
+
+
+def clamp_wait_seconds(seconds: int, *, maximum: int = MAX_WAIT_SECONDS) -> int:
+    """Bound a requested wait so no agent-facing op can block unbounded (ADR-023)."""
+    return max(0, min(seconds, maximum))
+
+
+def pr_already_merged(pr: dict[str, Any]) -> bool:
+    """True when the PR is already merged, so merge/delete can no-op idempotently."""
+    if pr.get("merged") is True:
+        return True
+    return pr.get("state") == "closed" and bool(pr.get("merged_at"))
+
+
+def find_ids(text: str, id_pattern: str) -> list[str]:
+    """All chunk ids in a string, per the project's id pattern."""
+    return re.findall(id_pattern, text)
+
+
+def parse_ledger(text: str, *, risk_flagged: set[str], id_pattern: str) -> dict[str, Chunk]:
+    """Parse a markdown ledger table into Chunks. Id format is supplied by the adapter."""
+    chunks: dict[str, Chunk] = {}
+    for line in text.splitlines():
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if len(cells) < 6 or not re.fullmatch(id_pattern, cells[0]):
+            continue
+        depends_on = tuple(re.findall(id_pattern, cells[3]))
+        chunks[cells[0]] = Chunk(
+            id=cells[0],
+            title=cells[1],
+            stage=cells[2],
+            depends_on=depends_on,
+            status=cells[4],
+            merge=cells[5],
+            risk_flagged=cells[0] in risk_flagged,
+        )
+    return chunks
+
+
+def ready_chunks(chunks: dict[str, Chunk]) -> list[Chunk]:
+    done = {chunk_id for chunk_id, chunk in chunks.items() if chunk.status == "done"}
+    ready: list[Chunk] = []
+    for chunk in chunks.values():
+        if chunk.status == "todo" and all(dep in done for dep in chunk.depends_on):
+            ready.append(chunk)
+    return ready
+
+
+def detect_stale_done_placeholders(
+    chunks: dict[str, Chunk], git_messages: list[str]
+) -> list[Issue]:
+    issues: list[Issue] = []
+    joined_messages = "\n".join(
+        message for message in git_messages if "Merge pull request" in message
+    )
+    for chunk in chunks.values():
+        if chunk.status != "done" or chunk.merge.strip().lower() not in MERGE_PLACEHOLDERS:
+            continue
+        if chunk.id in joined_messages:
+            issues.append(
+                Issue(
+                    code="progress.stale_merge",
+                    message=f"{chunk.id} is done but still has merge placeholder '{chunk.merge}'",
+                )
+            )
+    return issues
+
+
+def validate_branch_name(branch: str, *, pattern: str) -> list[Issue]:
+    if re.fullmatch(pattern, branch):
+        return []
+    return [
+        Issue(
+            code="git.branch",
+            message="Branch must match the configured chunk-branch pattern",
+        )
+    ]
+
+
+def validate_commit_subject(subject: str, chunk_id: str) -> list[Issue]:
+    pattern = rf"^(feat|test|refactor|fix|docs|chore|build)\([a-z0-9-]+\): .+  \[{chunk_id}\]$"
+    if re.fullmatch(pattern, subject):
+        return []
+    return [
+        Issue(
+            code="git.commit_subject",
+            message=f"Commit subject must follow '<type>(<scope>): <summary>  [{chunk_id}]'",
+        )
+    ]
+
+
+def choose_handoff(can_create_pr: bool, can_push: bool) -> Handoff:
+    if can_create_pr:
+        return Handoff("create-pr", "Create the pull request directly.")
+    if can_push:
+        return Handoff("compare-url", "Push the branch and provide a GitHub compare URL.")
+    return Handoff("patch", "Provide a diff/patch plus exact PR title and body.")
+
+
+def evaluate_pr_merge_readiness(
+    pr: dict[str, Any],
+    checks: list[PullRequestCheck],
+    statuses: list[dict[str, Any]],
+    ignored_checks: set[str] | None = None,
+) -> PullRequestReadiness:
+    issues: list[str] = []
+    ignored_checks = ignored_checks or set()
+    effective_checks = [check for check in checks if check.name not in ignored_checks]
+    if pr.get("state") != "open":
+        issues.append(f"PR is not open: {pr.get('state')}")
+    if pr.get("draft"):
+        issues.append("PR is draft")
+    mergeable = pr.get("mergeable")
+    mergeable_state = pr.get("mergeable_state", "unknown")
+    if mergeable is not True:
+        issues.append(f"PR is not confirmed mergeable: {mergeable_state}")
+    if not effective_checks:
+        issues.append("No CI check runs found for PR head")
+    for check in effective_checks:
+        if check.status != "completed":
+            issues.append(f"Check '{check.name}' is {check.status}")
+        elif check.conclusion != "success":
+            issues.append(f"Check '{check.name}' concluded {check.conclusion}")
+    for status in statuses:
+        state = status.get("state", "")
+        context = status.get("context", "status")
+        if state != "success":
+            issues.append(f"Status '{context}' is {state}")
+    return PullRequestReadiness(
+        ready=not issues,
+        issues=tuple(issues),
+        head_sha=pr.get("head", {}).get("sha", ""),
+        head_ref=pr.get("head", {}).get("ref", ""),
+    )
+
+
+def pr_requests_auto_merge(
+    pr: dict[str, Any],
+    *,
+    label: str = "auto-merge",
+    body_flag: str = "Auto-merge after CI",
+) -> bool:
+    labels = {
+        item.get("name", "").strip().lower()
+        for item in pr.get("labels", [])
+        if isinstance(item, dict)
+    }
+    if label.lower() in labels:
+        return True
+    body = pr.get("body") or ""
+    flag_re = re.compile(rf"- \[[xX]\]\s*{re.escape(body_flag)}")
+    return flag_re.search(body) is not None
+
+
+def gate_commands(
+    *,
+    python: str,
+    focused_targets: list[str],
+    test_command_tail: tuple[str, ...],
+    test_flags: tuple[str, ...],
+    lint_command_tail: tuple[str, ...],
+) -> dict[str, tuple[str, ...]]:
+    """Build the gate command tuples from adapter-supplied tool invocations."""
+    return {
+        "focused": (python, *test_command_tail, *focused_targets, *test_flags),
+        "full": (python, *test_command_tail, *test_flags),
+        "lint": (python, *lint_command_tail),
+    }
+
+
+def find_project_identifiers(source: str, forbidden: tuple[str, ...]) -> list[str]:
+    """Return any forbidden project-specific tokens found in engine source (purity guard)."""
+    return [token for token in forbidden if token in source]

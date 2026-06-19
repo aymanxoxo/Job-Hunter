@@ -1,8 +1,9 @@
 # tools - deterministic workflow automation
 
 ## Contents
-- `jh.py` - AI-facing workflow harness for bootstrap, status, next, start, doctor, gate, PR handoff,
-  and post-merge cleanup.
+- `jh.py` - imperative CLI shell: wires the project adapter into the engine and runs git/GitHub effects (bootstrap, status, next, start, doctor, gate, PR handoff, post-merge cleanup).
+- `jh_engine.py` - generic, project-agnostic workflow engine: value types + pure planning/eval logic, no project identifiers (ADR-025). `doctor` enforces its purity.
+- `jh_project.py` - the JobHunter `ProjectConfig` adapter; the only place project-specific values (paths, gate commands, id formats, plugin dirs, risk list) live (ADR-025).
 - `chunks.json` - the chunk registry: single source of truth for per-chunk metadata (stage/deps/risk/tests) + smoke imports (ADR-024); `doctor` checks it against the ledger and dev-plan §10.
 - `README.md` - command guide for any AI agent taking over the workflow.
 

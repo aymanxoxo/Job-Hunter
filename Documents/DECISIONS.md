@@ -431,3 +431,25 @@ ADR-019; renumbered to 024 to follow the repo's ADR sequence.)
 **Consequences.** One edit point for the chunk graph; the harness reads JSON instead of scraping markdown;
 drift between the three trackers becomes a failing `doctor` check rather than a silent inconsistency. Cost:
 the registry and the human-readable ledger coexist until C-046 wires generation.
+
+
+## ADR-025 — Decouple the generic workflow engine from project business
+
+**Context.** `tools/jh.py` mixed a reusable workflow engine (chunk graph, gate planning, PR readiness,
+ledger parsing) with JobHunter specifics (file paths, gate commands, the `C-NNN` id format, plugin dirs,
+risk list, CLI strings). That blocked reusing the *process* for another repo and concentrated everything
+in one ~1.6k-line module.
+
+**Decision.** Split into three modules: `tools/jh_engine.py` (the generic engine — value types plus pure
+planning/evaluation logic, parameterized by an adapter, with **no** project identifiers),
+`tools/jh_project.py` (the `ProjectConfig` adapter; the `JOBHUNTER` instance holds every project-specific
+value), and `tools/jh.py` (the imperative CLI shell that wires the adapter into the engine and runs the
+git/GitHub/file effects). `jh.py` re-exports engine names so its public surface — and all existing tests —
+stay unchanged. A `doctor` check (`_check_engine_purity`) fails if `jh_engine.py` contains any forbidden
+project identifier, and a fixture-adapter test drives the engine with a non-JobHunter `ProjectConfig` to
+prove independence. (Proposed as ADR-020; renumbered to 025 to follow the repo's ADR sequence.)
+
+**Consequences.** The process is now extraction-ready: another repo supplies a different `ProjectConfig`
+and reuses the engine + shell unchanged (template / skill / agent / package — the target stays open). Cost:
+a stable engine↔adapter boundary to maintain, and a few doc-format parsers (dev-plan dependency-range
+expansion) still live in the shell pending a later generalization.

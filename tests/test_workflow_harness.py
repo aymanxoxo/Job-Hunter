@@ -1043,3 +1043,86 @@ def test_real_registry_matches_ledger_and_doctor_passes():
 
 def test_jh_config_json_is_absorbed_into_registry():
     assert not (jh.ROOT / "tools" / "jh_config.json").exists()
+
+
+# --- C-044: generic engine decoupled from project business (ADR-025) ---
+
+from tools import jh_engine as engine  # noqa: E402
+from tools import jh_project  # noqa: E402
+
+DEMO_PROJECT = jh_project.ProjectConfig(
+    name="Demo",
+    progress_filename="TASKS.md",
+    registry_relpath="meta/tasks.json",
+    dev_plan_relpath="docs/PLAN.md",
+    pr_template_relpath=".github/PR.md",
+    source_check_dir="src",
+    chunk_id_regex=r"T-\d{2}",
+    branch_regex=r"task/T-\d{2}-[a-z0-9-]+",
+    default_risk_flagged=frozenset({"T-02"}),
+    default_smoke_imports=("src",),
+    plugin_boundaries=(("src/a", "b"),),
+    test_command_tail=("-m", "unittest"),
+    test_flags=("-v",),
+    lint_command_tail=("-m", "flake8"),
+    default_gate_chunk="T-01",
+    cli_prog="demo",
+    cli_description="Demo workflow",
+    guide_text="demo guide",
+    forbidden_engine_identifiers=("Demo",),
+)
+
+DEMO_LEDGER = """\
+| ID | Title | Stage | Depends on | Status | Merge |
+|----|-------|-------|-----------|--------|--------|
+| T-01 | First task | Setup | — | done | abc1234 |
+| T-02 | Risky task | Build | T-01 | todo | - |
+| T-03 | Next task | Build | T-01 | todo | - |
+"""
+
+
+def test_engine_runs_status_next_against_a_non_jobhunter_adapter():
+    # status: parse the ledger with the Demo id format + risk set (no JobHunter values)
+    chunks = engine.parse_ledger(
+        DEMO_LEDGER,
+        risk_flagged=set(DEMO_PROJECT.default_risk_flagged),
+        id_pattern=DEMO_PROJECT.chunk_id_regex,
+    )
+    assert set(chunks) == {"T-01", "T-02", "T-03"}
+    assert chunks["T-02"].risk_flagged is True
+    assert chunks["T-02"].depends_on == ("T-01",)
+
+    # next: ready chunks resolve purely from the parsed graph
+    ready = [chunk.id for chunk in engine.ready_chunks(chunks)]
+    assert ready == ["T-02", "T-03"]
+
+
+def test_engine_gate_plan_uses_adapter_supplied_tools():
+    commands = engine.gate_commands(
+        python="py",
+        focused_targets=["tests/test_demo.py"],
+        test_command_tail=DEMO_PROJECT.test_command_tail,
+        test_flags=DEMO_PROJECT.test_flags,
+        lint_command_tail=DEMO_PROJECT.lint_command_tail,
+    )
+    assert commands["full"] == ("py", "-m", "unittest", "-v")
+    assert commands["lint"] == ("py", "-m", "flake8")
+    assert "pytest" not in " ".join(commands["focused"])
+
+
+def test_engine_module_has_no_jobhunter_identifiers():
+    source = (jh.ROOT / "tools" / "jh_engine.py").read_text(encoding="utf-8")
+    leaked = engine.find_project_identifiers(
+        source, jh_project.JOBHUNTER.forbidden_engine_identifiers
+    )
+    assert leaked == []
+
+
+def test_doctor_flags_engine_purity_violation(tmp_path):
+    (tmp_path / "tools").mkdir()
+    (tmp_path / "tools" / "jh_engine.py").write_text(
+        "# leaked JobHunter and PROGRESS.md\n", encoding="utf-8"
+    )
+    issues = jh._check_engine_purity(tmp_path)
+    assert {i.code for i in issues} == {"engine.purity"}
+    assert any("JobHunter" in i.message for i in issues)
