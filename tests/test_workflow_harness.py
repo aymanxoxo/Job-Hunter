@@ -1344,3 +1344,69 @@ def test_context_command_is_registered():
     assert args.func is jh.command_context
     assert args.chunk == "C-007"
     assert args.json is True
+
+
+# --- C-048: deterministic PR review-comment fetch ---
+
+
+def test_engine_renders_pr_comments_grouped():
+    comments = [
+        {"kind": "issue", "user": "alice", "body": "looks good", "path": None},
+        {"kind": "review", "user": "bob", "body": "rename this", "path": "tools/jh.py"},
+    ]
+    rendered = engine.render_pr_comments(comments)
+    assert "alice" in rendered and "looks good" in rendered
+    assert "bob" in rendered and "tools/jh.py" in rendered and "rename this" in rendered
+
+
+def test_engine_renders_pr_comments_empty():
+    assert "No review" in engine.render_pr_comments([])
+
+
+def _stub_pr_comment_env(monkeypatch, comments):
+    monkeypatch.setattr(
+        jh, "resolve_github_token", lambda root: jh.GitHubCredential(source="env", token="t")
+    )
+    monkeypatch.setattr(jh, "_github_remote", lambda root: "https://github.com/acme/repo")
+    monkeypatch.setattr(jh, "get_pr_comments_via_api", lambda remote, token, pr_number: comments)
+
+
+def test_pr_comments_command_prints_threads(monkeypatch, capsys):
+    _stub_pr_comment_env(
+        monkeypatch,
+        [
+            {"kind": "issue", "user": "alice", "body": "ship it", "path": None},
+            {"kind": "review", "user": "bob", "body": "nit", "path": "tools/jh.py"},
+        ],
+    )
+    args = SimpleNamespace(root=".", pr=12, json=False)
+    assert jh.command_pr_comments(args) == 0
+    out = capsys.readouterr().out
+    assert "alice" in out and "ship it" in out and "bob" in out and "tools/jh.py" in out
+
+
+def test_pr_comments_command_json(monkeypatch, capsys):
+    _stub_pr_comment_env(
+        monkeypatch, [{"kind": "issue", "user": "alice", "body": "x", "path": None}]
+    )
+    args = SimpleNamespace(root=".", pr=12, json=True)
+    assert jh.command_pr_comments(args) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert data["pr"] == 12
+    assert data["comments"][0]["user"] == "alice"
+
+
+def test_pr_comments_degrades_without_credential(monkeypatch, capsys):
+    monkeypatch.setattr(jh, "resolve_github_token", lambda root: None)
+    monkeypatch.setattr(jh, "_github_remote", lambda root: "https://github.com/acme/repo")
+    args = SimpleNamespace(root=".", pr=12, json=False)
+    assert jh.command_pr_comments(args) == 1
+    assert "credential" in capsys.readouterr().out.lower()
+
+
+def test_pr_comments_command_is_registered():
+    parser = jh.build_parser()
+    args = parser.parse_args(["pr-comments", "12", "--json"])
+    assert args.func is jh.command_pr_comments
+    assert args.pr == 12
+    assert args.json is True

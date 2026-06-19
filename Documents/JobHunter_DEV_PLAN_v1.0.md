@@ -367,6 +367,7 @@ renderers. The Vue store maps events into the timeline model; the component is p
 | C-044 | Decouple engine from project business | `tools/jh_engine.py`, `tools/jh_project.py`, `tools/jh.py`, harness tests/docs | C-045 | Generic engine logic contains no JobHunter project identifiers; adapter-supplied config drives a non-JobHunter fixture. | ADR-025 |
 | C-046 | Generated PROGRESS orientation + sync | `tools/jh_engine.py`, `tools/jh_project.py`, `tools/jh.py`, `PROGRESS.md`, `tools/README.md`, harness tests/docs | C-044 | `jh.py sync` regenerates the sentinel-protected PROGRESS orientation, backfills done-chunk merge placeholders from git history, `after-merge` invokes it, and `doctor` fails stale generated orientation. | ADR-026 |
 | C-047 | One-command chunk context brief | `tools/jh.py`, `tools/jh_engine.py`, `tools/jh_project.py`, `tools/chunks.json`, `tools/README.md`, harness tests/docs | C-045 | `jh.py context C-XXX` prints registry metadata, resolved SDD excerpts, relevant ADR titles, module `AGENTS.md`, optional gate evidence, and supports `--json`. | ADR-026 |
+| C-048 | Deterministic PR review-comment fetch | `tools/jh.py`, `tools/jh_engine.py`, `tools/README.md`, harness tests/docs | C-043 | `jh.py pr-comments <#>` fetches PR review threads + issue comments via the capability-tiered auth, supports `--json`, and degrades clearly without API access. | ADR-019 |
 
 ### Foundation
 

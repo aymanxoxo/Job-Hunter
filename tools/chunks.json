@@ -698,6 +698,23 @@
         "tools/chunks.json",
         "tools/README.md"
       ]
+    },
+    "C-048": {
+      "title": "Deterministic PR review-comment fetch",
+      "stage": "Tooling",
+      "depends_on": [
+        "C-043"
+      ],
+      "risk_flagged": false,
+      "tests": [
+        "tests/test_workflow_harness.py"
+      ],
+      "sdd_anchor": "ADR-019",
+      "files": [
+        "tools/jh.py",
+        "tools/jh_engine.py",
+        "tools/README.md"
+      ]
     }
   }
 }

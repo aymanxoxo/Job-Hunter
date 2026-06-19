@@ -1277,6 +1277,24 @@ def command_ci_auto_merge(args: argparse.Namespace) -> int:
     return 0
 
 
+def command_pr_comments(args: argparse.Namespace) -> int:
+    root = Path(args.root).resolve()
+    credential = resolve_github_token(root)
+    remote = _github_remote(root)
+    if not credential:
+        print("Missing GitHub credential; run auth-login or set JH_GITHUB_TOKEN.")
+        return 1
+    if not remote:
+        print("Missing GitHub origin remote.")
+        return 1
+    comments = get_pr_comments_via_api(remote, credential.token, args.pr)
+    if getattr(args, "json", False):
+        print(json.dumps({"pr": args.pr, "comments": comments}, indent=2))
+    else:
+        print(engine.render_pr_comments(comments))
+    return 0
+
+
 def command_pr_status(args: argparse.Namespace) -> int:
     root = Path(args.root).resolve()
     credential = resolve_github_token(root)
@@ -1570,6 +1588,27 @@ def get_statuses_via_api(remote: str, token: str, sha: str) -> list[dict[str, An
     return data.get("statuses", [])
 
 
+def get_pr_comments_via_api(remote: str, token: str, pr_number: int) -> list[dict[str, Any]]:
+    issue = _github_api_json(remote, token, f"/issues/{pr_number}/comments")
+    review = _github_api_json(remote, token, f"/pulls/{pr_number}/comments")
+    comments: list[dict[str, Any]] = []
+    for item in issue if isinstance(issue, list) else []:
+        comments.append({
+            "kind": "issue",
+            "user": (item.get("user") or {}).get("login"),
+            "body": item.get("body", ""),
+            "path": None,
+        })
+    for item in review if isinstance(review, list) else []:
+        comments.append({
+            "kind": "review",
+            "user": (item.get("user") or {}).get("login"),
+            "body": item.get("body", ""),
+            "path": item.get("path"),
+        })
+    return comments
+
+
 def merge_pr_via_api(
     *, remote: str, token: str, pr_number: int, head_sha: str, method: str
 ) -> dict[str, Any]:
@@ -1757,6 +1796,11 @@ def build_parser() -> argparse.ArgumentParser:
     pr_status.add_argument("--json", action="store_true")
     pr_status.add_argument("--ignore-check", action="append", default=[])
     pr_status.set_defaults(func=command_pr_status)
+
+    pr_comments = sub.add_parser("pr-comments")
+    pr_comments.add_argument("pr", type=int)
+    pr_comments.add_argument("--json", action="store_true")
+    pr_comments.set_defaults(func=command_pr_comments)
 
     ci_auto_merge = sub.add_parser("ci-auto-merge")
     ci_auto_merge.add_argument("--label", default="auto-merge")
