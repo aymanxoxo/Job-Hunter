@@ -13,7 +13,7 @@ pipeline runner, and shared infra. Pure logic stays side-effect-free; I/O lives 
 - `walking_skeleton.py` — C-039 stub profile -> criteria -> fixture search -> score -> JSON export.
 - `profile_inputs/` — `BaseProfileInput` ABC + `TextProfileInput` (see `profile_inputs/AGENTS.md`). **[C-007 · present]**
 - `runner.py` — plugin discovery helper for built-in and user drop-zone modules. **[C-009 · present]**
-- `auth/` — ordered auth strategy resolver (see `auth/AGENTS.md`). **[C-008 · present]**
+- `auth/` — ordered auth strategy resolver + encrypted session store (see `auth/AGENTS.md`). **[C-008, C-019 · present]**
 - `ai_engine/` — AI facade plus pure prompt builders, response parsers, job scrubbing, and batching (see `ai_engine/AGENTS.md`). **[C-010–C-014 · present]**
 
 ## Conventions / contracts
@@ -38,6 +38,9 @@ pipeline runner, and shared infra. Pure logic stays side-effect-free; I/O lives 
 - **Auth (`auth/auth_strategy.py`, C-008).** `resolve_auth()` consumes ordered plugin
   `auth_methods`, tries injected providers/env in order, returns `AuthResult` for the first success, and
   warns + returns `None` when required auth is unmet.
+- **Session store (`auth/session_store.py`, C-019).** `SessionStore` encrypts Playwright
+  `storage_state` dicts with Fernet, stores the derived key through keyring, and keeps session files in
+  `~/.jobhunter/sessions/*.enc` by default.
 - **AI engine prompts (`ai_engine/prompts.py`, C-010).** Prompt builders are deterministic and pure.
   Score prompts include structured criteria plus only job `id`, `title`, `company`, and `description`.
 - **AI response parsing (`ai_engine/parsing.py`, C-011).** Parsers convert provider JSON into

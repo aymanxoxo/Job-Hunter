@@ -11,7 +11,7 @@
 <!-- jh:orientation:start -->
 - **Phase:** Phase 1 - Foundation. **Next gate:** M-03 (chunk C-029).
 - **Last done:** **C-048** - Deterministic PR review-comment fetch (`e5ba1d8`). Prior done: **C-047** - One-command chunk context brief (`6805055`); **C-046** - Generated PROGRESS orientation + sync (`75e1ae2`).
-- **Next ready:** **C-016** - Google OAuth device flow (risk-flagged; design sign-off required); **C-019** - Session store; **C-020** - Indeed connector (risk-flagged; design sign-off required); **C-022** - Pure pipeline transforms; **C-023** - Progress event emitter; **C-024** - Output exporter; **C-030** - OpenRouter provider; **C-038** - Authoring docs — **M-06 gate**.
+- **Next ready:** **C-016** - Google OAuth device flow (risk-flagged; design sign-off required); **C-020** - Indeed connector (risk-flagged; design sign-off required); **C-021** - LinkedIn connector (risk-flagged; design sign-off required); **C-022** - Pure pipeline transforms; **C-023** - Progress event emitter; **C-024** - Output exporter; **C-030** - OpenRouter provider; **C-038** - Authoring docs — **M-06 gate**.
 - **Blocked:** none.
 - **Notes:** Dev loop runs through short-lived GitHub PR branches; the user reviews and merges. See [ADR-014/015/016](Documents/DECISIONS.md).
 - **Protocol:** each chunk runs design -> test -> impl -> gate -> verify -> land (plan section 3.3); risky chunks pause for Design sign-off.
@@ -54,7 +54,7 @@
 | C-016 | Google OAuth device flow | Providers | C-002, C-008 | todo | — |
 | C-017 | Gemini provider | Providers | C-006, C-008, C-016 | todo | — |
 | C-018 | Mock connector + fixtures | Connectors | C-005 | done | 5acca79 |
-| C-019 | Session store | Connectors | C-002 | todo | — |
+| C-019 | Session store | Connectors | C-002 | done | (PR) |
 | C-020 | Indeed connector | Connectors | C-005 | todo | — |
 | C-021 | LinkedIn connector | Connectors | C-005, C-019 | todo | — |
 | C-022 | Pure pipeline transforms | Pipeline | C-004 | todo | — |
@@ -77,6 +77,7 @@
 
 ## Changelog (newest first)
 
+- 2026-06-19 - **C-019** Session store on `chunk/C-019-session-store`: `core.auth.SessionStore` encrypts Playwright storage-state dictionaries with Fernet, stores a PBKDF2HMAC-derived machine key through keyring, supports save/load/exists/delete, rejects unsafe session names, and keeps encrypted session files under `~/.jobhunter/sessions/*.enc` by default. Gate green (`197` pytest, `ruff`, import smoke). (PR pending.)
 - 2026-06-19 - **C-018** Mock connector + fixtures on `chunk/C-018-mock-connector`: `core.connectors.MockConnector` loads deterministic jobs from `fixtures/jobs.json` or an injected fixture path, enforces `source = "mock"`, returns all jobs when no keywords are provided, and filters with a case-insensitive keyword match against title/description. Gate green (`188` pytest, `ruff`, import smoke). Merged `5acca79` (PR #38).
 - 2026-06-19 - **C-015** Ollama provider on `chunk/C-015-ollama-provider`: `core.ai_providers.OllamaProvider` calls the local Ollama `/api/generate` endpoint with default model `llama3`, no auth, `stream: false`, and delegates prompt orchestration/parsing/scored immutable job copies to `AIEngine`; tests fake HTTP with `httpx.MockTransport`. Gate green (`182` pytest, `ruff`, import smoke). Merged `70c71f6` (PR #37).
 - 2026-06-19 - **C-014** AI engine facade on `chunk/C-014-ai-engine-facade`: `core.ai_engine.AIEngine` wraps an injected async prompt provider, builds criteria/scoring prompts, batches score requests, parses provider JSON into JobHunter models, raises `AIEngineError` for invalid provider output, and returns scored `Job` copies without mutating inputs. Gate green (`176` pytest, `ruff`, import smoke). Merged `a9138e2` (PR #36).
