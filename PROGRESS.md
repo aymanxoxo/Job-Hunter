@@ -47,7 +47,7 @@
 | C-009 | Plugin discovery | Contracts | C-005, C-006, C-007 | done | c1e32ad |
 | C-010 | Prompt builders (pure) | AI engine | C-004 | done | df227d5 |
 | C-011 | Response parsers (pure) | AI engine | C-004 | done | 1532e86 |
-| C-012 | Job field-stripper (pure) | AI engine | C-004 | done | (PR) |
+| C-012 | Job field-stripper (pure) | AI engine | C-004 | done | d5565b6 |
 | C-013 | Batching util (pure) | AI engine | C-004 | todo | — |
 | C-014 | AI engine facade | AI engine | C-006, C-010, C-011, C-012, C-013 | todo | — |
 | C-015 | Ollama provider | Providers | C-006, C-014 | todo | — |
@@ -77,7 +77,7 @@
 
 ## Changelog (newest first)
 
-- 2026-06-19 - **C-012** Job field-stripper on `chunk/C-012-job-field-stripper`: `core.ai_engine.scrub` exposes pure helpers that strip jobs to `id`, `title`, `company`, and `description` before provider calls; `build_score_jobs_prompt` now uses the shared scrubber. Gate green (`163` pytest, `ruff`, import smoke). (PR pending.)
+- 2026-06-19 - **C-012** Job field-stripper on `chunk/C-012-job-field-stripper`: `core.ai_engine.scrub` exposes pure helpers that strip jobs to `id`, `title`, `company`, and `description` before provider calls; `build_score_jobs_prompt` now uses the shared scrubber. Gate green (`163` pytest, `ruff`, import smoke). Merged `d5565b6` (PR #34).
 - 2026-06-19 - **C-011** Response parsers on `chunk/C-011-response-parsers`: `core.ai_engine.parsing` parses criteria JSON into `SearchCriteria`, applies scored-job JSON to immutable `Job` copies, preserves unmentioned jobs, ignores unknown scored IDs, and returns `None` for malformed or invalid provider output. Gate green (`159` pytest, `ruff`, import smoke). Merged `1532e86` (PR #33).
 - 2026-06-19 - **C-010** Prompt builders on `chunk/C-010-prompt-builders`: `core.ai_engine.prompts` builds deterministic GENERATE_CRITERIA and SCORE_JOBS prompt strings from the SDD §5.2 contract, preserves profile text verbatim, emits compact criteria JSON, and limits job payloads to `id`, `title`, `company`, and `description`. Gate green (`152` pytest, `ruff`, import smoke). Merged `df227d5` (PR #32).
 - 2026-06-19 - **C-008** Auth strategy resolver on `chunk/C-008-auth-strategy-resolver`: design sign-off accepted in chat for the contract-level resolver scope. `core.auth.auth_strategy.resolve_auth` now resolves ordered plugin `auth_methods` with injected OAuth/session providers and env-backed API keys, returns the first successful `AuthResult`, treats `none` as always authenticated, and warns + returns `None` when required auth is unmet. Gate green (`147` pytest, `ruff`, import smoke). Merged `7d96047` (PR #31).
