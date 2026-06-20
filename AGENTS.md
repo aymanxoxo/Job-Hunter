@@ -136,6 +136,28 @@ Full detail in the [dev plan](Documents/JobHunter_DEV_PLAN_v1.0.md); the essenti
 - **Logging:** structured, keyed to a per-run `run_id`, **stderr only** (stdout is the sidecar IPC
   channel — a stray stdout log corrupts it). Never log secrets.
 
+### Chunk ownership — in-sandbox vs external agent
+
+Every chunk has an implicit **executor**:
+
+- **`self` (default)** — the in-sandbox Cowork agent builds it: pure Python with mocked I/O, fully
+  testable in the sandbox / CI.
+- **`external`** — a local coding agent with the full toolchain (Claude Code / Codex / Copilot on the
+  developer's machine) owns it **end to end**, running the same per-chunk protocol (design → test →
+  impl → gate → merge → ledger update). For any chunk needing a Rust/Tauri/Node toolchain or a GUI to
+  build and test — which neither the sandbox nor GitHub Actions CI can fully do.
+
+**Standing rule:** if a chunk can't be built *and* tested in the sandbox or in CI, it is `external`.
+The in-sandbox agent never starts external chunks — it flags them and leaves them for a local agent.
+(For a `self` chunk that hits a single sandbox-blocked step, prefer CI; otherwise the in-sandbox agent
+hands the developer a copyable A-to-Z prompt for an external agent.)
+
+**Currently `external`** (Phase-2 desktop; also deferred until Phase 1 is complete): **C-031** Tauri
+shell + sidecar + IPC, **C-032** Vue scaffold, **C-033** Live Pipeline Progress UX, **C-034–C-036**
+views, **C-037** Windows installer. When Phase 1 finishes, a local agent picks these up from
+[`PROGRESS.md`](PROGRESS.md) and runs them A-to-Z. Everything else (providers, connectors incl. the
+Adzuna aggregator, pipeline, CLI, docs) is `self` and built in-sandbox.
+
 ## Commands (planned — from SDD §13)
 
 ```bash
