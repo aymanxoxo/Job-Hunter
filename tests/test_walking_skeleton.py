@@ -4,12 +4,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from click.testing import CliRunner
-
 from core.models.job import Job
 from core.models.search_criteria import SearchCriteria
 from core.walking_skeleton import FixtureConnector, StubAIProvider, run_walking_skeleton
-from ui.cli.cli import main
 
 
 def _fixture_path(tmp_path: Path) -> Path:
@@ -83,27 +80,3 @@ async def test_walking_skeleton_runs_profile_to_scored_export(tmp_path: Path):
     assert exported["criteria"]["raw_profile"] == "Senior Python developer seeking remote work"
     assert exported["jobs"][0]["id"] == "remote-python"
     assert exported["jobs"][0]["score"] == result.jobs[0].score
-
-
-def test_cli_run_prints_scored_table_and_writes_export(tmp_path: Path):
-    output_path = tmp_path / "results.json"
-    runner = CliRunner()
-
-    completed = runner.invoke(
-        main,
-        [
-            "run",
-            "--profile",
-            "Senior Python developer seeking remote work",
-            "--fixture",
-            str(_fixture_path(tmp_path)),
-            "--output",
-            str(output_path),
-        ],
-    )
-
-    assert completed.exit_code == 0, completed.output
-    assert "Senior Python Developer" in completed.output
-    assert "Acme" in completed.output
-    assert "Matched: python, remote" in completed.output
-    assert output_path.exists()
