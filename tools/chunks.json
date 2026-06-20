@@ -505,7 +505,9 @@
         "C-024"
       ],
       "risk_flagged": false,
-      "tests": [],
+      "tests": [
+        "tests/test_cli_config_cmd.py"
+      ],
       "sdd_anchor": "§10.1",
       "files": [
         "ui/cli/config_cmd.py"
