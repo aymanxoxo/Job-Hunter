@@ -11,7 +11,7 @@
 <!-- jh:orientation:start -->
 - **Phase:** Phase 1 - Foundation. **Next gate:** M-03 (chunk C-029).
 - **Last done:** **C-049** - Plugin-load fail-graceful + raw read-only (`88341c9`). Prior done: **C-048** - Deterministic PR review-comment fetch (`e5ba1d8`); **C-047** - One-command chunk context brief (`6805055`).
-- **Next ready:** **C-016** - Google OAuth device flow (risk-flagged; design sign-off required); **C-020** - Indeed connector (risk-flagged; design sign-off required); **C-021** - LinkedIn connector (risk-flagged; design sign-off required); **C-029** - E2E CLI test — **M-03 gate**; **C-030** - OpenRouter provider; **C-031** - Tauri shell + sidecar + IPC (risk-flagged; design sign-off required); **C-038** - Authoring docs — **M-06 gate**; **C-050** - Retire walking skeleton + re-point CLI.
+- **Next ready:** **C-016** - Google OAuth device flow (risk-flagged; design sign-off required); **C-020** - Indeed connector (risk-flagged; design sign-off required); **C-021** - LinkedIn connector (risk-flagged; design sign-off required); **C-030** - OpenRouter provider; **C-031** - Tauri shell + sidecar + IPC (risk-flagged; design sign-off required); **C-038** - Authoring docs — **M-06 gate**; **C-050** - Retire walking skeleton + re-point CLI.
 - **Blocked:** none.
 - **Notes:** Dev loop runs through short-lived GitHub PR branches; the user reviews and merges. See [ADR-014/015/016](Documents/DECISIONS.md).
 - **Protocol:** each chunk runs design -> test -> impl -> gate -> verify -> land (plan section 3.3); risky chunks pause for Design sign-off.
@@ -66,7 +66,7 @@
 | C-026 | CLI skeleton + run + Rich render | CLI | C-025 | done | 977ad68 |
 | C-027 | CLI auth commands | CLI | C-016, C-017, C-019, C-021 | todo | — |
 | C-028 | CLI config/list/export commands | CLI | C-003, C-009, C-024 | done | 7cfc799 |
-| C-029 | E2E CLI test — **M-03 gate** | CLI | C-026, C-018, C-015 | todo | — |
+| C-029 | E2E CLI test — **M-03 gate** | CLI | C-026, C-018, C-015 | done | — |
 | C-030 | OpenRouter provider | Phase 2 | C-006, C-014 | todo | — |
 | C-031 | Tauri shell + sidecar + IPC | Phase 2 | C-026, C-023 | todo | — |
 | C-032 | Vue app scaffold | Phase 2 | C-031 | todo | — |
@@ -79,6 +79,7 @@
 
 ## Changelog (newest first)
 
+- 2026-06-20 - **C-029** E2E CLI test — **M-03 gate** on `chunk/C-029-e2e-cli-test`: `tests/e2e/test_cli_run.py` drives the real `jobhunter run` end to end with no network — a deterministic offline provider dropped into the project `ai_providers/` drop-zone plus the built-in `MockConnector` reading a local `fixtures/jobs.json` — and asserts a timestamped `results_*.csv` is written containing scored rows. `build_runner` now resolves user drop-zones relative to the current working directory (built-ins still ship under the package), matching installed-CLI semantics; running from the repo root is unchanged. Milestone **M-03** reached. 1 E2E test; gate green (236 pytest, ruff, doctor). (PR pending.)
 - 2026-06-20 - **C-026** CLI run + Rich render on `chunk/C-026-cli-run`: `jobhunter run --profile/--profile-file` now drives the real `core.runner` pipeline via `build_runner` and prints a Rich results table; progress events go to stderr so stdout stays the table. Re-points `run` off the C-039 stub (walking_skeleton module retained for C-050); replaced the obsolete skeleton CLI-run test with real-run tests (build_runner injected). 2 focused tests; gate green (235 pytest, ruff, doctor). (PR pending.)
 - 2026-06-20 - **C-028** CLI config/list/export commands on `chunk/C-028-cli-config-list-export`: adds `jobhunter config show` with `auth.*` values redacted, `connectors list` and `providers list` backed by built-in + drop-zone plugin discovery, and `export --format csv|json|both` re-exporting the newest configured `results_*.json` through `core.output`. 7 focused CLI tests; gate green (234 pytest, ruff, doctor). Merged `7cfc799` (PR #49).
 
