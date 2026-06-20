@@ -10,8 +10,8 @@
 
 <!-- jh:orientation:start -->
 - **Phase:** Phase 1 - Foundation (M-03 gate cleared). **Next gate:** M-06 (chunks C-037 + C-038).
-- **Last done:** **C-050** - Retire walking skeleton + re-point CLI (`3c96c4b`). Prior done: **C-049** - Plugin-load fail-graceful + raw read-only (`88341c9`); **C-048** - Deterministic PR review-comment fetch (`e5ba1d8`).
-- **Next ready:** **C-027** - CLI auth commands; **C-038** - Authoring docs — **M-06 gate**; **C-051** - Adzuna connector.
+- **Last done:** **C-051** - Adzuna connector (merge pending). Prior done: **C-050** - Retire walking skeleton + re-point CLI (`3c96c4b`); **C-049** - Plugin-load fail-graceful + raw read-only (`88341c9`).
+- **Next ready:** **C-027** - CLI auth commands; **C-038** - Authoring docs — **M-06 gate**.
 - **Blocked:** **C-016** - Google OAuth device flow (risk-flagged; design sign-off required); **C-020** - Indeed connector (risk-flagged; design sign-off required); **C-021** - LinkedIn connector (risk-flagged; design sign-off required); **C-031** - Tauri shell + sidecar + IPC (risk-flagged; design sign-off required).
 - **Notes:** Dev loop runs through short-lived GitHub PR branches; the user reviews and merges. See [ADR-014/015/016](Documents/DECISIONS.md).
 - **Protocol:** each chunk runs design -> test -> impl -> gate -> verify -> land (plan section 3.3); risky chunks pause for Design sign-off.
@@ -76,9 +76,11 @@
 | C-036 | Settings View | Phase 2 | C-032, C-003 | todo | — |
 | C-037 | Windows installer | Phase 2 | C-033, C-034, C-035, C-036, C-030 | todo | — |
 | C-038 | Authoring docs — **M-06 gate** | Phase 2 | C-005, C-006, C-007 | todo | — |
-| C-051 | Adzuna connector | Connectors | C-005 | todo | — |
+| C-051 | Adzuna connector | Connectors | C-005 | done | (PR) |
 
 ## Changelog (newest first)
+
+- 2026-06-20 - **C-051** Adzuna connector on `chunk/C-051-adzuna-connector`: adds a built-in `AdzunaConnector` using the official Adzuna jobs API with env-backed `ADZUNA_APP_ID`/`ADZUNA_APP_KEY` credentials, criteria-to-query mapping, Adzuna result-to-`Job` mapping, and clear API/JSON/credential errors. 8 focused connector tests; gate green (259 pytest, ruff, doctor). (PR pending.)
 
 - 2026-06-20 - **C-017** Gemini provider on `chunk/C-017-gemini-provider`: `core.ai_providers.GeminiProvider` calls Google's Generative Language `generateContent` and delegates prompt orchestration/parsing/scored immutable job copies to `AIEngine`; auth resolves through the C-008 `auth_strategy` — OAuth bearer when a token provider is wired (lands with C-016), else `x-goog-api-key` from `$GEMINI_API_KEY` (read at call time, never stored/logged); default model `gemini-3-flash`. API-key path shipped; OAuth path deferred to C-016. Tests fake HTTP with `httpx.MockTransport`. 9 focused tests; gate green (251 pytest, ruff, doctor). Merged `de61ba5` (PR #61).
 - 2026-06-20 - **Backlog refinement** (planning only, no feature code): pivot job sourcing from direct scraping to sanctioned aggregator APIs (LinkedIn/Indeed scraping is ToS + anti-bot + account-ban risk). Added **C-051 Adzuna connector** (free aggregator; `app_id`/`app_key`) as the primary real job source. Marked **C-020 Indeed** + **C-021 LinkedIn** `blocked` (superseded by C-051). Decoupled **C-017 Gemini** from C-016 (deps -> C-006/C-008/C-014) to ship the API-key path first; marked **C-016 Google OAuth** `blocked` (deferred; design banked: Fernet encrypted-file tokens, print-URL device UX). Re-scoped **C-027 CLI auth** (deps -> C-017/C-019) to available auth (API-key provider status + session store). Marked **C-031 Tauri shell** `blocked` (Phase-2 desktop deferred until Phase 1 done; build via CI). Registry + ledger updated; dev-plan section 10 deps synced for C-017/C-027. See [[jobhunter-design-decisions]].

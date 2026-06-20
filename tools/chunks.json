@@ -789,7 +789,9 @@
         "C-005"
       ],
       "risk_flagged": false,
-      "tests": [],
+      "tests": [
+        "tests/test_adzuna_connector.py"
+      ],
       "sdd_anchor": "§4.1",
       "files": [
         "core/connectors/adzuna_connector.py"

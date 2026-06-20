@@ -3,7 +3,8 @@
 ## Contents
 - `base_connector.py` - `BaseConnector` ABC. **[C-005 present]**
 - `mock_connector.py` - fixture-backed offline connector. **[C-018 present]**
-- `indeed_connector.py`, `linkedin_connector.py` - built-ins planned for later chunks.
+- `adzuna_connector.py` - sanctioned Adzuna jobs API connector. **[C-051 present]**
+- `indeed_connector.py`, `linkedin_connector.py` - blocked direct-scraping connectors; superseded by Adzuna.
 
 ## Contract (`BaseConnector`, SDD section 4.1)
 - Subclass and implement `async search(criteria) -> list[Job]` returning raw, unscored jobs.
@@ -16,6 +17,8 @@
 - `MockConnector` reads `fixtures/jobs.json` by default, accepts a `fixture_path` override, enforces
   `source = "mock"`, and filters with a simple case-insensitive keyword match against title and
   description.
+- `AdzunaConnector` uses the official Adzuna API, reads `ADZUNA_APP_ID`/`ADZUNA_APP_KEY` by default,
+  maps Adzuna results to `Job`, and keeps credentials out of source/config values.
 
 ## Pointers
 - Parent: [../AGENTS.md](../AGENTS.md)

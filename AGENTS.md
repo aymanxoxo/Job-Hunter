@@ -37,7 +37,7 @@ Each module folder gets its own `AGENTS.md` (following the template below) when 
 | Module | Path | Purpose |
 |--------|------|---------|
 | Models | `core/models/` | `Job` and `SearchCriteria` dataclasses |
-| Connectors (built-in) | `core/connectors/` | `BaseConnector` ABC + Mock (present); Indeed / LinkedIn planned |
+| Connectors (built-in) | `core/connectors/` | `BaseConnector` ABC + Mock + Adzuna (present); Indeed / LinkedIn blocked |
 | AI providers (built-in) | `core/ai_providers/` | `BaseAIProvider` ABC + Ollama (present); Gemini / OpenRouter planned |
 | Auth | `core/auth/` | Ordered auth strategy resolver + encrypted session store; OAuth device flow planned |
 | Engine | `core/ai_engine/` | AI facade + pure prompt/parsing/scrub/batching helpers |

@@ -8,7 +8,7 @@ pipeline runner, and shared infra. Pure logic stays side-effect-free; I/O lives 
 - `config.py` — config models + YAML loader + env overrides + no-secrets validator. **[C-003 · present]**
 - `logging.py` — structured JSON logger. **[C-002 · present]**
 - `models/` — `Job`, `SearchCriteria` (see `models/AGENTS.md`). **[C-004 · present]**
-- `connectors/` — `BaseConnector` ABC + built-in Mock connector (see `connectors/AGENTS.md`). **[C-005, C-018 · present]**
+- `connectors/` — `BaseConnector` ABC + built-in Mock and Adzuna connectors (see `connectors/AGENTS.md`). **[C-005, C-018, C-051 · present]**
 - `ai_providers/` — `BaseAIProvider` ABC + built-in Ollama, OpenRouter & Gemini providers (see `ai_providers/AGENTS.md`). **[C-006, C-015, C-030, C-017 · present]**
 - `pipeline.py` — pure merge/dedup/sort/filter transforms for runner pipeline results. **[C-022 · present]**
 - `progress.py` — stdout protocol progress events with matching stderr logs. **[C-023 · present]**
@@ -21,7 +21,9 @@ pipeline runner, and shared infra. Pure logic stays side-effect-free; I/O lives 
 - **Config (`config.py`, SDD §9).** `load_config(path, env=None)` → a validated `Config`;
   `apply_env_overrides` (pure) applies `KEY__SUBKEY` env overrides; `auth.*` fields must be env-var
   NAMES (a validator rejects pasted secrets). Sub-models: AIConfig / ProfileConfig / ConnectorSettings
-  / OutputConfig / AuthConfig. All use `extra="forbid"` (unknown/secret keys fail load); `output.format` is a `csv|json|both` enum; `delay_min <= delay_max` (ADR-018).
+  / OutputConfig / AuthConfig. All use `extra="forbid"` (unknown/secret keys fail load); `auth.*`
+  fields are env-var names only, including Adzuna API keys; `output.format` is a `csv|json|both`
+  enum; `delay_min <= delay_max` (ADR-018).
 - **Logging (`logging.py`, ADR-010 / dev plan §6).** `get_logger(name, **ctx)` → a `Logger`;
   `.bind(**ctx)` returns a **new** logger (immutable context); `.debug/.info/.warning/.error(msg,
   **fields)`. Output is **JSON lines to stderr only** — never stdout (it is the sidecar IPC channel).
@@ -33,6 +35,9 @@ pipeline runner, and shared infra. Pure logic stays side-effect-free; I/O lives 
 - **Mock connector (`connectors/mock_connector.py`, C-018).** `MockConnector` loads deterministic jobs
   from `fixtures/jobs.json` or an injected fixture path, forces `source = "mock"`, and filters by a
   case-insensitive keyword match against title/description.
+- **Adzuna connector (`connectors/adzuna_connector.py`, C-051).** `AdzunaConnector` calls the official
+  jobs API with `ADZUNA_APP_ID`/`ADZUNA_APP_KEY`, maps response records to raw unscored `Job` objects,
+  and raises clear connector errors for missing credentials, HTTP failures, or malformed JSON.
 - **Auth (`auth/auth_strategy.py`, C-008).** `resolve_auth()` consumes ordered plugin
   `auth_methods`, tries injected providers/env in order, returns `AuthResult` for the first success, and
   warns + returns `None` when required auth is unmet.
