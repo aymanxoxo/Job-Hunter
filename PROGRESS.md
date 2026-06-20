@@ -64,7 +64,7 @@
 | C-024 | Output exporter | Pipeline | C-004 | done | 0313037 |
 | C-025 | Runner orchestrator | Pipeline | C-009, C-014, C-022, C-023, C-024, ≥1 provider, ≥1 connector | done | e2981a2 |
 | C-026 | CLI skeleton + run + Rich render | CLI | C-025 | done | 977ad68 |
-| C-027 | CLI auth commands | CLI | C-017, C-019 | done | (PR) |
+| C-027 | CLI auth commands | CLI | C-017, C-019 | done | a55530c |
 | C-028 | CLI config/list/export commands | CLI | C-003, C-009, C-024 | done | 7cfc799 |
 | C-029 | E2E CLI test — **M-03 gate** | CLI | C-026, C-018, C-015 | done | 8c94253 |
 | C-030 | OpenRouter provider | Phase 2 | C-006, C-014 | done | a3eeee8 |
@@ -80,7 +80,7 @@
 
 ## Changelog (newest first)
 
-- 2026-06-20 - **C-027** CLI auth commands on `chunk/C-027-cli-auth-commands`: adds `jobhunter auth status` for env-backed provider/connector API keys plus encrypted session-store state, `auth logout <service>` for stored sessions, and clear deferred errors for OAuth/browser login commands. Status output shows env-var names and session presence only; secret values are never printed. 5 focused CLI tests; gate green (264 pytest, ruff, doctor). (PR pending.)
+- 2026-06-20 - **C-027** CLI auth commands on `chunk/C-027-cli-auth-commands`: adds `jobhunter auth status` for env-backed provider/connector API keys plus encrypted session-store state, `auth logout <service>` for stored sessions, and clear deferred errors for OAuth/browser login commands. Status output shows env-var names and session presence only; secret values are never printed. 5 focused CLI tests; gate green (264 pytest, ruff, doctor). Merged `a55530c` (PR #64).
 
 - 2026-06-20 - **C-051** Adzuna connector on `chunk/C-051-adzuna-connector`: adds a built-in `AdzunaConnector` using the official Adzuna jobs API with env-backed `ADZUNA_APP_ID`/`ADZUNA_APP_KEY` credentials, criteria-to-query mapping, Adzuna result-to-`Job` mapping, and clear API/JSON/credential errors. 8 focused connector tests; gate green (259 pytest, ruff, doctor). Merged `581166a` (PR #63).
 
