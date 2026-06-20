@@ -100,7 +100,8 @@ JOBHUNTER = ProjectConfig(
     orientation_start_marker="<!-- jh:orientation:start -->",
     orientation_end_marker="<!-- jh:orientation:end -->",
     orientation_prelude_lines=(
-        "- **Phase:** Phase 1 - Foundation. **Next gate:** M-03 (chunk C-029).",
+        "- **Phase:** Phase 1 - Foundation (M-03 gate cleared). "
+        "**Next gate:** M-06 (chunks C-037 + C-038).",
     ),
     orientation_footer_lines=(
         "- **Notes:** Dev loop runs through short-lived GitHub PR branches; the user reviews "
