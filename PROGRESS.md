@@ -9,7 +9,7 @@
 ## Orientation
 
 <!-- jh:orientation:start -->
-- **Phase:** Phase 1 - Foundation. **Next gate:** M-03 (chunk C-029).
+- **Phase:** Phase 1 - Foundation (M-03 gate cleared). **Next gate:** M-06 (chunks C-037 + C-038).
 - **Last done:** **C-049** - Plugin-load fail-graceful + raw read-only (`88341c9`). Prior done: **C-048** - Deterministic PR review-comment fetch (`e5ba1d8`); **C-047** - One-command chunk context brief (`6805055`).
 - **Next ready:** **C-016** - Google OAuth device flow (risk-flagged; design sign-off required); **C-020** - Indeed connector (risk-flagged; design sign-off required); **C-021** - LinkedIn connector (risk-flagged; design sign-off required); **C-030** - OpenRouter provider; **C-031** - Tauri shell + sidecar + IPC (risk-flagged; design sign-off required); **C-038** - Authoring docs — **M-06 gate**; **C-050** - Retire walking skeleton + re-point CLI.
 - **Blocked:** none.
