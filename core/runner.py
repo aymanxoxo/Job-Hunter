@@ -197,13 +197,27 @@ def _select_named(plugins: list[type], name: str) -> type:
     raise ValueError(f"No plugin named {name!r} discovered (available: {available})")
 
 
-def build_runner(config, *, root: Path = _ROOT, discover=discover_plugins, **overrides) -> Runner:
-    """Wire a Runner from config + plugin discovery (built-in dirs + user drop-zones)."""
+def build_runner(
+    config,
+    *,
+    root: Path = _ROOT,
+    plugin_root: str | Path | None = None,
+    discover=discover_plugins,
+    **overrides,
+) -> Runner:
+    """Wire a Runner from config + plugin discovery (built-in dirs + user drop-zones).
+
+    Built-in plugins ship under ``root/core/...``. User drop-zones (``ai_providers/`` and
+    ``connectors/``) are resolved relative to ``plugin_root`` - the current working directory by
+    default - so an installed CLI discovers plugins from the project it is run in rather than from
+    the package install location. Running from the repo root keeps the old behaviour (cwd == root).
+    """
+    drop = Path.cwd() if plugin_root is None else Path(plugin_root)
     providers = _discover_unique(
-        discover, BaseAIProvider, root / "core" / "ai_providers", root / "ai_providers"
+        discover, BaseAIProvider, root / "core" / "ai_providers", drop / "ai_providers"
     )
     connectors = _discover_unique(
-        discover, BaseConnector, root / "core" / "connectors", root / "connectors"
+        discover, BaseConnector, root / "core" / "connectors", drop / "connectors"
     )
     provider = _select_named(providers, config.ai.provider)()
     return Runner(
