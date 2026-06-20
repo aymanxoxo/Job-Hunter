@@ -10,7 +10,6 @@ pipeline runner, and shared infra. Pure logic stays side-effect-free; I/O lives 
 - `models/` — `Job`, `SearchCriteria` (see `models/AGENTS.md`). **[C-004 · present]**
 - `connectors/` — `BaseConnector` ABC + built-in Mock connector (see `connectors/AGENTS.md`). **[C-005, C-018 · present]**
 - `ai_providers/` — `BaseAIProvider` ABC + built-in Ollama provider (see `ai_providers/AGENTS.md`). **[C-006, C-015 · present]**
-- `walking_skeleton.py` — C-039 stub profile -> criteria -> fixture search -> score -> JSON export.
 - `pipeline.py` — pure merge/dedup/sort/filter transforms for runner pipeline results. **[C-022 · present]**
 - `progress.py` — stdout protocol progress events with matching stderr logs. **[C-023 · present]**
 - `profile_inputs/` — `BaseProfileInput` ABC + `TextProfileInput` (see `profile_inputs/AGENTS.md`). **[C-007 · present]**
@@ -29,9 +28,6 @@ pipeline runner, and shared infra. Pure logic stays side-effect-free; I/O lives 
   `new_run_id()` gives a per-run correlation id to thread via `bind(run_id=...)`. Secret-looking keys
   (token, api_key, password, authorization, cookie, …) are auto-redacted. Pure helpers: `format_record`,
   `redact`.
-- **Walking skeleton (`walking_skeleton.py`, C-039).** This is deliberately temporary integration
-  wiring, not the final runner/exporter/connector implementation. Keep it deterministic and side-effect
-  free except for explicit fixture loading and JSON export.
 - **Runner (`runner.py`, C-009).** Discovery is importlib-based and direct-directory only: skip `_*.py`
   and `base_*.py`, return plugin classes rather than instances, and keep orchestration for later chunks.
 - **Mock connector (`connectors/mock_connector.py`, C-018).** `MockConnector` loads deterministic jobs

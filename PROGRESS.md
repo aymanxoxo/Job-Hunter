@@ -10,8 +10,8 @@
 
 <!-- jh:orientation:start -->
 - **Phase:** Phase 1 - Foundation (M-03 gate cleared). **Next gate:** M-06 (chunks C-037 + C-038).
-- **Last done:** **C-049** - Plugin-load fail-graceful + raw read-only (`88341c9`). Prior done: **C-048** - Deterministic PR review-comment fetch (`e5ba1d8`); **C-047** - One-command chunk context brief (`6805055`).
-- **Next ready:** **C-016** - Google OAuth device flow (risk-flagged; design sign-off required); **C-020** - Indeed connector (risk-flagged; design sign-off required); **C-021** - LinkedIn connector (risk-flagged; design sign-off required); **C-030** - OpenRouter provider; **C-031** - Tauri shell + sidecar + IPC (risk-flagged; design sign-off required); **C-038** - Authoring docs — **M-06 gate**; **C-050** - Retire walking skeleton + re-point CLI.
+- **Last done:** **C-050** - Retire walking skeleton + re-point CLI (merge pending). Prior done: **C-049** - Plugin-load fail-graceful + raw read-only (`88341c9`); **C-048** - Deterministic PR review-comment fetch (`e5ba1d8`).
+- **Next ready:** **C-016** - Google OAuth device flow (risk-flagged; design sign-off required); **C-020** - Indeed connector (risk-flagged; design sign-off required); **C-021** - LinkedIn connector (risk-flagged; design sign-off required); **C-030** - OpenRouter provider; **C-031** - Tauri shell + sidecar + IPC (risk-flagged; design sign-off required); **C-038** - Authoring docs — **M-06 gate**.
 - **Blocked:** none.
 - **Notes:** Dev loop runs through short-lived GitHub PR branches; the user reviews and merges. See [ADR-014/015/016](Documents/DECISIONS.md).
 - **Protocol:** each chunk runs design -> test -> impl -> gate -> verify -> land (plan section 3.3); risky chunks pause for Design sign-off.
@@ -43,7 +43,7 @@
 | C-047 | One-command chunk context brief | Tooling | C-045 | done | 6805055 |
 | C-048 | Deterministic PR review-comment fetch | Tooling | C-043 | done | e5ba1d8 |
 | C-049 | Plugin-load fail-graceful + raw read-only | Hardening | C-004, C-009 | done | 88341c9 |
-| C-050 | Retire walking skeleton + re-point CLI | Cleanup | C-024, C-025, C-026 | todo | — |
+| C-050 | Retire walking skeleton + re-point CLI | Cleanup | C-024, C-025, C-026 | done | — |
 | C-007 | BaseProfileInput ABC + text parser | Contracts | C-004 | done | ff83ca3 |
 | C-008 | Auth strategy resolver | Contracts | C-002, C-003 | done | 7d96047 |
 | C-009 | Plugin discovery | Contracts | C-005, C-006, C-007 | done | c1e32ad |
@@ -79,6 +79,7 @@
 
 ## Changelog (newest first)
 
+- 2026-06-20 - **C-050** Retire walking skeleton + re-point CLI on `chunk/C-050-retire-skeleton`: removed the temporary `core/walking_skeleton.py` stub (StubAIProvider/FixtureConnector/run_walking_skeleton) and its `tests/test_walking_skeleton.py`; the CLI `run` was already on the real `core.runner` pipeline since C-026. Scrubbed skeleton references from `core/AGENTS.md` and `ui/cli/AGENTS.md`, and cleared the now-dangling `tests/test_walking_skeleton.py` entries from the `C-039`/`C-050` registry metadata. Pure removal — no new tests; gate green (233 pytest, ruff, doctor). (PR pending.)
 - 2026-06-20 - **C-029** E2E CLI test — **M-03 gate** on `chunk/C-029-e2e-cli-test`: `tests/e2e/test_cli_run.py` drives the real `jobhunter run` end to end with no network — a deterministic offline provider dropped into the project `ai_providers/` drop-zone plus the built-in `MockConnector` reading a local `fixtures/jobs.json` — and asserts a timestamped `results_*.csv` is written containing scored rows. `build_runner` now resolves user drop-zones relative to the current working directory (built-ins still ship under the package), matching installed-CLI semantics; running from the repo root is unchanged. Milestone **M-03** reached. 1 E2E test; gate green (236 pytest, ruff, doctor). Merged `8c94253` (PR #52).
 - 2026-06-20 - **C-026** CLI run + Rich render on `chunk/C-026-cli-run`: `jobhunter run --profile/--profile-file` now drives the real `core.runner` pipeline via `build_runner` and prints a Rich results table; progress events go to stderr so stdout stays the table. Re-points `run` off the C-039 stub (walking_skeleton module retained for C-050); replaced the obsolete skeleton CLI-run test with real-run tests (build_runner injected). 2 focused tests; gate green (235 pytest, ruff, doctor). (PR pending.)
 - 2026-06-20 - **C-028** CLI config/list/export commands on `chunk/C-028-cli-config-list-export`: adds `jobhunter config show` with `auth.*` values redacted, `connectors list` and `providers list` backed by built-in + drop-zone plugin discovery, and `export --format csv|json|both` re-exporting the newest configured `results_*.json` through `core.output`. 7 focused CLI tests; gate green (234 pytest, ruff, doctor). Merged `7cfc799` (PR #49).
