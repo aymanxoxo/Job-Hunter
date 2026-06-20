@@ -404,7 +404,7 @@ renderers. The Vue store maps events into the timeline model; the component is p
 |----|------|-------|-----------|------------|---------|
 | C-015 | Ollama provider | `core/ai_providers/ollama_provider.py` | C-006, C-014 | Calls local endpoint (faked in tests); returns valid criteria/scores; `auth_methods=['none']` | §7.2 |
 | C-016 | Google OAuth device flow | `core/auth/google_oauth.py` | C-002, C-008 | Device-flow + refresh logic with faked HTTP/keyring; tokens stored/redacted | §7.1, §8.2 |
-| C-017 | Gemini provider | `core/ai_providers/gemini_provider.py` | C-006, C-008, C-016 | `auth_methods=['oauth','api_key']` resolves correctly; `gemini-3-flash` calls faked; parses response | §7.1 |
+| C-017 | Gemini provider | `core/ai_providers/gemini_provider.py` | C-006, C-008, C-014 | API-key path first (`GEMINI_API_KEY`) resolved via auth_strategy; OAuth path deferred to C-016; `gemini-3-flash` calls faked; parses response | §7.1 |
 
 ### Connectors
 
@@ -429,7 +429,7 @@ renderers. The Vue store maps events into the timeline model; the component is p
 | ID | Goal | Files | Depends on | Acceptance | SDD ref |
 |----|------|-------|-----------|------------|---------|
 | C-026 | CLI skeleton + run + Rich render | `ui/cli/cli.py` | C-025 | `jobhunter run` executes pipeline; Rich table renders from progress/results | §10 |
-| C-027 | CLI auth commands | `ui/cli/auth.py` | C-016, C-017, C-019, C-021 | `auth google/linkedin/logout/status` drive the auth strategy; statuses correct | §10.1, §8 |
+| C-027 | CLI auth commands | `ui/cli/auth.py` | C-017, C-019 | `auth status/logout` report available provider (API-key) + session-store auth; OAuth/LinkedIn commands deferred to C-016/C-021 | §10.1, §8 |
 | C-028 | CLI config/list/export commands | `ui/cli/config_cmd.py` | C-003, C-009, C-024 | `config show` (redacted), `connectors/providers list`, `export --format` work | §10.1 |
 | C-029 | E2E CLI test (Phase 1 gate) | `tests/e2e/test_cli_run.py` | C-026, C-018, C-015 | `jobhunter run` with Mock+Ollama produces a scored CSV with rows | §12 E2E, **M-03** |
 
