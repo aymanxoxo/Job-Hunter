@@ -490,7 +490,9 @@
         "C-019"
       ],
       "risk_flagged": false,
-      "tests": [],
+      "tests": [
+        "tests/test_cli_auth_cmd.py"
+      ],
       "sdd_anchor": "§10.1, §8",
       "files": [
         "ui/cli/auth.py"
