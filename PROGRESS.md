@@ -65,7 +65,7 @@
 | C-025 | Runner orchestrator | Pipeline | C-009, C-014, C-022, C-023, C-024, ≥1 provider, ≥1 connector | done | e2981a2 |
 | C-026 | CLI skeleton + run + Rich render | CLI | C-025 | todo | — |
 | C-027 | CLI auth commands | CLI | C-016, C-017, C-019, C-021 | todo | — |
-| C-028 | CLI config/list/export commands | CLI | C-003, C-009, C-024 | done | (PR) |
+| C-028 | CLI config/list/export commands | CLI | C-003, C-009, C-024 | done | 7cfc799 |
 | C-029 | E2E CLI test — **M-03 gate** | CLI | C-026, C-018, C-015 | todo | — |
 | C-030 | OpenRouter provider | Phase 2 | C-006, C-014 | todo | — |
 | C-031 | Tauri shell + sidecar + IPC | Phase 2 | C-026, C-023 | todo | — |
@@ -79,7 +79,7 @@
 
 ## Changelog (newest first)
 
-- 2026-06-20 - **C-028** CLI config/list/export commands on `chunk/C-028-cli-config-list-export`: adds `jobhunter config show` with `auth.*` values redacted, `connectors list` and `providers list` backed by built-in + drop-zone plugin discovery, and `export --format csv|json|both` re-exporting the newest configured `results_*.json` through `core.output`. 7 focused CLI tests; gate green (234 pytest, ruff, doctor). (PR pending.)
+- 2026-06-20 - **C-028** CLI config/list/export commands on `chunk/C-028-cli-config-list-export`: adds `jobhunter config show` with `auth.*` values redacted, `connectors list` and `providers list` backed by built-in + drop-zone plugin discovery, and `export --format csv|json|both` re-exporting the newest configured `results_*.json` through `core.output`. 7 focused CLI tests; gate green (234 pytest, ruff, doctor). Merged `7cfc799` (PR #49).
 
 - 2026-06-20 - **C-025** Runner orchestrator on `chunk/C-025-runner-orchestrator`: `core.runner.Runner` wires the full SDD §5.1 pipeline (profile -> criteria -> parallel fail-graceful search -> merge/dedup -> score -> sort/filter by `min_score_threshold` -> export), emitting a progress event per stage; `build_runner` selects the configured provider + drop-zone connectors via discovery. All collaborators injected (clock/emitter/plugins). 4 focused tests (full flow, per-connector fail-graceful, empty, build_runner selection); gate green (210 pytest, ruff, doctor). Design sign-off in chat. (PR pending.)
 - 2026-06-19 - **C-024** Output exporter on `chunk/C-024-output-exporter`: `core.output` writes scored jobs to the configured `output/` dir as timestamped `results_<ts>.csv`/`.json` per `config.output.format` (SDD §5.4); pure `jobs_to_csv`/`jobs_to_json` + injected clock. 7 focused tests; gate green (206 pytest, ruff, doctor). Merged `0313037` (PR #45).
