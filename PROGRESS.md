@@ -11,7 +11,7 @@
 <!-- jh:orientation:start -->
 - **Phase:** Phase 1 - Foundation (M-03 gate cleared). **Next gate:** M-06 (chunks C-037 + C-038).
 - **Last done:** **C-051** - Adzuna connector (`581166a`). Prior done: **C-050** - Retire walking skeleton + re-point CLI (`3c96c4b`); **C-049** - Plugin-load fail-graceful + raw read-only (`88341c9`).
-- **Next ready:** **C-038** - Authoring docs — **M-06 gate**.
+- **Next ready:** none.
 - **Blocked:** **C-016** - Google OAuth device flow (risk-flagged; design sign-off required); **C-020** - Indeed connector (risk-flagged; design sign-off required); **C-021** - LinkedIn connector (risk-flagged; design sign-off required); **C-031** - Tauri shell + sidecar + IPC (risk-flagged; design sign-off required).
 - **Notes:** Dev loop runs through short-lived GitHub PR branches; the user reviews and merges. See [ADR-014/015/016](Documents/DECISIONS.md).
 - **Protocol:** each chunk runs design -> test -> impl -> gate -> verify -> land (plan section 3.3); risky chunks pause for Design sign-off.
@@ -75,10 +75,12 @@
 | C-035 | Results View | Phase 2 | C-032 | todo | — |
 | C-036 | Settings View | Phase 2 | C-032, C-003 | todo | — |
 | C-037 | Windows installer | Phase 2 | C-033, C-034, C-035, C-036, C-030 | todo | — |
-| C-038 | Authoring docs — **M-06 gate** | Phase 2 | C-005, C-006, C-007 | todo | — |
+| C-038 | Authoring docs — **M-06 gate** | Phase 2 | C-005, C-006, C-007 | done | (PR) |
 | C-051 | Adzuna connector | Connectors | C-005 | done | 581166a |
 
 ## Changelog (newest first)
+
+- 2026-06-20 - **C-038** Authoring docs on `chunk/C-038-authoring-docs`: adds the root README plus connector, provider, and profile-input authoring guides with contract summaries, discovery/config rules, auth/secrets guidance, examples, and test checklists. Added focused docs coverage to keep the guide set present and linked. Gate green: 4 focused docs tests; 268 full-suite tests; Ruff, doctor, and import smoke passed. (PR pending.)
 
 - 2026-06-20 - **C-027** CLI auth commands on `chunk/C-027-cli-auth-commands`: adds `jobhunter auth status` for env-backed provider/connector API keys plus encrypted session-store state, `auth logout <service>` for stored sessions, and clear deferred errors for OAuth/browser login commands. Status output shows env-var names and session presence only; secret values are never printed. 5 focused CLI tests; gate green (264 pytest, ruff, doctor). Merged `a55530c` (PR #64).
 

@@ -653,7 +653,9 @@
         "C-007"
       ],
       "risk_flagged": false,
-      "tests": [],
+      "tests": [
+        "tests/test_authoring_docs.py"
+      ],
       "sdd_anchor": "§14, **M-06**",
       "files": [
         "README.md",
