@@ -75,12 +75,12 @@
 | C-035 | Results View | Phase 2 | C-032 | todo | — |
 | C-036 | Settings View | Phase 2 | C-032, C-003 | todo | — |
 | C-037 | Windows installer | Phase 2 | C-033, C-034, C-035, C-036, C-030 | todo | — |
-| C-038 | Authoring docs — **M-06 gate** | Phase 2 | C-005, C-006, C-007 | done | (PR) |
+| C-038 | Authoring docs — **M-06 gate** | Phase 2 | C-005, C-006, C-007 | done | 1392942 |
 | C-051 | Adzuna connector | Connectors | C-005 | done | 581166a |
 
 ## Changelog (newest first)
 
-- 2026-06-20 - **C-038** Authoring docs on `chunk/C-038-authoring-docs`: adds the root README plus connector, provider, and profile-input authoring guides with contract summaries, discovery/config rules, auth/secrets guidance, examples, and test checklists. Added focused docs coverage to keep the guide set present and linked. Gate green: 4 focused docs tests; 268 full-suite tests; Ruff, doctor, and import smoke passed. (PR pending.)
+- 2026-06-20 - **C-038** Authoring docs on `chunk/C-038-authoring-docs`: adds the root README plus connector, provider, and profile-input authoring guides with contract summaries, discovery/config rules, auth/secrets guidance, examples, and test checklists. Added focused docs coverage to keep the guide set present and linked. Gate green: 4 focused docs tests; 268 full-suite tests; Ruff, doctor, and import smoke passed. Merged `1392942` (PR #65).
 
 - 2026-06-20 - **C-027** CLI auth commands on `chunk/C-027-cli-auth-commands`: adds `jobhunter auth status` for env-backed provider/connector API keys plus encrypted session-store state, `auth logout <service>` for stored sessions, and clear deferred errors for OAuth/browser login commands. Status output shows env-var names and session presence only; secret values are never printed. 5 focused CLI tests; gate green (264 pytest, ruff, doctor). Merged `a55530c` (PR #64).
 
