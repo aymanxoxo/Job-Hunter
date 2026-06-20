@@ -11,7 +11,7 @@
 <!-- jh:orientation:start -->
 - **Phase:** Phase 1 - Foundation (M-03 gate cleared). **Next gate:** M-06 (chunks C-037 + C-038).
 - **Last done:** **C-051** - Adzuna connector (`581166a`). Prior done: **C-050** - Retire walking skeleton + re-point CLI (`3c96c4b`); **C-049** - Plugin-load fail-graceful + raw read-only (`88341c9`).
-- **Next ready:** **C-027** - CLI auth commands; **C-038** - Authoring docs — **M-06 gate**.
+- **Next ready:** **C-038** - Authoring docs — **M-06 gate**.
 - **Blocked:** **C-016** - Google OAuth device flow (risk-flagged; design sign-off required); **C-020** - Indeed connector (risk-flagged; design sign-off required); **C-021** - LinkedIn connector (risk-flagged; design sign-off required); **C-031** - Tauri shell + sidecar + IPC (risk-flagged; design sign-off required).
 - **Notes:** Dev loop runs through short-lived GitHub PR branches; the user reviews and merges. See [ADR-014/015/016](Documents/DECISIONS.md).
 - **Protocol:** each chunk runs design -> test -> impl -> gate -> verify -> land (plan section 3.3); risky chunks pause for Design sign-off.
@@ -64,7 +64,7 @@
 | C-024 | Output exporter | Pipeline | C-004 | done | 0313037 |
 | C-025 | Runner orchestrator | Pipeline | C-009, C-014, C-022, C-023, C-024, ≥1 provider, ≥1 connector | done | e2981a2 |
 | C-026 | CLI skeleton + run + Rich render | CLI | C-025 | done | 977ad68 |
-| C-027 | CLI auth commands | CLI | C-017, C-019 | todo | — |
+| C-027 | CLI auth commands | CLI | C-017, C-019 | done | (PR) |
 | C-028 | CLI config/list/export commands | CLI | C-003, C-009, C-024 | done | 7cfc799 |
 | C-029 | E2E CLI test — **M-03 gate** | CLI | C-026, C-018, C-015 | done | 8c94253 |
 | C-030 | OpenRouter provider | Phase 2 | C-006, C-014 | done | a3eeee8 |
@@ -79,6 +79,8 @@
 | C-051 | Adzuna connector | Connectors | C-005 | done | 581166a |
 
 ## Changelog (newest first)
+
+- 2026-06-20 - **C-027** CLI auth commands on `chunk/C-027-cli-auth-commands`: adds `jobhunter auth status` for env-backed provider/connector API keys plus encrypted session-store state, `auth logout <service>` for stored sessions, and clear deferred errors for OAuth/browser login commands. Status output shows env-var names and session presence only; secret values are never printed. 5 focused CLI tests; gate green (264 pytest, ruff, doctor). (PR pending.)
 
 - 2026-06-20 - **C-051** Adzuna connector on `chunk/C-051-adzuna-connector`: adds a built-in `AdzunaConnector` using the official Adzuna jobs API with env-backed `ADZUNA_APP_ID`/`ADZUNA_APP_KEY` credentials, criteria-to-query mapping, Adzuna result-to-`Job` mapping, and clear API/JSON/credential errors. 8 focused connector tests; gate green (259 pytest, ruff, doctor). Merged `581166a` (PR #63).
 

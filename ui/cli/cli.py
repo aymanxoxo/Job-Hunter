@@ -13,6 +13,7 @@ from core.config import load_config
 from core.models.job import Job
 from core.progress import ProgressEmitter
 from core.runner import build_runner
+from ui.cli.auth import register_cli as register_auth_cli
 from ui.cli.config_cmd import register_cli
 
 CONFIG_PATH = Path("config.yaml")
@@ -23,6 +24,7 @@ def main() -> None:
     """JobHunter command-line entry point."""
 
 
+register_auth_cli(main)
 register_cli(main)
 
 
