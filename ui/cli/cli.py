@@ -10,11 +10,15 @@ from rich.table import Table
 
 from core.models.job import Job
 from core.walking_skeleton import DEFAULT_FIXTURE_PATH, DEFAULT_OUTPUT_PATH, run_walking_skeleton
+from ui.cli.config_cmd import register_cli
 
 
 @click.group()
 def main() -> None:
     """JobHunter command-line entry point."""
+
+
+register_cli(main)
 
 
 @main.command()
