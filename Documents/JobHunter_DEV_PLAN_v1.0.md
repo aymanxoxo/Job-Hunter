@@ -438,7 +438,7 @@ renderers. The Vue store maps events into the timeline model; the component is p
 | ID | Goal | Files | Depends on | Acceptance | SDD ref |
 |----|------|-------|-----------|------------|---------|
 | C-030 | OpenRouter provider | `core/ai_providers/openrouter_provider.py` | C-006, C-014 | `qwen3-coder:free` default, `deepseek-r1:free` fallback; faked HTTP; parses | §7.3 |
-| C-031 | Tauri shell + sidecar + IPC | `ui/desktop/src-tauri/**` | C-026, C-023 | Rust spawns Python sidecar; round-trips a `run_pipeline` request; streams progress | §11.1 |
+| C-031 | Tauri shell + sidecar + IPC | `ui/desktop/src-tauri/**`, `ui/cli/sidecar.py` | C-026, C-023 | Rust spawns Python sidecar; round-trips a `run_pipeline` request; streams progress | §11.1 |
 | C-032 | Vue app scaffold | `ui/desktop/src/**` | C-031 | Router + Pinia store + design tokens; receives IPC events into store | §11 |
 | C-033 | **Live Pipeline Progress UX** | `ui/desktop/src/components/PipelineProgress.vue` | C-032, C-023 | Renders the §9 timeline from the event stream; all states incl. partial/failed; reduced-motion; no layout shift | §9 (this doc), §11.2 |
 | C-034 | Criteria View | `ui/desktop/src/views/CriteriaView.vue` | C-032 | Profile input + Generate + editable chips + refine; future file-upload control present-but-disabled | §11.2 |

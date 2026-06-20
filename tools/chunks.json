@@ -554,10 +554,13 @@
         "C-023"
       ],
       "risk_flagged": true,
-      "tests": [],
+      "tests": [
+        "tests/test_sidecar.py"
+      ],
       "sdd_anchor": "§11.1",
       "files": [
-        "ui/desktop/src-tauri/**"
+        "ui/desktop/src-tauri/**",
+        "ui/cli/sidecar.py"
       ]
     },
     "C-032": {
