@@ -63,6 +63,8 @@ class AuthConfig(BaseModel):
     google_client_secret_env: str = "GOOGLE_CLIENT_SECRET"
     gemini_api_key_env: str = "GEMINI_API_KEY"
     openrouter_api_key_env: str = "OPENROUTER_API_KEY"
+    adzuna_app_id_env: str = "ADZUNA_APP_ID"
+    adzuna_app_key_env: str = "ADZUNA_APP_KEY"
 
     @field_validator("*")
     @classmethod

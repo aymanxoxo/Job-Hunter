@@ -22,6 +22,8 @@ def test_defaults():
     assert c.profile.input == "text"
     assert c.output.format == "both"
     assert c.auth.gemini_api_key_env == "GEMINI_API_KEY"
+    assert c.auth.adzuna_app_id_env == "ADZUNA_APP_ID"
+    assert c.auth.adzuna_app_key_env == "ADZUNA_APP_KEY"
 
 
 def test_load_config_reads_yaml(tmp_path):
