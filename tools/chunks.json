@@ -337,7 +337,9 @@
         "C-014"
       ],
       "risk_flagged": true,
-      "tests": [],
+      "tests": [
+        "tests/test_gemini_provider.py"
+      ],
       "sdd_anchor": "§7.1",
       "files": [
         "core/ai_providers/gemini_provider.py"

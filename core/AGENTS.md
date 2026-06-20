@@ -9,7 +9,7 @@ pipeline runner, and shared infra. Pure logic stays side-effect-free; I/O lives 
 - `logging.py` — structured JSON logger. **[C-002 · present]**
 - `models/` — `Job`, `SearchCriteria` (see `models/AGENTS.md`). **[C-004 · present]**
 - `connectors/` — `BaseConnector` ABC + built-in Mock connector (see `connectors/AGENTS.md`). **[C-005, C-018 · present]**
-- `ai_providers/` — `BaseAIProvider` ABC + built-in Ollama & OpenRouter providers (see `ai_providers/AGENTS.md`). **[C-006, C-015, C-030 · present]**
+- `ai_providers/` — `BaseAIProvider` ABC + built-in Ollama, OpenRouter & Gemini providers (see `ai_providers/AGENTS.md`). **[C-006, C-015, C-030, C-017 · present]**
 - `pipeline.py` — pure merge/dedup/sort/filter transforms for runner pipeline results. **[C-022 · present]**
 - `progress.py` — stdout protocol progress events with matching stderr logs. **[C-023 · present]**
 - `profile_inputs/` — `BaseProfileInput` ABC + `TextProfileInput` (see `profile_inputs/AGENTS.md`). **[C-007 · present]**
@@ -57,6 +57,9 @@ pipeline runner, and shared infra. Pure logic stays side-effect-free; I/O lives 
   OpenAI-style `chat/completions` with a `Bearer` key from `$OPENROUTER_API_KEY` (read at call time,
   never logged), default model `qwen/qwen3-coder:free` with a fallback model on error, and delegates
   to `AIEngine`.
+- **Gemini provider (`ai_providers/gemini_provider.py`, C-017).** `GeminiProvider` calls Google's
+  `generateContent`; auth resolves via `auth_strategy` (OAuth bearer when wired, else
+  `x-goog-api-key` from `$GEMINI_API_KEY`); default model `gemini-3-flash`; delegates to `AIEngine`.
 - **Pipeline transforms (`pipeline.py`, C-022).** `merge_results()`, `dedup_by_url()`,
   `sort_by_score()`, and `filter_below_threshold()` are pure helpers for runner steps 8-10; they do no
   config reads, logging, filesystem, or network work.

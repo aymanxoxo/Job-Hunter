@@ -11,7 +11,7 @@
 <!-- jh:orientation:start -->
 - **Phase:** Phase 1 - Foundation (M-03 gate cleared). **Next gate:** M-06 (chunks C-037 + C-038).
 - **Last done:** **C-050** - Retire walking skeleton + re-point CLI (`3c96c4b`). Prior done: **C-049** - Plugin-load fail-graceful + raw read-only (`88341c9`); **C-048** - Deterministic PR review-comment fetch (`e5ba1d8`).
-- **Next ready:** **C-017** - Gemini provider (risk-flagged; design sign-off required); **C-038** - Authoring docs — **M-06 gate**; **C-051** - Adzuna connector.
+- **Next ready:** **C-027** - CLI auth commands; **C-038** - Authoring docs — **M-06 gate**; **C-051** - Adzuna connector.
 - **Blocked:** **C-016** - Google OAuth device flow (risk-flagged; design sign-off required); **C-020** - Indeed connector (risk-flagged; design sign-off required); **C-021** - LinkedIn connector (risk-flagged; design sign-off required); **C-031** - Tauri shell + sidecar + IPC (risk-flagged; design sign-off required).
 - **Notes:** Dev loop runs through short-lived GitHub PR branches; the user reviews and merges. See [ADR-014/015/016](Documents/DECISIONS.md).
 - **Protocol:** each chunk runs design -> test -> impl -> gate -> verify -> land (plan section 3.3); risky chunks pause for Design sign-off.
@@ -54,7 +54,7 @@
 | C-014 | AI engine facade | AI engine | C-006, C-010, C-011, C-012, C-013 | done | a9138e2 |
 | C-015 | Ollama provider | Providers | C-006, C-014 | done | 70c71f6 |
 | C-016 | Google OAuth device flow | Providers | C-002, C-008 | blocked | — |
-| C-017 | Gemini provider | Providers | C-006, C-008, C-014 | todo | — |
+| C-017 | Gemini provider | Providers | C-006, C-008, C-014 | done | — |
 | C-018 | Mock connector + fixtures | Connectors | C-005 | done | 5acca79 |
 | C-019 | Session store | Connectors | C-002 | done | 9fb5ce0 |
 | C-020 | Indeed connector | Connectors | C-005 | blocked | — |
@@ -80,6 +80,7 @@
 
 ## Changelog (newest first)
 
+- 2026-06-20 - **C-017** Gemini provider on `chunk/C-017-gemini-provider`: `core.ai_providers.GeminiProvider` calls Google's Generative Language `generateContent` and delegates prompt orchestration/parsing/scored immutable job copies to `AIEngine`; auth resolves through the C-008 `auth_strategy` — OAuth bearer when a token provider is wired (lands with C-016), else `x-goog-api-key` from `$GEMINI_API_KEY` (read at call time, never stored/logged); default model `gemini-3-flash`. API-key path shipped; OAuth path deferred to C-016. Tests fake HTTP with `httpx.MockTransport`. 9 focused tests; gate green (251 pytest, ruff, doctor). (PR pending.)
 - 2026-06-20 - **Backlog refinement** (planning only, no feature code): pivot job sourcing from direct scraping to sanctioned aggregator APIs (LinkedIn/Indeed scraping is ToS + anti-bot + account-ban risk). Added **C-051 Adzuna connector** (free aggregator; `app_id`/`app_key`) as the primary real job source. Marked **C-020 Indeed** + **C-021 LinkedIn** `blocked` (superseded by C-051). Decoupled **C-017 Gemini** from C-016 (deps -> C-006/C-008/C-014) to ship the API-key path first; marked **C-016 Google OAuth** `blocked` (deferred; design banked: Fernet encrypted-file tokens, print-URL device UX). Re-scoped **C-027 CLI auth** (deps -> C-017/C-019) to available auth (API-key provider status + session store). Marked **C-031 Tauri shell** `blocked` (Phase-2 desktop deferred until Phase 1 done; build via CI). Registry + ledger updated; dev-plan section 10 deps synced for C-017/C-027. See [[jobhunter-design-decisions]].
 - 2026-06-20 - **C-030** OpenRouter provider on `chunk/C-030-openrouter-provider`: `core.ai_providers.OpenRouterProvider` posts OpenAI-compatible `chat/completions` with a `Bearer` key read from `$OPENROUTER_API_KEY` at call time (never stored in config or logged), default model `qwen/qwen3-coder:free` with automatic fallback to `deepseek/deepseek-r1:free` when the primary errors, and delegates prompt orchestration/parsing/scored immutable job copies to `AIEngine`; tests fake HTTP with `httpx.MockTransport`. 9 focused tests; gate green (242 pytest, ruff, doctor). Merged `a3eeee8` (PR #57).
 - 2026-06-20 - **C-050** Retire walking skeleton + re-point CLI on `chunk/C-050-retire-skeleton`: removed the temporary `core/walking_skeleton.py` stub (StubAIProvider/FixtureConnector/run_walking_skeleton) and its `tests/test_walking_skeleton.py`; the CLI `run` was already on the real `core.runner` pipeline since C-026. Scrubbed skeleton references from `core/AGENTS.md` and `ui/cli/AGENTS.md`, and cleared the now-dangling `tests/test_walking_skeleton.py` entries from the `C-039`/`C-050` registry metadata. Pure removal — no new tests; gate green (233 pytest, ruff, doctor). Merged `3c96c4b` (PR #55).
