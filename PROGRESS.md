@@ -63,7 +63,7 @@
 | C-023 | Progress event emitter | Pipeline | C-002 | done | d5b7e06 |
 | C-024 | Output exporter | Pipeline | C-004 | done | 0313037 |
 | C-025 | Runner orchestrator | Pipeline | C-009, C-014, C-022, C-023, C-024, ≥1 provider, ≥1 connector | done | e2981a2 |
-| C-026 | CLI skeleton + run + Rich render | CLI | C-025 | done | (PR) |
+| C-026 | CLI skeleton + run + Rich render | CLI | C-025 | done | 977ad68 |
 | C-027 | CLI auth commands | CLI | C-016, C-017, C-019, C-021 | todo | — |
 | C-028 | CLI config/list/export commands | CLI | C-003, C-009, C-024 | done | 7cfc799 |
 | C-029 | E2E CLI test — **M-03 gate** | CLI | C-026, C-018, C-015 | todo | — |
