@@ -334,7 +334,7 @@
       "depends_on": [
         "C-006",
         "C-008",
-        "C-016"
+        "C-014"
       ],
       "risk_flagged": true,
       "tests": [],
@@ -484,10 +484,8 @@
       "title": "CLI auth commands",
       "stage": "CLI",
       "depends_on": [
-        "C-016",
         "C-017",
-        "C-019",
-        "C-021"
+        "C-019"
       ],
       "risk_flagged": false,
       "tests": [],
@@ -780,6 +778,19 @@
       "files": [
         "core/walking_skeleton.py",
         "ui/cli/cli.py"
+      ]
+    },
+    "C-051": {
+      "title": "Adzuna connector",
+      "stage": "Connectors",
+      "depends_on": [
+        "C-005"
+      ],
+      "risk_flagged": false,
+      "tests": [],
+      "sdd_anchor": "§4.1",
+      "files": [
+        "core/connectors/adzuna_connector.py"
       ]
     }
   }
