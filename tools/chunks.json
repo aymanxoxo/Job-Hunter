@@ -474,7 +474,9 @@
         "C-025"
       ],
       "risk_flagged": false,
-      "tests": [],
+      "tests": [
+        "tests/test_cli_run.py"
+      ],
       "sdd_anchor": "§10",
       "files": [
         "ui/cli/cli.py"
