@@ -46,6 +46,10 @@ class AdzunaConnector(BaseConnector):
         timeout: float = DEFAULT_ADZUNA_TIMEOUT,
         page_size: int = DEFAULT_ADZUNA_PAGE_SIZE,
         client_factory: ClientFactory | None = None,
+        enabled: bool = True,
+        max_results: int = 50,
+        delay_min: float = 2.0,
+        delay_max: float = 5.0,
     ) -> None:
         self.app_id = app_id
         self.app_key = app_key
@@ -56,11 +60,16 @@ class AdzunaConnector(BaseConnector):
         self.timeout = timeout
         self.page_size = page_size
         self._client_factory = client_factory or self._default_client_factory
+        self.enabled = enabled
+        self.max_results = max_results
+        self.delay_min = delay_min
+        self.delay_max = delay_max
 
     async def search(self, criteria: SearchCriteria) -> list[Job]:
         """Search Adzuna and return raw unscored jobs."""
         app_id, app_key = self._credentials()
-        params = _params_for(criteria, app_id=app_id, app_key=app_key, page_size=self.page_size)
+        effective_page = min(self.page_size, self.max_results)
+        params = _params_for(criteria, app_id=app_id, app_key=app_key, page_size=effective_page)
         endpoint = self.endpoint_template.format(country=self.country, page=1)
         async with self._client_factory() as client:
             response = await client.get(endpoint, params=params, timeout=self.timeout)

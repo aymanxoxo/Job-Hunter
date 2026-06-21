@@ -11,7 +11,7 @@
 <!-- jh:orientation:start -->
 - **Phase:** Phase 1 - Foundation (M-03 gate cleared). **Next gate:** M-06 (chunks C-037 + C-038).
 - **Last done:** **C-051** - Adzuna connector (`581166a`). Prior done: **C-050** - Retire walking skeleton + re-point CLI (`3c96c4b`); **C-049** - Plugin-load fail-graceful + raw read-only (`88341c9`).
-- **Next ready:** **C-037** - Windows installer.
+- **Next ready:** **C-037** - Windows installer; **C-053** - Fix config.yaml + connector config wiring.
 - **Blocked:** **C-016** - Google OAuth device flow (risk-flagged; design sign-off required); **C-020** - Indeed connector (risk-flagged; design sign-off required); **C-021** - LinkedIn connector (risk-flagged; design sign-off required).
 - **Notes:** Dev loop runs through short-lived GitHub PR branches; the user reviews and merges. See [ADR-014/015/016](Documents/DECISIONS.md).
 - **Protocol:** each chunk runs design -> test -> impl -> gate -> verify -> land (plan section 3.3); risky chunks pause for Design sign-off.
@@ -78,6 +78,7 @@
 | C-037 | Windows installer | Phase 2 | C-033, C-034, C-035, C-036, C-030, C-052 | todo | — |
 | C-038 | Authoring docs — **M-06 gate** | Phase 2 | C-005, C-006, C-007 | done | 1392942 |
 | C-051 | Adzuna connector | Connectors | C-005 | done | 581166a |
+| C-053 | Fix config.yaml + connector config wiring | Hardening | C-051, C-003, C-009 | todo | — |
 
 ## Changelog (newest first)
 

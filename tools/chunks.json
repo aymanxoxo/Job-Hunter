@@ -827,6 +827,26 @@
       "files": [
         "core/connectors/adzuna_connector.py"
       ]
+    },
+    "C-053": {
+      "title": "Fix config.yaml + connector config wiring",
+      "stage": "Hardening",
+      "depends_on": [
+        "C-051",
+        "C-003",
+        "C-009"
+      ],
+      "risk_flagged": false,
+      "tests": [
+        "tests/test_runner_build_runner.py"
+      ],
+      "sdd_anchor": "§5.1, §9",
+      "files": [
+        "config.yaml",
+        "core/runner.py",
+        "core/connectors/adzuna_connector.py",
+        "core/connectors/mock_connector.py"
+      ]
     }
   }
 }
