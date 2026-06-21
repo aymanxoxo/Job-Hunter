@@ -10,8 +10,8 @@
 
 <!-- jh:orientation:start -->
 - **Phase:** Phase 1 - Foundation (M-03 gate cleared). **Next gate:** M-06 (chunks C-037 + C-038).
-- **Last done:** **C-053** - Fix config.yaml + connector config wiring (`bcd45ba`). Prior done: **C-051** - Adzuna connector (`581166a`); **C-050** - Retire walking skeleton + re-point CLI (`3c96c4b`).
-- **Next ready:** **C-037** - Windows installer; **C-056** - Desktop API key — honest labeling + clipboard copy.
+- **Last done:** **C-054** - JSON fence stripping + provider HTTP retry (`04a222d`). Prior done: **C-053** - Fix config.yaml + connector config wiring (`bcd45ba`); **C-051** - Adzuna connector (`581166a`).
+- **Next ready:** **C-037** - Windows installer; **C-055** - Adzuna pagination + provider config pass-through; **C-056** - Desktop API key — honest labeling + clipboard copy.
 - **Blocked:** **C-016** - Google OAuth device flow (risk-flagged; design sign-off required); **C-020** - Indeed connector (risk-flagged; design sign-off required); **C-021** - LinkedIn connector (risk-flagged; design sign-off required).
 - **Notes:** Dev loop runs through short-lived GitHub PR branches; the user reviews and merges. See [ADR-014/015/016](Documents/DECISIONS.md).
 - **Protocol:** each chunk runs design -> test -> impl -> gate -> verify -> land (plan section 3.3); risky chunks pause for Design sign-off.
@@ -79,11 +79,13 @@
 | C-038 | Authoring docs — **M-06 gate** | Phase 2 | C-005, C-006, C-007 | done | 1392942 |
 | C-051 | Adzuna connector | Connectors | C-005 | done | 581166a |
 | C-053 | Fix config.yaml + connector config wiring | Hardening | C-051, C-003, C-009 | done | bcd45ba |
-| C-054 | JSON fence stripping + provider HTTP retry | Hardening | C-011, C-015, C-017, C-030 | in-progress | — |
+| C-054 | JSON fence stripping + provider HTTP retry | Hardening | C-011, C-015, C-017, C-030 | done | 04a222d |
 | C-055 | Adzuna pagination + provider config pass-through | Hardening | C-053, C-054 | todo | — |
 | C-056 | Desktop API key — honest labeling + clipboard copy | Phase 2 | C-036, C-052 | todo | — |
 
 ## Changelog (newest first)
+
+- 2026-06-21 - **C-054** JSON fence stripping + provider HTTP retry on `chunk/C-054-json-fence-retry`: strips markdown ` ```json ` fences from LLM output in `parsing._loads()` before JSON decode; adds `core/ai_providers/_retry.py` with `http_call_with_retry()` exponential backoff (1 s, 2 s) on 429/500/502/503/504 and network errors; wires retry into OllamaProvider, GeminiProvider, OpenRouterProvider via `max_attempts`/`base_delay` params. 19 new tests (9 fence + 10 retry); 299 total pass; gate green. Merged `04a222d` (PR #80).
 
 - 2026-06-21 - **C-053** Fix config.yaml + connector config wiring on `chunk/C-053-fix-config-wiring`: corrects YAML parsing so connector settings are read from `config.yaml` and passed to `_instantiate_connector`; wires `ConnectorSettings.enabled` filtering so disabled connectors are skipped at runner build time. No new tests — the 5 existing `test_runner_build_runner.py` tests cover this code path. Gate green. Merged `bcd45ba` (PR #78).
 
