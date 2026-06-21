@@ -10,7 +10,7 @@
 
 <!-- jh:orientation:start -->
 - **Phase:** Phase 1 - Foundation (M-03 gate cleared). **Next gate:** M-06 (chunks C-037 + C-038).
-- **Last done:** **C-056** - Desktop API key — honest labeling + clipboard copy (merge pending). Prior done: **C-055** - Adzuna pagination + provider config pass-through (`4d4aa12`); **C-054** - JSON fence stripping + provider HTTP retry (`04a222d`).
+- **Last done:** **C-056** - Desktop API key — honest labeling + clipboard copy (`d895aa8`). Prior done: **C-055** - Adzuna pagination + provider config pass-through (`4d4aa12`); **C-054** - JSON fence stripping + provider HTTP retry (`04a222d`).
 - **Next ready:** **C-037** - Windows installer.
 - **Blocked:** **C-016** - Google OAuth device flow (risk-flagged; design sign-off required); **C-020** - Indeed connector (risk-flagged; design sign-off required); **C-021** - LinkedIn connector (risk-flagged; design sign-off required).
 - **Notes:** Dev loop runs through short-lived GitHub PR branches; the user reviews and merges. See [ADR-014/015/016](Documents/DECISIONS.md).
@@ -81,11 +81,11 @@
 | C-053 | Fix config.yaml + connector config wiring | Hardening | C-051, C-003, C-009 | done | bcd45ba |
 | C-054 | JSON fence stripping + provider HTTP retry | Hardening | C-011, C-015, C-017, C-030 | done | 04a222d |
 | C-055 | Adzuna pagination + provider config pass-through | Hardening | C-053, C-054 | done | 4d4aa12 |
-| C-056 | Desktop API key — honest labeling + clipboard copy | Phase 2 | C-036, C-052 | done | pending |
+| C-056 | Desktop API key — honest labeling + clipboard copy | Phase 2 | C-036, C-052 | done | d895aa8 |
 
 ## Changelog (newest first)
 
-- 2026-06-21 - **C-056** Desktop API key honest labeling + clipboard copy on `chunk/C-056-desktop-api-key-clipboard`: replaces the fake Settings API-key save flow with a clipboard-only helper, env-var setup guidance, and honest provider status that no longer turns Ready from localStorage. Adds Settings tests for clipboard copy, env-var messaging, input clearing, no secure-status write, stale secure-status ignoring, and copy failure. Frontend tests/build green; repo gate green (305 pytest, Ruff, doctor, import smoke). Merge pending.
+- 2026-06-21 - **C-056** Desktop API key honest labeling + clipboard copy on `chunk/C-056-desktop-api-key-clipboard`: replaces the fake Settings API-key save flow with a clipboard-only helper, env-var setup guidance, and honest provider status that no longer turns Ready from localStorage. Adds Settings tests for clipboard copy, env-var messaging, input clearing, no secure-status write, stale secure-status ignoring, and copy failure. Frontend tests/build green; repo gate green (305 pytest, Ruff, doctor, import smoke). Merged `d895aa8` (PR #82).
 
 - 2026-06-21 - **C-055** Adzuna pagination + provider model/batch_size pass-through on `chunk/C-055-adzuna-pagination`: `build_runner` now passes `model` and `batch_size` from `config.ai` to the selected provider; `AdzunaConnector.search()` replaced single-page fetch with a pagination loop that fetches until `max_results` is reached or API returns empty; `_params_for` simplified (caller controls page_size). 6 new tests; 305 total pass; gate green. Merged `4d4aa12` (PR #81).
 
