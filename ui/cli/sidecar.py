@@ -1,9 +1,10 @@
 """Tauri desktop sidecar entrypoint (SDD §11.1).
 
-Reads one ``run_pipeline`` JSON request from stdin, runs the pipeline with
+Reads one JSON request from stdin. ``run_pipeline`` runs the pipeline with
 progress events emitted to STDOUT (the IPC channel), then writes the final
-``{"type": "result", ...}`` line.  All Python logs go to STDERR so they never
-corrupt the JSON stream.
+``{"type": "result", ...}`` line. ``generate_criteria`` invokes the configured
+provider's criteria generation and writes a ``{"type": "criteria", ...}``
+line. All Python logs go to STDERR so they never corrupt the JSON stream.
 
 Usage (from the project root, with CWD = project root or a dir that has
 config.yaml + user drop-zone folders):
@@ -12,10 +13,12 @@ config.yaml + user drop-zone folders):
 
 Request format (one JSON line on stdin):
     {"command": "run_pipeline", "args": {"profile": "...", "provider": "ollama"}}
+    {"command": "generate_criteria", "args": {"profile": "...", "provider": "ollama"}}
 
 Response (newline-delimited JSON on stdout):
     {"type": "progress", "stage": "...", "state": "...", ...}  # zero or more
     {"type": "result", "data": [{...job fields...}]}           # final line
+    {"type": "criteria", "data": {...SearchCriteria fields...}} # criteria generation
     {"type": "error",  "message": "..."}                       # on fatal error
 """
 from __future__ import annotations
@@ -39,8 +42,59 @@ def _job_to_dict(job: Job) -> dict:
     return job.model_dump(mode="json")
 
 
+def _write_event(event: dict) -> None:
+    print(json.dumps(event), file=sys.stdout, flush=True)
+
+
 def _error(message: str) -> None:
-    print(json.dumps({"type": "error", "message": message}), file=sys.stdout, flush=True)
+    _write_event({"type": "error", "message": message})
+
+
+def _profile_arg(args: dict) -> str:
+    profile = args.get("profile", "")
+    if not profile:
+        raise ValueError("args.profile is required")
+    return profile
+
+
+def _load_request_config(args: dict):
+    try:
+        config = load_config(_CONFIG_PATH)
+    except Exception as exc:
+        raise ValueError(f"config load failed: {exc}") from exc
+
+    provider_override = args.get("provider")
+    if provider_override:
+        config = config.model_copy(
+            update={"ai": config.ai.model_copy(update={"provider": provider_override})}
+        )
+    return config
+
+
+async def _generate_criteria(profile: str, args: dict) -> None:
+    config = _load_request_config(args)
+    try:
+        runner = build_runner(config)
+    except ValueError as exc:
+        raise ValueError(str(exc)) from exc
+
+    profile_text = await runner.profile_input.to_text(profile)
+    criteria = await runner.provider.generate_criteria(profile_text)
+    _write_event({"type": "criteria", "data": criteria.model_dump(mode="json")})
+
+
+async def _run_pipeline(profile: str, args: dict) -> None:
+    config = _load_request_config(args)
+
+    try:
+        # Progress events go to stdout (the IPC channel); logs stay on stderr.
+        runner = build_runner(config, emitter=ProgressEmitter(stream=sys.stdout))
+    except ValueError as exc:
+        raise ValueError(str(exc)) from exc
+
+    result = await runner.run(profile)
+    data = [_job_to_dict(j) for j in result.jobs]
+    _write_event({"type": "result", "data": data})
 
 
 def main() -> None:
@@ -55,46 +109,26 @@ def main() -> None:
         _error(f"invalid JSON request: {exc}")
         sys.exit(1)
 
-    command = request.get("command")
-    if command != "run_pipeline":
-        _error(f"unknown command: {command!r}")
-        sys.exit(1)
-
     args = request.get("args") or {}
-    profile = args.get("profile", "")
-    if not profile:
-        _error("args.profile is required")
-        sys.exit(1)
-
+    command = request.get("command")
     try:
-        config = load_config(_CONFIG_PATH)
-    except Exception as exc:
-        _error(f"config load failed: {exc}")
-        sys.exit(1)
-
-    # Allow provider override from request args (useful in tests and UI "Settings").
-    provider_override = args.get("provider")
-    if provider_override:
-        config = config.model_copy(
-            update={"ai": config.ai.model_copy(update={"provider": provider_override})}
-        )
-
-    try:
-        # Progress events go to stdout (the IPC channel); logs stay on stderr.
-        runner = build_runner(config, emitter=ProgressEmitter(stream=sys.stdout))
+        profile = _profile_arg(args)
     except ValueError as exc:
         _error(str(exc))
         sys.exit(1)
 
     try:
-        result = asyncio.run(runner.run(profile))
+        if command == "run_pipeline":
+            asyncio.run(_run_pipeline(profile, args))
+        elif command == "generate_criteria":
+            asyncio.run(_generate_criteria(profile, args))
+        else:
+            _error(f"unknown command: {command!r}")
+            sys.exit(1)
     except Exception as exc:
-        _log.error("pipeline failed", error=str(exc))
-        _error(f"pipeline failed: {exc}")
+        _log.error("sidecar command failed", command=command, error=str(exc))
+        _error(f"{command or 'command'} failed: {exc}")
         sys.exit(1)
-
-    data = [_job_to_dict(j) for j in result.jobs]
-    print(json.dumps({"type": "result", "data": data}), file=sys.stdout, flush=True)
 
 
 if __name__ == "__main__":

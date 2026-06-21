@@ -90,23 +90,18 @@ fn which_exists(cmd: &str) -> bool {
 // Tauri command
 // ---------------------------------------------------------------------------
 
-/// Spawn the Python sidecar, stream progress events back to the frontend, and
-/// return the final scored-job list as JSON.
-///
-/// The caller (Vue frontend, C-032) receives progress events via the Tauri
-/// event `pipeline-progress` and the final array via the command's return
-/// value.
-#[tauri::command]
-async fn run_pipeline(
+async fn call_sidecar(
     app: tauri::AppHandle,
+    command: &str,
     profile: String,
     provider: Option<String>,
+    result_type: &str,
 ) -> Result<serde_json::Value, String> {
     let python = find_python();
     let project_root = project_root_from_env();
 
     let request = serde_json::json!({
-        "command": "run_pipeline",
+        "command": command,
         "args": {
             "profile": profile,
             "provider": provider,
@@ -154,7 +149,7 @@ async fn run_pipeline(
                 // Forward to the Vue frontend as a Tauri event.
                 let _ = app.emit("pipeline-progress", &event);
             }
-            Some("result") => {
+            Some(kind) if kind == result_type => {
                 result_value = Some(event["data"].clone());
             }
             Some("error") => {
@@ -169,7 +164,33 @@ async fn run_pipeline(
         .wait()
         .map_err(|e| format!("sidecar wait error: {e}"))?;
 
-    result_value.ok_or_else(|| "sidecar produced no result event".to_string())
+    result_value.ok_or_else(|| format!("sidecar produced no {result_type} event"))
+}
+
+/// Spawn the Python sidecar, stream progress events back to the frontend, and
+/// return the final scored-job list as JSON.
+///
+/// The caller (Vue frontend, C-032) receives progress events via the Tauri
+/// event `pipeline-progress` and the final array via the command's return
+/// value.
+#[tauri::command]
+async fn run_pipeline(
+    app: tauri::AppHandle,
+    profile: String,
+    provider: Option<String>,
+) -> Result<serde_json::Value, String> {
+    call_sidecar(app, "run_pipeline", profile, provider, "result").await
+}
+
+/// Invoke provider-backed criteria generation through the same Python sidecar
+/// boundary used by full pipeline runs.
+#[tauri::command]
+async fn generate_criteria(
+    app: tauri::AppHandle,
+    profile: String,
+    provider: Option<String>,
+) -> Result<serde_json::Value, String> {
+    call_sidecar(app, "generate_criteria", profile, provider, "criteria").await
 }
 
 // ---------------------------------------------------------------------------
@@ -179,7 +200,7 @@ async fn run_pipeline(
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![run_pipeline])
+        .invoke_handler(tauri::generate_handler![run_pipeline, generate_criteria])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

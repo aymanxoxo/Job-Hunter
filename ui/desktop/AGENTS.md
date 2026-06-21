@@ -4,12 +4,13 @@
 
 - `src/index.html` - Vite HTML entry that mounts the Vue application.
 - `src/main.ts` - Vue 3 entry point; installs Pinia + router and imports design tokens.
-- `src/App.vue` - Desktop app shell with left navigation, header state, and theme toggle.
+- `src/App.vue` - Desktop app shell with left navigation, header state, theme toggle, and global
+  pipeline progress surface.
 - `src/router/index.ts` - Hash-router routes for Criteria, Results, and Settings views.
-- `src/stores/pipeline.ts` - Pinia pipeline store; invokes `run_pipeline` and records
-  `pipeline-progress` IPC events.
-- `src/views/CriteriaView.vue` - Criteria workspace: profile input, local draft generation/editing,
-  refine, localStorage save/load, and Run Search through the existing pipeline IPC.
+- `src/stores/pipeline.ts` - Pinia pipeline store; invokes `run_pipeline` / `generate_criteria` and
+  records `pipeline-progress` IPC events.
+- `src/views/CriteriaView.vue` - Criteria workspace: profile input, provider-backed criteria
+  generation/editing, refine, localStorage save/load, and Run Search through the pipeline IPC.
 - `src/views/ResultsView.vue` - Results workspace: score-band table, sorting/filtering, below-40 hide
   rule, row detail drawer, JSON export, and re-run merge over the pipeline store results.
 - `src/views/SettingsView.vue` - Settings workspace: provider selection, connector toggles, search
@@ -33,6 +34,7 @@ Rust -> Python stdin, one JSON line:
 
 ```json
 {"command": "run_pipeline", "args": {"profile": "...", "provider": "ollama"}}
+{"command": "generate_criteria", "args": {"profile": "...", "provider": "ollama"}}
 ```
 
 Python stdout is newline-delimited JSON, streaming:
@@ -45,6 +47,7 @@ Then a final line:
 
 ```json
 {"type":"result","data":[{...job fields including score...}]}
+{"type":"criteria","data":{...SearchCriteria fields...}}
 ```
 
 Critical rule: only protocol JSON goes to stdout; all Python logs go to stderr. A stray stdout log
@@ -62,8 +65,8 @@ The Tauri command spawns this via `python -m ui.cli.sidecar` with:
 
 - CWD = project root, where `config.yaml` lives.
 - `PYTHONPATH` = project root, so `core` and `ui` are importable.
-- stdin = the `run_pipeline` JSON request.
-- stdout = progress events + final result, parsed by Rust.
+- stdin = the `run_pipeline` or `generate_criteria` JSON request.
+- stdout = progress events + final result, or a criteria event, parsed by Rust.
 - stderr = Python logs, inherited by the Tauri process and safe to ignore.
 
 ## Python Path Resolution
@@ -99,10 +102,11 @@ level differs.
 - Frontend events for streamed progress use the event name `pipeline-progress`.
 - Frontend state lives in Pinia stores under `src/stores/`; keep event names aligned with Rust and the
   Python sidecar stdout contract.
-- C-034 is frontend-only: Criteria draft generation/editing is local UI state; the only backend call is
-  the existing `run_pipeline(profile, provider)` command.
-- C-035 is frontend-only: Results rendering derives from `pipeline.results`; re-run uses
-  `pipeline.lastRun` and merges fresh rows locally by result identity.
+- C-034/C-052: Criteria draft generation calls the Python provider through the `generate_criteria`
+  sidecar command; editing/refine remains local UI state.
+- C-035/C-052: Results rendering derives from `pipeline.results`; re-run uses `pipeline.lastRun` and
+  merges fresh rows locally by result identity. Rows below score 40 are hidden by default with an
+  explicit reveal toggle.
 - C-036 is frontend-only until a Tauri settings command lands: non-secret settings persist to a
   local config-shaped payload, while API keys are cleared after save and represented only by saved
   status so secret values are never written to config.
