@@ -61,14 +61,15 @@ async def test_search_builds_adzuna_request_from_criteria_and_maps_jobs():
         params = dict(request.url.params)
         assert params["app_id"] == "app-id"
         assert params["app_key"] == "app-key"
-        assert params["results_per_page"] == "25"
+        assert params["results_per_page"] == "1"
         assert params["what"] == "Senior Python Developer python async"
         assert params["what_exclude"] == "contract"
         assert params["where"] == "Remote"
         assert params["content-type"] == "application/json"
         return httpx.Response(200, json=_response())
 
-    connector = _connector_for(handler)
+    # max_results=1: one result fills the limit so the loop exits after a single page
+    connector = _connector_for(handler, max_results=1)
 
     jobs = await connector.search(
         SearchCriteria(
@@ -76,11 +77,12 @@ async def test_search_builds_adzuna_request_from_criteria_and_maps_jobs():
             keywords=("python", "async"),
             exclude_keywords=("contract",),
             locations=("Remote",),
-            max_results=25,
         )
     )
 
-    contract_connector = _connector_for(lambda _request: httpx.Response(200, json=_response()))
+    contract_connector = _connector_for(
+        lambda _request: httpx.Response(200, json=_response()), max_results=1
+    )
     await assert_connector_returns_valid_jobs(
         contract_connector, SearchCriteria(keywords=("python",))
     )
@@ -156,7 +158,8 @@ async def test_search_skips_incomplete_result_records():
                     _response({"id": "ok"})["results"][0],
                 ]
             },
-        )
+        ),
+        max_results=1,  # one valid job satisfies the limit; loop exits after page 1
     )
 
     jobs = await connector.search(SearchCriteria())

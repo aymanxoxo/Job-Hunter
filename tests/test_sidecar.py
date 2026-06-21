@@ -27,6 +27,9 @@ class SidecarStubProvider(BaseAIProvider):
     auth_methods = ("none",)
     supports_local = True
 
+    def __init__(self, **_kw):
+        pass
+
     async def generate_criteria(self, profile):
         return SearchCriteria(
             keywords=("python",), min_score_threshold=40, raw_profile=profile

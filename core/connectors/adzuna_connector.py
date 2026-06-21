@@ -66,23 +66,42 @@ class AdzunaConnector(BaseConnector):
         self.delay_max = delay_max
 
     async def search(self, criteria: SearchCriteria) -> list[Job]:
-        """Search Adzuna and return raw unscored jobs."""
+        """Search Adzuna and return raw unscored jobs, paginating until max_results reached."""
         app_id, app_key = self._credentials()
-        effective_page = min(self.page_size, self.max_results)
-        params = _params_for(criteria, app_id=app_id, app_key=app_key, page_size=effective_page)
-        endpoint = self.endpoint_template.format(country=self.country, page=1)
+        collected: list[Job] = []
+        page = 1
         async with self._client_factory() as client:
-            response = await client.get(endpoint, params=params, timeout=self.timeout)
-        if response.status_code >= 400:
-            raise AdzunaConnectorError(f"Adzuna search failed with HTTP {response.status_code}.")
-        try:
-            payload = response.json()
-        except ValueError as exc:
-            raise AdzunaConnectorError("Adzuna response body was not valid JSON.") from exc
-        results = payload.get("results") if isinstance(payload, dict) else None
-        if not isinstance(results, list):
-            raise AdzunaConnectorError("Adzuna response JSON must include a results list.")
-        return [job for item in results if (job := _job_from_result(item)) is not None]
+            while len(collected) < self.max_results:
+                remaining = self.max_results - len(collected)
+                page_size = min(self.page_size, remaining)
+                params = _params_for(
+                    criteria, app_id=app_id, app_key=app_key, page_size=page_size
+                )
+                endpoint = self.endpoint_template.format(country=self.country, page=page)
+                response = await client.get(endpoint, params=params, timeout=self.timeout)
+                if response.status_code >= 400:
+                    raise AdzunaConnectorError(
+                        f"Adzuna search failed with HTTP {response.status_code}."
+                    )
+                try:
+                    payload = response.json()
+                except ValueError as exc:
+                    raise AdzunaConnectorError(
+                        "Adzuna response body was not valid JSON."
+                    ) from exc
+                results = payload.get("results") if isinstance(payload, dict) else None
+                if not isinstance(results, list):
+                    raise AdzunaConnectorError(
+                        "Adzuna response JSON must include a results list."
+                    )
+                page_jobs = [
+                    job for item in results if (job := _job_from_result(item)) is not None
+                ]
+                if not page_jobs:
+                    break
+                collected.extend(page_jobs)
+                page += 1
+        return collected[: self.max_results]
 
     def _credentials(self) -> tuple[str, str]:
         app_id = self.app_id or os.environ.get(self.app_id_env)
@@ -100,11 +119,10 @@ class AdzunaConnector(BaseConnector):
 def _params_for(
     criteria: SearchCriteria, *, app_id: str, app_key: str, page_size: int
 ) -> dict[str, str | int]:
-    max_results = min(criteria.max_results, page_size)
     params: dict[str, str | int] = {
         "app_id": app_id,
         "app_key": app_key,
-        "results_per_page": max_results,
+        "results_per_page": page_size,
         "content-type": "application/json",
     }
     what = " ".join((*criteria.titles, *criteria.keywords)).strip()
