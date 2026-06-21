@@ -11,7 +11,7 @@
 <!-- jh:orientation:start -->
 - **Phase:** Phase 1 - Foundation (M-03 gate cleared). **Next gate:** M-06 (chunks C-037 + C-038).
 - **Last done:** **C-051** - Adzuna connector (`581166a`). Prior done: **C-050** - Retire walking skeleton + re-point CLI (`3c96c4b`); **C-049** - Plugin-load fail-graceful + raw read-only (`88341c9`).
-- **Next ready:** **C-033** - Live Pipeline Progress UX (risk-flagged; design sign-off required); **C-034** - Criteria View; **C-035** - Results View; **C-036** - Settings View.
+- **Next ready:** **C-034** - Criteria View; **C-035** - Results View; **C-036** - Settings View.
 - **Blocked:** **C-016** - Google OAuth device flow (risk-flagged; design sign-off required); **C-020** - Indeed connector (risk-flagged; design sign-off required); **C-021** - LinkedIn connector (risk-flagged; design sign-off required).
 - **Notes:** Dev loop runs through short-lived GitHub PR branches; the user reviews and merges. See [ADR-014/015/016](Documents/DECISIONS.md).
 - **Protocol:** each chunk runs design -> test -> impl -> gate -> verify -> land (plan section 3.3); risky chunks pause for Design sign-off.
@@ -70,7 +70,7 @@
 | C-030 | OpenRouter provider | Phase 2 | C-006, C-014 | done | a3eeee8 |
 | C-031 | Tauri shell + sidecar + IPC | Phase 2 | C-026, C-023 | done | 32257ee |
 | C-032 | Vue app scaffold | Phase 2 | C-031 | done | 65cc38f |
-| C-033 | Live Pipeline Progress UX | Phase 2 | C-032, C-023 | todo | — |
+| C-033 | Live Pipeline Progress UX | Phase 2 | C-032, C-023 | done | 3e4cfad |
 | C-034 | Criteria View | Phase 2 | C-032 | todo | — |
 | C-035 | Results View | Phase 2 | C-032 | todo | — |
 | C-036 | Settings View | Phase 2 | C-032, C-003 | todo | — |
@@ -79,6 +79,8 @@
 | C-051 | Adzuna connector | Connectors | C-005 | done | 581166a |
 
 ## Changelog (newest first)
+
+- 2026-06-21 - **C-033** Live Pipeline Progress UX on `chunk/C-033-pipeline-progress`: adds `ui/desktop/src/lib/timeline.ts` — pure `buildTimeline()` mapping streamed `ProgressEvent[]` → `TimelineModel` (functional core, no DOM), 7 vitest unit tests in `timeline.test.ts`. Adds `ui/desktop/src/components/PipelineProgress.vue` — reactive 5-stage horizontal timeline (CSS grid, no layout shift), per-connector sub-rows under Search, determinate score progress bar (batch N/M), elapsed timer, summary footer, activity log; all state classes driven by design-token CSS vars. Updates `pipeline.ts` `ProgressEvent` with `connector` and `label` fields. Also fixes `tools/jh.py` docs link-checker to exclude `node_modules` and `dist` (spurious failures after `npm install`). npm test 9/9; npm run build clean; gate green (274 pytest, ruff, doctor, import smoke). Merged `3e4cfad` (PR #70).
 
 - 2026-06-20 - **C-032** Vue app scaffold on `chunk/C-032-vue-app-scaffold`: adds the Vite + Vue 3 frontend entry, Router routes for Criteria/Results/Settings, a Pinia pipeline store that invokes the Tauri `run_pipeline` command and records `pipeline-progress` events, token-backed shell styling, and Tauri build hooks for Vite `dist`. Focused store tests cover event capture and sidecar invocation; frontend `npm run test` + `npm run build` green; repo gate green (274 pytest, Ruff, doctor, import smoke). Merged `65cc38f` (PR #69).
 
