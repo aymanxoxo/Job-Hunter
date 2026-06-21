@@ -7,7 +7,9 @@ export interface ProgressEvent {
   run_id?: string;
   stage?: string;
   state?: string;
+  connector?: string;
   message?: string;
+  label?: string;
   current?: number;
   total?: number;
   metric?: unknown;
