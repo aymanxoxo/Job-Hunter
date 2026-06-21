@@ -27,6 +27,8 @@
 - `src-tauri/capabilities/default.json` - Tauri v2 capability grant for the main window.
 - `src-tauri/icons/icon.ico` - Placeholder application icon (required by tauri-build).
 - `package.json` - npm scripts: `dev`, `build`, `test`, `tauri`, `tauri:dev`, `tauri:build`.
+- `../../.github/workflows/desktop-windows.yml` - Windows CI packaging workflow; runs desktop
+  tests/build, builds the MSI with Tauri, checks the 120 MB size cap, and uploads the MSI artifact.
 
 ## IPC Contract
 
@@ -94,6 +96,9 @@ Or launch from a Visual Studio 2022 Developer Command Prompt.
 Application Control note: if `npm run tauri build` release builds are blocked by Windows WDAC policy,
 use `npm run tauri build -- --debug` for debug builds. The code is identical; only the optimisation
 level differs.
+
+Windows installer verification also runs in GitHub Actions via `.github/workflows/desktop-windows.yml`
+on `windows-latest`, which avoids local WDAC restrictions and publishes the MSI bundle artifact.
 
 ## Conventions
 

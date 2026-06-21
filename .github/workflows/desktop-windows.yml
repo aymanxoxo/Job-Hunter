@@ -1,0 +1,73 @@
+name: Desktop Windows Installer
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  windows-installer:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: ui/desktop/package-lock.json
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install desktop dependencies
+        working-directory: ui/desktop
+        run: npm ci
+
+      - name: Run desktop tests
+        working-directory: ui/desktop
+        run: npm test
+
+      - name: Build frontend
+        working-directory: ui/desktop
+        run: npm run build
+
+      - name: Build Tauri MSI
+        working-directory: ui/desktop
+        run: npm run tauri:build
+
+      - name: Check MSI size
+        shell: pwsh
+        run: |
+          $msi = Get-ChildItem -Path "ui/desktop/src-tauri/target/release/bundle/msi" -Filter "*.msi" | Select-Object -First 1
+          if (-not $msi) {
+            throw "No MSI was produced by tauri build."
+          }
+          $maxBytes = 120MB
+          if ($msi.Length -gt $maxBytes) {
+            throw "MSI exceeds 120 MB: $([math]::Round($msi.Length / 1MB, 2)) MB"
+          }
+          "MSI artifact: $($msi.FullName)"
+          "MSI size: $([math]::Round($msi.Length / 1MB, 2)) MB"
+
+      - name: Silent install smoke
+        shell: pwsh
+        run: |
+          $msi = Get-ChildItem -Path "ui/desktop/src-tauri/target/release/bundle/msi" -Filter "*.msi" | Select-Object -First 1
+          if (-not $msi) {
+            throw "No MSI was produced by tauri build."
+          }
+          $install = Start-Process msiexec.exe -ArgumentList "/i", "`"$($msi.FullName)`"", "/qn", "/norestart" -Wait -PassThru
+          if ($install.ExitCode -ne 0) {
+            throw "Silent MSI install failed with exit code $($install.ExitCode)."
+          }
+
+      - name: Upload MSI bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: jobhunter-windows-msi
+          path: ui/desktop/src-tauri/target/release/bundle/msi/*.msi
+          if-no-files-found: error

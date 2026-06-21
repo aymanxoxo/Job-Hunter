@@ -668,7 +668,8 @@
       "tests": [],
       "sdd_anchor": "§13.2",
       "files": [
-        "ui/desktop/src-tauri/tauri.conf.json"
+        "ui/desktop/src-tauri/tauri.conf.json",
+        ".github/workflows/desktop-windows.yml"
       ]
     },
     "C-038": {
