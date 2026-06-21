@@ -8,7 +8,10 @@
 - `src/router/index.ts` - Hash-router routes for Criteria, Results, and Settings views.
 - `src/stores/pipeline.ts` - Pinia pipeline store; invokes `run_pipeline` and records
   `pipeline-progress` IPC events.
-- `src/views/*.vue` - Scaffold views kept intentionally thin for C-034 through C-036.
+- `src/views/CriteriaView.vue` - Criteria workspace: profile input, local draft generation/editing,
+  refine, localStorage save/load, and Run Search through the existing pipeline IPC.
+- `src/views/ResultsView.vue`, `src/views/SettingsView.vue` - Scaffold views kept intentionally thin
+  for C-035 and C-036.
 - `src/styles/app.css` - Token-backed shell/component styling.
 - `src-tauri/src/main.rs` - Tauri entry point (thin wrapper calling `lib::run()`).
 - `src-tauri/src/lib.rs` - `run_pipeline` Tauri command + `find_python` / `project_root_from_env`
@@ -94,7 +97,9 @@ level differs.
 - Frontend events for streamed progress use the event name `pipeline-progress`.
 - Frontend state lives in Pinia stores under `src/stores/`; keep event names aligned with Rust and the
   Python sidecar stdout contract.
-- Keep C-032 scaffold views thin; detailed Criteria/Results/Settings UX lands in C-034 through C-036.
+- C-034 is frontend-only: Criteria draft generation/editing is local UI state; the only backend call is
+  the existing `run_pipeline(profile, provider)` command.
+- Results and Settings remain scaffold views until C-035 and C-036.
 
 ## Pointers
 

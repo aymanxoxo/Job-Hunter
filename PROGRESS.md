@@ -11,7 +11,7 @@
 <!-- jh:orientation:start -->
 - **Phase:** Phase 1 - Foundation (M-03 gate cleared). **Next gate:** M-06 (chunks C-037 + C-038).
 - **Last done:** **C-051** - Adzuna connector (`581166a`). Prior done: **C-050** - Retire walking skeleton + re-point CLI (`3c96c4b`); **C-049** - Plugin-load fail-graceful + raw read-only (`88341c9`).
-- **Next ready:** **C-034** - Criteria View; **C-035** - Results View; **C-036** - Settings View.
+- **Next ready:** **C-035** - Results View; **C-036** - Settings View.
 - **Blocked:** **C-016** - Google OAuth device flow (risk-flagged; design sign-off required); **C-020** - Indeed connector (risk-flagged; design sign-off required); **C-021** - LinkedIn connector (risk-flagged; design sign-off required).
 - **Notes:** Dev loop runs through short-lived GitHub PR branches; the user reviews and merges. See [ADR-014/015/016](Documents/DECISIONS.md).
 - **Protocol:** each chunk runs design -> test -> impl -> gate -> verify -> land (plan section 3.3); risky chunks pause for Design sign-off.
@@ -71,7 +71,7 @@
 | C-031 | Tauri shell + sidecar + IPC | Phase 2 | C-026, C-023 | done | 32257ee |
 | C-032 | Vue app scaffold | Phase 2 | C-031 | done | 65cc38f |
 | C-033 | Live Pipeline Progress UX | Phase 2 | C-032, C-023 | done | 3e4cfad |
-| C-034 | Criteria View | Phase 2 | C-032 | todo | — |
+| C-034 | Criteria View | Phase 2 | C-032 | done | — |
 | C-035 | Results View | Phase 2 | C-032 | todo | — |
 | C-036 | Settings View | Phase 2 | C-032, C-003 | todo | — |
 | C-037 | Windows installer | Phase 2 | C-033, C-034, C-035, C-036, C-030 | todo | — |
@@ -79,6 +79,8 @@
 | C-051 | Adzuna connector | Connectors | C-005 | done | 581166a |
 
 ## Changelog (newest first)
+
+- 2026-06-21 - **C-034** Criteria View on `chunk/C-034-criteria-view`: replaces the thin Criteria scaffold with a frontend-only criteria workspace: profile input, provider selector, disabled future file upload, deterministic local criteria draft generation, editable chips, seniority toggles, threshold slider, local refine commands, localStorage save/load, and Run Search through the existing `run_pipeline(profile, provider)` IPC with an augmented profile summary. Adds Vue component tests with `@vue/test-utils` + `happy-dom` for generation, editing, refine, save/load, and run behavior. Frontend test/build green; repo gate green (274 pytest, Ruff, doctor, import smoke). Merge hash to be finalized after merge.
 
 - 2026-06-21 - **C-033** Live Pipeline Progress UX on `chunk/C-033-pipeline-progress`: adds `ui/desktop/src/lib/timeline.ts` — pure `buildTimeline()` mapping streamed `ProgressEvent[]` → `TimelineModel` (functional core, no DOM), 7 vitest unit tests in `timeline.test.ts`. Adds `ui/desktop/src/components/PipelineProgress.vue` — reactive 5-stage horizontal timeline (CSS grid, no layout shift), per-connector sub-rows under Search, determinate score progress bar (batch N/M), elapsed timer, summary footer, activity log; all state classes driven by design-token CSS vars. Updates `pipeline.ts` `ProgressEvent` with `connector` and `label` fields. Also fixes `tools/jh.py` docs link-checker to exclude `node_modules` and `dist` (spurious failures after `npm install`). npm test 9/9; npm run build clean; gate green (274 pytest, ruff, doctor, import smoke). Merged `3e4cfad` (PR #70).
 
