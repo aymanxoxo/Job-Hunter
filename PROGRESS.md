@@ -9,9 +9,9 @@
 ## Orientation
 
 <!-- jh:orientation:start -->
-- **Phase:** Phase 1 - Foundation (M-03 gate cleared). **Next gate:** M-06 (chunks C-037 + C-038).
-- **Last done:** **C-056** - Desktop API key — honest labeling + clipboard copy (`d895aa8`). Prior done: **C-055** - Adzuna pagination + provider config pass-through (`4d4aa12`); **C-054** - JSON fence stripping + provider HTTP retry (`04a222d`).
-- **Next ready:** none.
+- **Phase:** Phase 1 + Phase 2 complete. **M-03 gate cleared** (C-029). **M-06 gate cleared** (C-037 + C-038). All planned chunks done.
+- **Last done:** **C-037** - Windows installer (`3fa7ac9`). Prior done: **C-056** - Desktop API key clipboard copy (`d895aa8`); **C-055** - Adzuna pagination + provider config pass-through (`4d4aa12`).
+- **Next ready:** none — all unblocked chunks complete.
 - **Blocked:** **C-016** - Google OAuth device flow (risk-flagged; design sign-off required); **C-020** - Indeed connector (risk-flagged; design sign-off required); **C-021** - LinkedIn connector (risk-flagged; design sign-off required).
 - **Notes:** Dev loop runs through short-lived GitHub PR branches; the user reviews and merges. See [ADR-014/015/016](Documents/DECISIONS.md).
 - **Protocol:** each chunk runs design -> test -> impl -> gate -> verify -> land (plan section 3.3); risky chunks pause for Design sign-off.
