@@ -75,7 +75,7 @@
 | C-035 | Results View | Phase 2 | C-032 | done | cf05c5f |
 | C-036 | Settings View | Phase 2 | C-032, C-003 | done | a94c750 |
 | C-052 | Desktop integration refinement + deep validation | Phase 2 | C-031, C-032, C-033, C-034, C-035, C-036, C-030 | done | 2930752 |
-| C-037 | Windows installer | Phase 2 | C-033, C-034, C-035, C-036, C-030, C-052 | done | pending |
+| C-037 | Windows installer | Phase 2 | C-033, C-034, C-035, C-036, C-030, C-052 | done | 3fa7ac9 |
 | C-038 | Authoring docs — **M-06 gate** | Phase 2 | C-005, C-006, C-007 | done | 1392942 |
 | C-051 | Adzuna connector | Connectors | C-005 | done | 581166a |
 | C-053 | Fix config.yaml + connector config wiring | Hardening | C-051, C-003, C-009 | done | bcd45ba |
@@ -85,7 +85,7 @@
 
 ## Changelog (newest first)
 
-- 2026-06-21 - **C-037** Windows installer on `chunk/C-037-windows-installer`: tightens the Tauri bundle config to build an MSI target with the tracked app icon and adds a Windows GitHub Actions packaging workflow that runs desktop tests/build, runs `npm run tauri:build`, checks the MSI is under 120 MB, performs a silent-install smoke, and uploads the MSI artifact. Local frontend tests/build green; local Tauri build remains blocked by Windows Application Control (`os error 4551`) before Rust build scripts execute; repo gate green (305 pytest, Ruff, doctor, import smoke). CI packaging result pending.
+- 2026-06-21 - **C-037** Windows installer on `chunk/C-037-windows-installer`: tightens the Tauri bundle config to build an MSI target with the tracked app icon and adds a Windows GitHub Actions packaging workflow that runs desktop tests/build, runs `npm run tauri:build`, checks the MSI is under 120 MB, performs a silent-install smoke, and uploads the MSI artifact. Local frontend tests/build green; local Tauri build remains blocked by Windows Application Control (`os error 4551`) before Rust build scripts execute; repo gate green (305 pytest, Ruff, doctor, import smoke). Windows CI packaging passed; `jobhunter-windows-msi` artifact uploaded (zip size 2,611,033 bytes); silent install smoke passed. Merged `3fa7ac9` (PR #84).
 
 - 2026-06-21 - **C-056** Desktop API key honest labeling + clipboard copy on `chunk/C-056-desktop-api-key-clipboard`: replaces the fake Settings API-key save flow with a clipboard-only helper, env-var setup guidance, and honest provider status that no longer turns Ready from localStorage. Adds Settings tests for clipboard copy, env-var messaging, input clearing, no secure-status write, stale secure-status ignoring, and copy failure. Frontend tests/build green; repo gate green (305 pytest, Ruff, doctor, import smoke). Merged `d895aa8` (PR #82).
 
