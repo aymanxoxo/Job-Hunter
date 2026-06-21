@@ -20,8 +20,20 @@ class MockConnector(BaseConnector):
     name = "mock"
     auth_methods = ("none",)
 
-    def __init__(self, fixture_path: str | Path = DEFAULT_FIXTURE_PATH) -> None:
+    def __init__(
+        self,
+        fixture_path: str | Path = DEFAULT_FIXTURE_PATH,
+        *,
+        enabled: bool = True,
+        max_results: int = 50,
+        delay_min: float = 2.0,
+        delay_max: float = 5.0,
+    ) -> None:
         self.fixture_path = Path(fixture_path)
+        self.enabled = enabled
+        self.max_results = max_results
+        self.delay_min = delay_min
+        self.delay_max = delay_max
 
     async def search(self, criteria: SearchCriteria) -> list[Job]:
         """Return fixture jobs matching any criteria keyword in title or description."""

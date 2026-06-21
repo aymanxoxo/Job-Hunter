@@ -8,16 +8,11 @@ ai:
 profile:
   input: text               # active profile-input plugin (text | pdf | docx | image …)
 connectors:
-  linkedin:
+  adzuna:
     enabled: true
     max_results: 50
     delay_min: 1.5
     delay_max: 4.0
-  indeed:
-    enabled: true
-    max_results: 50
-    delay_min: 2.0
-    delay_max: 5.0
   mock:
     enabled: false
     fixture_path: fixtures/jobs.json

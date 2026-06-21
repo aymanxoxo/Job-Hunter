@@ -197,6 +197,24 @@ def _select_named(plugins: list[type], name: str) -> type:
     raise ValueError(f"No plugin named {name!r} discovered (available: {available})")
 
 
+def _instantiate_connector(cls, settings) -> BaseConnector:
+    """Instantiate a connector class, passing only kwargs its constructor accepts."""
+    if settings is None:
+        return cls()
+    sig = inspect.signature(cls)
+    acceptable = set(sig.parameters.keys())
+    config_kwargs = {
+        "enabled": getattr(settings, "enabled", True),
+        "max_results": getattr(settings, "max_results", 50),
+        "delay_min": getattr(settings, "delay_min", 2.0),
+        "delay_max": getattr(settings, "delay_max", 5.0),
+    }
+    if hasattr(settings, "fixture_path") and settings.fixture_path is not None:
+        config_kwargs["fixture_path"] = settings.fixture_path
+    kwargs = {k: v for k, v in config_kwargs.items() if k in acceptable}
+    return cls(**kwargs)
+
+
 def build_runner(
     config,
     *,
@@ -216,13 +234,24 @@ def build_runner(
     providers = _discover_unique(
         discover, BaseAIProvider, root / "core" / "ai_providers", drop / "ai_providers"
     )
-    connectors = _discover_unique(
+    connector_classes = _discover_unique(
         discover, BaseConnector, root / "core" / "connectors", drop / "connectors"
     )
     provider = _select_named(providers, config.ai.provider)()
+    connector_instances: list[BaseConnector] = []
+    for cls in connector_classes:
+        name = getattr(cls, "name", None)
+        settings = getattr(config, "connectors", None)
+        if settings is not None:
+            settings = settings.get(name) if name else None
+        else:
+            settings = None
+        if settings is not None and not getattr(settings, "enabled", True):
+            continue
+        connector_instances.append(_instantiate_connector(cls, settings))
     return Runner(
         provider=provider,
-        connectors=[connector() for connector in connectors],
+        connectors=connector_instances,
         output_dir=config.output.directory,
         output_format=config.output.format,
         **overrides,

@@ -78,6 +78,7 @@
 | C-037 | Windows installer | Phase 2 | C-033, C-034, C-035, C-036, C-030, C-052 | todo | — |
 | C-038 | Authoring docs — **M-06 gate** | Phase 2 | C-005, C-006, C-007 | done | 1392942 |
 | C-051 | Adzuna connector | Connectors | C-005 | done | 581166a |
+| C-053 | Fix config.yaml + connector config wiring | Hardening | C-051, C-003, C-009 | todo | — |
 
 ## Changelog (newest first)
 
