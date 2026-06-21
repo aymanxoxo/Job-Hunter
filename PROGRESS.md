@@ -10,8 +10,8 @@
 
 <!-- jh:orientation:start -->
 - **Phase:** Phase 1 - Foundation (M-03 gate cleared). **Next gate:** M-06 (chunks C-037 + C-038).
-- **Last done:** **C-051** - Adzuna connector (`581166a`). Prior done: **C-050** - Retire walking skeleton + re-point CLI (`3c96c4b`); **C-049** - Plugin-load fail-graceful + raw read-only (`88341c9`).
-- **Next ready:** **C-037** - Windows installer; **C-053** - Fix config.yaml + connector config wiring.
+- **Last done:** **C-053** - Fix config.yaml + connector config wiring (`bcd45ba`). Prior done: **C-051** - Adzuna connector (`581166a`); **C-050** - Retire walking skeleton + re-point CLI (`3c96c4b`).
+- **Next ready:** **C-037** - Windows installer.
 - **Blocked:** **C-016** - Google OAuth device flow (risk-flagged; design sign-off required); **C-020** - Indeed connector (risk-flagged; design sign-off required); **C-021** - LinkedIn connector (risk-flagged; design sign-off required).
 - **Notes:** Dev loop runs through short-lived GitHub PR branches; the user reviews and merges. See [ADR-014/015/016](Documents/DECISIONS.md).
 - **Protocol:** each chunk runs design -> test -> impl -> gate -> verify -> land (plan section 3.3); risky chunks pause for Design sign-off.
@@ -78,9 +78,11 @@
 | C-037 | Windows installer | Phase 2 | C-033, C-034, C-035, C-036, C-030, C-052 | todo | — |
 | C-038 | Authoring docs — **M-06 gate** | Phase 2 | C-005, C-006, C-007 | done | 1392942 |
 | C-051 | Adzuna connector | Connectors | C-005 | done | 581166a |
-| C-053 | Fix config.yaml + connector config wiring | Hardening | C-051, C-003, C-009 | todo | — |
+| C-053 | Fix config.yaml + connector config wiring | Hardening | C-051, C-003, C-009 | done | bcd45ba |
 
 ## Changelog (newest first)
+
+- 2026-06-21 - **C-053** Fix config.yaml + connector config wiring on `chunk/C-053-fix-config-wiring`: corrects YAML parsing so connector settings are read from `config.yaml` and passed to `_instantiate_connector`; wires `ConnectorSettings.enabled` filtering so disabled connectors are skipped at runner build time. No new tests — the 5 existing `test_runner_build_runner.py` tests cover this code path. Gate green. Merged `bcd45ba` (PR #78).
 
 - 2026-06-21 - **C-052** Desktop integration refinement + deep validation on `chunk/C-052-desktop-integration-refinement`: wires Criteria "Generate with AI" through the Python sidecar/provider IPC (`generate_criteria`), mounts global pipeline progress in the app shell, adds explicit Results hidden-row reveal, refreshes desktop coverage/audit tooling, and documents the refined desktop contracts. Added sidecar, store, app-shell, Criteria, and Results coverage. Frontend tests/build/coverage green; npm audit clean; repo gate green (275 pytest, Ruff, doctor, import smoke); Vite served smoke green. Tauri release/debug builds remain blocked locally by Windows Application Control on WebView2 proc-macro DLL loading (`os error 4551`). Merged `2930752` (PR #76).
 

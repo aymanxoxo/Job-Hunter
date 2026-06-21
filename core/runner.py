@@ -238,14 +238,11 @@ def build_runner(
         discover, BaseConnector, root / "core" / "connectors", drop / "connectors"
     )
     provider = _select_named(providers, config.ai.provider)()
+    connector_map: dict = getattr(config, "connectors", {}) or {}
     connector_instances: list[BaseConnector] = []
     for cls in connector_classes:
         name = getattr(cls, "name", None)
-        settings = getattr(config, "connectors", None)
-        if settings is not None:
-            settings = settings.get(name) if name else None
-        else:
-            settings = None
+        settings = connector_map.get(name) if name else None
         if settings is not None and not getattr(settings, "enabled", True):
             continue
         connector_instances.append(_instantiate_connector(cls, settings))
