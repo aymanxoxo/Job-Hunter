@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { KeyRound, Link, Lock, Save, ShieldCheck, SlidersHorizontal } from "@lucide/vue";
+import { Clipboard, KeyRound, Link, Save, ShieldCheck, SlidersHorizontal } from "@lucide/vue";
 import { computed, onMounted, ref } from "vue";
 
 import { usePipelineStore } from "@/stores/pipeline";
@@ -40,20 +40,17 @@ interface PersistedConfig {
   };
 }
 
-interface SecureStatus {
-  gemini: boolean;
-  openrouter: boolean;
-}
-
 const configKey = "jobhunter.desktopConfig.v1";
-const secureStatusKey = "jobhunter.secureStatus.v1";
 
 const pipeline = usePipelineStore();
 const settings = ref<DesktopSettings>(defaultSettings());
 const apiKey = ref("");
 const savedMessage = ref("");
 const secretMessage = ref("");
-const secureStatus = ref<SecureStatus>({ gemini: false, openrouter: false });
+const providerEnvVars = {
+  gemini: "GEMINI_API_KEY",
+  openrouter: "OPENROUTER_API_KEY",
+} as const;
 
 const providerOptions: Array<{ value: Provider; label: string; detail: string }> = [
   { value: "ollama", label: "Ollama", detail: "Local, no API key" },
@@ -66,12 +63,10 @@ const selectedProvider = computed(
 );
 
 const apiKeyRequired = computed(() => settings.value.provider !== "ollama");
-const currentProviderSaved = computed(() => {
-  if (settings.value.provider === "ollama") {
-    return true;
-  }
-  return secureStatus.value[settings.value.provider];
+const envVarName = computed(() => {
+  return settings.value.provider === "ollama" ? "" : providerEnvVars[settings.value.provider];
 });
+const currentProviderSaved = computed(() => settings.value.provider === "ollama");
 
 const authRows = computed(() => [
   {
@@ -82,21 +77,20 @@ const authRows = computed(() => [
   },
   {
     label: "OpenRouter",
-    state: secureStatus.value.openrouter ? "Saved" : "Missing",
-    detail: "OPENROUTER_API_KEY",
-    ready: secureStatus.value.openrouter,
+    state: "Missing",
+    detail: providerEnvVars.openrouter,
+    ready: false,
   },
   {
     label: "Gemini",
-    state: secureStatus.value.gemini ? "Saved" : "Missing",
-    detail: "GEMINI_API_KEY",
-    ready: secureStatus.value.gemini,
+    state: "Missing",
+    detail: providerEnvVars.gemini,
+    ready: false,
   },
 ]);
 
 onMounted(() => {
   settings.value = loadSettings();
-  secureStatus.value = loadSecureStatus();
 });
 
 function defaultSettings(): DesktopSettings {
@@ -159,18 +153,6 @@ function loadSettings(): DesktopSettings {
   }
 }
 
-function loadSecureStatus(): SecureStatus {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(secureStatusKey) ?? "{}");
-    return {
-      gemini: Boolean(parsed.gemini),
-      openrouter: Boolean(parsed.openrouter),
-    };
-  } catch {
-    return { gemini: false, openrouter: false };
-  }
-}
-
 function configPayload(): PersistedConfig {
   return {
     ai: {
@@ -191,8 +173,8 @@ function configPayload(): PersistedConfig {
       },
     },
     auth: {
-      gemini_api_key_env: "GEMINI_API_KEY",
-      openrouter_api_key_env: "OPENROUTER_API_KEY",
+      gemini_api_key_env: providerEnvVars.gemini,
+      openrouter_api_key_env: providerEnvVars.openrouter,
     },
   };
 }
@@ -202,17 +184,18 @@ function saveSettings() {
   savedMessage.value = "Saved";
 }
 
-function saveApiKey() {
-  if (!apiKeyRequired.value || apiKey.value.trim().length === 0) {
+async function saveApiKey() {
+  const key = apiKey.value.trim();
+  if (!apiKeyRequired.value || key.length === 0) {
     return;
   }
-  secureStatus.value = {
-    ...secureStatus.value,
-    [settings.value.provider]: true,
-  };
-  localStorage.setItem(secureStatusKey, JSON.stringify(secureStatus.value));
+  try {
+    await navigator.clipboard.writeText(key);
+    secretMessage.value = `Copied! Paste into your shell: export ${envVarName.value}=<key>`;
+  } catch {
+    secretMessage.value = "Copy failed — paste the key manually into your environment.";
+  }
   apiKey.value = "";
-  secretMessage.value = "Saved to OS secure store";
 }
 </script>
 
@@ -309,7 +292,7 @@ function saveApiKey() {
         <div class="card-header">
           <div>
             <h3 id="secret-title">API key</h3>
-            <p>Secret values never enter the persisted config payload.</p>
+            <p>Your key is never stored by this app. Set it as an environment variable before running the pipeline.</p>
           </div>
           <KeyRound aria-hidden="true" />
         </div>
@@ -335,8 +318,8 @@ function saveApiKey() {
             :disabled="!apiKeyRequired || apiKey.trim().length === 0"
             @click="saveApiKey"
           >
-            <Lock aria-hidden="true" />
-            <span>Save key</span>
+            <Clipboard aria-hidden="true" />
+            <span>Copy to clipboard</span>
           </button>
         </div>
       </section>

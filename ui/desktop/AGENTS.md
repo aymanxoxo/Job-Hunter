@@ -14,7 +14,7 @@
 - `src/views/ResultsView.vue` - Results workspace: score-band table, sorting/filtering, below-40 hide
   rule, row detail drawer, JSON export, and re-run merge over the pipeline store results.
 - `src/views/SettingsView.vue` - Settings workspace: provider selection, connector toggles, search
-  limits, masked API-key save affordance, auth status, and disabled deferred auth actions.
+  limits, clipboard-only API-key helper, auth status, and disabled deferred auth actions.
 - `src/styles/app.css` - Token-backed shell/component styling.
 - `src-tauri/src/main.rs` - Tauri entry point (thin wrapper calling `lib::run()`).
 - `src-tauri/src/lib.rs` - `run_pipeline` Tauri command + `find_python` / `project_root_from_env`
@@ -107,9 +107,9 @@ level differs.
 - C-035/C-052: Results rendering derives from `pipeline.results`; re-run uses `pipeline.lastRun` and
   merges fresh rows locally by result identity. Rows below score 40 are hidden by default with an
   explicit reveal toggle.
-- C-036 is frontend-only until a Tauri settings command lands: non-secret settings persist to a
-  local config-shaped payload, while API keys are cleared after save and represented only by saved
-  status so secret values are never written to config.
+- C-036/C-056 is frontend-only until a Tauri settings command lands: non-secret settings persist to a
+  local config-shaped payload. API keys are never stored; the UI only copies a typed key to the
+  clipboard with env-var setup guidance, then clears the field.
 
 ## Pointers
 

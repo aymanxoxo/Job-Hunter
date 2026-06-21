@@ -897,9 +897,7 @@
         "C-052"
       ],
       "risk_flagged": false,
-      "tests": [
-        "ui/desktop/src/views/SettingsView.test.ts"
-      ],
+      "tests": [],
       "sdd_anchor": "§11.2",
       "files": [
         "ui/desktop/src/views/SettingsView.vue"
