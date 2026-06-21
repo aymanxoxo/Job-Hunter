@@ -445,7 +445,7 @@ renderers. The Vue store maps events into the timeline model; the component is p
 | C-035 | Results View | `ui/desktop/src/views/ResultsView.vue` | C-032 | Sortable scored table, score bands, detail panel, filter, export, re-run | §11.2 |
 | C-036 | Settings View | `ui/desktop/src/views/SettingsView.vue` | C-032, C-003 | Provider selector, masked key field, connector toggles, auth status — persist to config | §11.2 |
 | C-052 | Desktop integration refinement + deep validation | `ui/desktop/src/**`, `ui/desktop/src-tauri/src/lib.rs`, `ui/cli/sidecar.py` | C-031–C-036, C-030 | Criteria generation is provider-backed through IPC; app shell shows streamed progress; results hidden-row affordance/export/re-run validated; deep desktop QA report captured | §11.1, §11.2 |
-| C-037 | Windows installer | `ui/desktop/src-tauri/tauri.conf.json`, build spec | C-033–C-036, C-030, C-052 | `.msi` builds; installs/runs on clean Win11; < 120 MB | §13.2 |
+| C-037 | Windows installer | `ui/desktop/src-tauri/tauri.conf.json`, `.github/workflows/desktop-windows.yml` | C-033–C-036, C-030, C-052 | `.msi` builds in Windows CI; installer artifact uploaded; < 120 MB | §13.2 |
 | C-038 | Authoring docs (Phase 2 gate) | `README.md`, `CONNECTOR_GUIDE.md`, `PROVIDER_GUIDE.md`, `PROFILE_INPUT_GUIDE.md` | stable contracts (C-005–C-007) | Each guide lets a new plugin be added by following it; peer-reviewed (by AI) | §14, **M-06** |
 
 ---
