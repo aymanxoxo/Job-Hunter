@@ -568,6 +568,8 @@ def _iter_text_files(root: Path, patterns: tuple[str, ...]) -> list[Path]:
         ".pytest_cache",
         ".ruff_cache",
         "output",
+        "node_modules",
+        "dist",
     }
     for pattern in patterns:
         for path in root.rglob(pattern):
