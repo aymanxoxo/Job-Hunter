@@ -10,8 +10,9 @@
   `pipeline-progress` IPC events.
 - `src/views/CriteriaView.vue` - Criteria workspace: profile input, local draft generation/editing,
   refine, localStorage save/load, and Run Search through the existing pipeline IPC.
-- `src/views/ResultsView.vue`, `src/views/SettingsView.vue` - Scaffold views kept intentionally thin
-  for C-035 and C-036.
+- `src/views/ResultsView.vue` - Results workspace: score-band table, sorting/filtering, below-40 hide
+  rule, row detail drawer, JSON export, and re-run merge over the pipeline store results.
+- `src/views/SettingsView.vue` - Scaffold view kept intentionally thin for C-036.
 - `src/styles/app.css` - Token-backed shell/component styling.
 - `src-tauri/src/main.rs` - Tauri entry point (thin wrapper calling `lib::run()`).
 - `src-tauri/src/lib.rs` - `run_pipeline` Tauri command + `find_python` / `project_root_from_env`
@@ -99,7 +100,9 @@ level differs.
   Python sidecar stdout contract.
 - C-034 is frontend-only: Criteria draft generation/editing is local UI state; the only backend call is
   the existing `run_pipeline(profile, provider)` command.
-- Results and Settings remain scaffold views until C-035 and C-036.
+- C-035 is frontend-only: Results rendering derives from `pipeline.results`; re-run uses
+  `pipeline.lastRun` and merges fresh rows locally by result identity.
+- Settings remains a scaffold view until C-036.
 
 ## Pointers
 
