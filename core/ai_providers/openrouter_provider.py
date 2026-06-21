@@ -16,6 +16,7 @@ from typing import Any
 import httpx
 
 from core.ai_engine import AIEngine, AIEngineError
+from core.ai_providers._retry import http_call_with_retry
 from core.ai_providers.base_provider import BaseAIProvider
 from core.models.job import Job
 from core.models.search_criteria import SearchCriteria
@@ -50,6 +51,8 @@ class OpenRouterProvider(BaseAIProvider):
         endpoint: str = DEFAULT_OPENROUTER_ENDPOINT,
         timeout: float = DEFAULT_OPENROUTER_TIMEOUT,
         batch_size: int = 15,
+        max_attempts: int = 3,
+        base_delay: float = 1.0,
         client_factory: ClientFactory | None = None,
     ) -> None:
         self._api_key = api_key
@@ -59,6 +62,8 @@ class OpenRouterProvider(BaseAIProvider):
         self.endpoint = endpoint
         self.timeout = timeout
         self.batch_size = batch_size
+        self.max_attempts = max_attempts
+        self.base_delay = base_delay
         self._client_factory = client_factory or self._default_client_factory
 
     async def generate_criteria(self, profile: str) -> SearchCriteria:
@@ -99,8 +104,12 @@ class OpenRouterProvider(BaseAIProvider):
         }
         headers = {"Authorization": f"Bearer {api_key}"}
         try:
-            response = await client.post(
-                self.endpoint, json=payload, headers=headers, timeout=self.timeout
+            response = await http_call_with_retry(
+                lambda: client.post(
+                    self.endpoint, json=payload, headers=headers, timeout=self.timeout
+                ),
+                max_attempts=self.max_attempts,
+                base_delay=self.base_delay,
             )
             response.raise_for_status()
         except httpx.HTTPError as exc:

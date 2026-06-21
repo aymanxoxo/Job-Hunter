@@ -138,7 +138,8 @@ async def test_falls_back_to_secondary_model_when_primary_errors():
             return httpx.Response(429, json={"error": {"message": "rate-limited"}})
         return _chat_response(_CRITERIA_JSON)
 
-    provider = _provider_for(handler)
+    # max_attempts=1 isolates model-fallback behaviour from the retry layer
+    provider = _provider_for(handler, max_attempts=1)
 
     criteria = await provider.generate_criteria("Senior Python developer")
 

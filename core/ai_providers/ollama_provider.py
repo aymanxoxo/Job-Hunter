@@ -8,6 +8,7 @@ from typing import Any
 import httpx
 
 from core.ai_engine import AIEngine, AIEngineError
+from core.ai_providers._retry import http_call_with_retry
 from core.ai_providers.base_provider import BaseAIProvider
 from core.models.job import Job
 from core.models.search_criteria import SearchCriteria
@@ -37,12 +38,16 @@ class OllamaProvider(BaseAIProvider):
         endpoint: str = DEFAULT_OLLAMA_ENDPOINT,
         timeout: float = DEFAULT_OLLAMA_TIMEOUT,
         batch_size: int = 15,
+        max_attempts: int = 3,
+        base_delay: float = 1.0,
         client_factory: ClientFactory | None = None,
     ) -> None:
         self.model = model
         self.endpoint = endpoint
         self.timeout = timeout
         self.batch_size = batch_size
+        self.max_attempts = max_attempts
+        self.base_delay = base_delay
         self._client_factory = client_factory or self._default_client_factory
 
     async def generate_criteria(self, profile: str) -> SearchCriteria:
@@ -66,8 +71,15 @@ class OllamaProvider(BaseAIProvider):
             "stream": False,
         }
         async with self._client_factory() as client:
-            response = await client.post(self.endpoint, json=payload, timeout=self.timeout)
-            response.raise_for_status()
+            try:
+                response = await http_call_with_retry(
+                    lambda: client.post(self.endpoint, json=payload, timeout=self.timeout),
+                    max_attempts=self.max_attempts,
+                    base_delay=self.base_delay,
+                )
+                response.raise_for_status()
+            except httpx.HTTPError as exc:
+                raise OllamaProviderError(f"Ollama request failed: {exc}") from exc
         try:
             data = response.json()
         except ValueError as exc:

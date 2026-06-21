@@ -16,6 +16,7 @@ from typing import Any
 import httpx
 
 from core.ai_engine import AIEngine, AIEngineError
+from core.ai_providers._retry import http_call_with_retry
 from core.ai_providers.base_provider import BaseAIProvider
 from core.auth.auth_strategy import AuthProvider, AuthResult, resolve_auth
 from core.models.job import Job
@@ -48,6 +49,8 @@ class GeminiProvider(BaseAIProvider):
         endpoint: str = DEFAULT_GEMINI_ENDPOINT,
         timeout: float = DEFAULT_GEMINI_TIMEOUT,
         batch_size: int = 15,
+        max_attempts: int = 3,
+        base_delay: float = 1.0,
         env: Mapping[str, str] | None = None,
         oauth_provider: AuthProvider | None = None,
         client_factory: ClientFactory | None = None,
@@ -57,6 +60,8 @@ class GeminiProvider(BaseAIProvider):
         self.endpoint = endpoint
         self.timeout = timeout
         self.batch_size = batch_size
+        self.max_attempts = max_attempts
+        self.base_delay = base_delay
         self._env = env
         self._oauth_provider = oauth_provider
         self._client_factory = client_factory or self._default_client_factory
@@ -82,8 +87,10 @@ class GeminiProvider(BaseAIProvider):
         payload: dict[str, Any] = {"contents": [{"parts": [{"text": prompt}]}]}
         async with self._client_factory() as client:
             try:
-                response = await client.post(
-                    url, json=payload, headers=headers, timeout=self.timeout
+                response = await http_call_with_retry(
+                    lambda: client.post(url, json=payload, headers=headers, timeout=self.timeout),
+                    max_attempts=self.max_attempts,
+                    base_delay=self.base_delay,
                 )
                 response.raise_for_status()
             except httpx.HTTPError as exc:

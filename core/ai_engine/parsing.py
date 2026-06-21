@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re as _re
 from collections.abc import Sequence
 from typing import Any
 
@@ -9,6 +10,8 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from core.models.job import Job
 from core.models.search_criteria import SearchCriteria
+
+_FENCE_RE = _re.compile(r"```(?:json)?\s*(.*?)\s*```", _re.DOTALL)
 
 
 class _CriteriaPayload(BaseModel):
@@ -72,7 +75,12 @@ def parse_scored_jobs_response(text: str, jobs: Sequence[Job]) -> list[Job] | No
 
 
 def _loads(text: str) -> Any:
+    match = _FENCE_RE.search(text)
+    candidate = match.group(1) if match else text
     try:
-        return json.loads(text)
+        return json.loads(candidate)
     except json.JSONDecodeError:
-        return None
+        try:
+            return json.loads(candidate.strip())
+        except json.JSONDecodeError:
+            return None
