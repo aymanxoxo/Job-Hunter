@@ -11,7 +11,7 @@
 <!-- jh:orientation:start -->
 - **Phase:** Phase 1 - Foundation (M-03 gate cleared). **Next gate:** M-06 (chunks C-037 + C-038).
 - **Last done:** **C-051** - Adzuna connector (`581166a`). Prior done: **C-050** - Retire walking skeleton + re-point CLI (`3c96c4b`); **C-049** - Plugin-load fail-graceful + raw read-only (`88341c9`).
-- **Next ready:** **C-035** - Results View; **C-036** - Settings View.
+- **Next ready:** **C-037** - Windows installer.
 - **Blocked:** **C-016** - Google OAuth device flow (risk-flagged; design sign-off required); **C-020** - Indeed connector (risk-flagged; design sign-off required); **C-021** - LinkedIn connector (risk-flagged; design sign-off required).
 - **Notes:** Dev loop runs through short-lived GitHub PR branches; the user reviews and merges. See [ADR-014/015/016](Documents/DECISIONS.md).
 - **Protocol:** each chunk runs design -> test -> impl -> gate -> verify -> land (plan section 3.3); risky chunks pause for Design sign-off.
@@ -72,13 +72,17 @@
 | C-032 | Vue app scaffold | Phase 2 | C-031 | done | 65cc38f |
 | C-033 | Live Pipeline Progress UX | Phase 2 | C-032, C-023 | done | 3e4cfad |
 | C-034 | Criteria View | Phase 2 | C-032 | done | 9316f09 |
-| C-035 | Results View | Phase 2 | C-032 | todo | — |
-| C-036 | Settings View | Phase 2 | C-032, C-003 | todo | — |
+| C-035 | Results View | Phase 2 | C-032 | done | cf05c5f |
+| C-036 | Settings View | Phase 2 | C-032, C-003 | done | a94c750 |
 | C-037 | Windows installer | Phase 2 | C-033, C-034, C-035, C-036, C-030 | todo | — |
 | C-038 | Authoring docs — **M-06 gate** | Phase 2 | C-005, C-006, C-007 | done | 1392942 |
 | C-051 | Adzuna connector | Connectors | C-005 | done | 581166a |
 
 ## Changelog (newest first)
+
+- 2026-06-21 - **C-036** Settings View on `chunk/C-036-settings-view`: replaces the thin Settings scaffold with provider selection, connector toggles for Mock/Adzuna, max-results and delay sliders, auth status, disabled deferred OAuth/LinkedIn controls, and masked API-key handling that clears typed secrets and persists only non-secret config-shaped settings. Adds Vue component tests for provider/connector controls, persistence round-trip, secret non-rendering/non-persistence, and deferred auth controls. Frontend tests/build green; repo gate green (274 pytest, Ruff, doctor, import smoke). Merged `a94c750` (PR #74).
+
+- 2026-06-21 - **C-035** Results View on `chunk/C-035-results-view`: replaces the thin Results scaffold with a score-banded sortable table, filter bar, below-40 hidden rows, row-click detail drawer, JSON export action, and re-run merge behavior over `pipeline.lastRun` and `pipeline.results`. Adds Vue component tests for sorting, score bands, hidden low scores, detail panel, filtering, and re-run merging. Frontend tests/build green; repo gate green (274 pytest, Ruff, doctor, import smoke). Merged `cf05c5f` (PR #73).
 
 - 2026-06-21 - **C-034** Criteria View on `chunk/C-034-criteria-view`: replaces the thin Criteria scaffold with a frontend-only criteria workspace: profile input, provider selector, disabled future file upload, deterministic local criteria draft generation, editable chips, seniority toggles, threshold slider, local refine commands, localStorage save/load, and Run Search through the existing `run_pipeline(profile, provider)` IPC with an augmented profile summary. Adds Vue component tests with `@vue/test-utils` + `happy-dom` for generation, editing, refine, save/load, and run behavior. Frontend test/build green; repo gate green (274 pytest, Ruff, doctor, import smoke). Merged `9316f09` (PR #71).
 
