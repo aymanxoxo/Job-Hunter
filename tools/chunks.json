@@ -847,6 +847,63 @@
         "core/connectors/adzuna_connector.py",
         "core/connectors/mock_connector.py"
       ]
+    },
+    "C-054": {
+      "title": "JSON fence stripping + provider HTTP retry",
+      "stage": "Hardening",
+      "depends_on": [
+        "C-011",
+        "C-015",
+        "C-017",
+        "C-030"
+      ],
+      "risk_flagged": false,
+      "tests": [
+        "tests/test_parsing_fence.py",
+        "tests/test_provider_retry.py"
+      ],
+      "sdd_anchor": "§5.2, §7",
+      "files": [
+        "core/ai_engine/parsing.py",
+        "core/ai_providers/_retry.py",
+        "core/ai_providers/ollama_provider.py",
+        "core/ai_providers/gemini_provider.py",
+        "core/ai_providers/openrouter_provider.py"
+      ]
+    },
+    "C-055": {
+      "title": "Adzuna pagination + provider config pass-through",
+      "stage": "Hardening",
+      "depends_on": [
+        "C-053",
+        "C-054"
+      ],
+      "risk_flagged": false,
+      "tests": [
+        "tests/test_adzuna_pagination.py",
+        "tests/test_runner_provider_config.py"
+      ],
+      "sdd_anchor": "§5.1, §6, §7",
+      "files": [
+        "core/connectors/adzuna_connector.py",
+        "core/runner.py"
+      ]
+    },
+    "C-056": {
+      "title": "Desktop API key — honest labeling + clipboard copy",
+      "stage": "Phase 2",
+      "depends_on": [
+        "C-036",
+        "C-052"
+      ],
+      "risk_flagged": false,
+      "tests": [
+        "ui/desktop/src/views/SettingsView.test.ts"
+      ],
+      "sdd_anchor": "§11.2",
+      "files": [
+        "ui/desktop/src/views/SettingsView.vue"
+      ]
     }
   }
 }
