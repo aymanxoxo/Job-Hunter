@@ -10,8 +10,8 @@
 
 <!-- jh:orientation:start -->
 - **Phase:** Phase 1 - Foundation (M-03 gate cleared). **Next gate:** M-06 (chunks C-037 + C-038).
-- **Last done:** **C-054** - JSON fence stripping + provider HTTP retry (`04a222d`). Prior done: **C-053** - Fix config.yaml + connector config wiring (`bcd45ba`); **C-051** - Adzuna connector (`581166a`).
-- **Next ready:** **C-037** - Windows installer; **C-055** - Adzuna pagination + provider config pass-through; **C-056** - Desktop API key — honest labeling + clipboard copy.
+- **Last done:** **C-055** - Adzuna pagination + provider config pass-through (`4d4aa12`). Prior done: **C-054** - JSON fence stripping + provider HTTP retry (`04a222d`); **C-053** - Fix config.yaml + connector config wiring (`bcd45ba`).
+- **Next ready:** **C-037** - Windows installer; **C-056** - Desktop API key — honest labeling + clipboard copy.
 - **Blocked:** **C-016** - Google OAuth device flow (risk-flagged; design sign-off required); **C-020** - Indeed connector (risk-flagged; design sign-off required); **C-021** - LinkedIn connector (risk-flagged; design sign-off required).
 - **Notes:** Dev loop runs through short-lived GitHub PR branches; the user reviews and merges. See [ADR-014/015/016](Documents/DECISIONS.md).
 - **Protocol:** each chunk runs design -> test -> impl -> gate -> verify -> land (plan section 3.3); risky chunks pause for Design sign-off.
@@ -80,10 +80,12 @@
 | C-051 | Adzuna connector | Connectors | C-005 | done | 581166a |
 | C-053 | Fix config.yaml + connector config wiring | Hardening | C-051, C-003, C-009 | done | bcd45ba |
 | C-054 | JSON fence stripping + provider HTTP retry | Hardening | C-011, C-015, C-017, C-030 | done | 04a222d |
-| C-055 | Adzuna pagination + provider config pass-through | Hardening | C-053, C-054 | todo | — |
+| C-055 | Adzuna pagination + provider config pass-through | Hardening | C-053, C-054 | done | 4d4aa12 |
 | C-056 | Desktop API key — honest labeling + clipboard copy | Phase 2 | C-036, C-052 | todo | — |
 
 ## Changelog (newest first)
+
+- 2026-06-21 - **C-055** Adzuna pagination + provider model/batch_size pass-through on `chunk/C-055-adzuna-pagination`: `build_runner` now passes `model` and `batch_size` from `config.ai` to the selected provider; `AdzunaConnector.search()` replaced single-page fetch with a pagination loop that fetches until `max_results` is reached or API returns empty; `_params_for` simplified (caller controls page_size). 6 new tests; 305 total pass; gate green. Merged `4d4aa12` (PR #81).
 
 - 2026-06-21 - **C-054** JSON fence stripping + provider HTTP retry on `chunk/C-054-json-fence-retry`: strips markdown ` ```json ` fences from LLM output in `parsing._loads()` before JSON decode; adds `core/ai_providers/_retry.py` with `http_call_with_retry()` exponential backoff (1 s, 2 s) on 429/500/502/503/504 and network errors; wires retry into OllamaProvider, GeminiProvider, OpenRouterProvider via `max_attempts`/`base_delay` params. 19 new tests (9 fence + 10 retry); 299 total pass; gate green. Merged `04a222d` (PR #80).
 
