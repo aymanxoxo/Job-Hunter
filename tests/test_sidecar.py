@@ -80,14 +80,14 @@ def _make_project(root: Path) -> None:
     (root / "output").mkdir()
 
 
-def _spawn_sidecar(tmp_path: Path) -> subprocess.CompletedProcess:
+def _spawn_sidecar(
+    tmp_path: Path, request: dict | None = None
+) -> subprocess.CompletedProcess:
     """Run ``python -m ui.cli.sidecar`` in *tmp_path* and return the result."""
-    request = json.dumps(
-        {"command": "run_pipeline", "args": {"profile": "Senior Python developer"}}
-    )
+    payload = request or {"command": "run_pipeline", "args": {"profile": "Senior Python developer"}}
     return subprocess.run(
         [sys.executable, "-m", "ui.cli.sidecar"],
-        input=request + "\n",
+        input=json.dumps(payload) + "\n",
         capture_output=True,
         text=True,
         cwd=tmp_path,
@@ -217,3 +217,33 @@ def test_sidecar_provider_override_accepted(tmp_path):
     assert proc.returncode == 0, proc.stderr
     events = _parse_lines(proc.stdout)
     assert any(e.get("type") == "result" for e in events)
+
+
+def test_sidecar_generate_criteria_returns_structured_criteria(tmp_path):
+    _make_project(tmp_path)
+    proc = _spawn_sidecar(
+        tmp_path,
+        {
+            "command": "generate_criteria",
+            "args": {"profile": "Senior Python developer", "provider": "sidecar_stub"},
+        },
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    events = _parse_lines(proc.stdout)
+    assert events == [
+        {
+            "type": "criteria",
+            "data": {
+                "titles": [],
+                "keywords": ["python"],
+                "exclude_keywords": [],
+                "seniority_levels": [],
+                "locations": [],
+                "min_score_threshold": 40,
+                "max_results": 50,
+                "date_posted_days": None,
+                "raw_profile": "Senior Python developer",
+            },
+        }
+    ]

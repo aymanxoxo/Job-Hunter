@@ -75,7 +75,7 @@ describe("ResultsView", () => {
     vi.restoreAllMocks();
   });
 
-  it("hides scores below 40 and applies score band classes", () => {
+  it("hides scores below 40, can reveal them, and applies score band classes", async () => {
     const { wrapper } = mountView();
 
     expect(renderedTitles(wrapper)).toEqual([
@@ -87,6 +87,16 @@ describe("ResultsView", () => {
     expect(wrapper.get("[data-testid='score-job-1']").classes()).toContain("score-green");
     expect(wrapper.get("[data-testid='score-job-2']").classes()).toContain("score-amber");
     expect(wrapper.get("[data-testid='score-job-4']").classes()).toContain("score-orange");
+
+    await wrapper.get("[data-testid='toggle-hidden-results']").trigger("click");
+
+    expect(renderedTitles(wrapper)).toEqual([
+      "Platform Engineer",
+      "Backend Engineer",
+      "Data Integrations Engineer",
+      "Support Developer",
+    ]);
+    expect(wrapper.get("[data-testid='score-job-3']").classes()).toContain("score-gray");
   });
 
   it("sorts table columns in both directions", async () => {

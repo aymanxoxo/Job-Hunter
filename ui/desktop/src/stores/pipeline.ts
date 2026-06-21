@@ -20,6 +20,20 @@ export interface RunPipelineRequest {
   provider?: string;
 }
 
+export type GenerateCriteriaRequest = RunPipelineRequest;
+
+export interface CriteriaResult {
+  titles: string[];
+  keywords: string[];
+  exclude_keywords: string[];
+  seniority_levels: string[];
+  locations: string[];
+  min_score_threshold: number;
+  max_results?: number;
+  date_posted_days?: number | null;
+  raw_profile?: string | null;
+}
+
 export type JobResult = Record<string, unknown>;
 
 type ProgressHandler = (event: { payload: unknown }) => void;
@@ -28,6 +42,7 @@ type Unlisten = () => void;
 export interface PipelineClient {
   listen(eventName: "pipeline-progress", handler: ProgressHandler): Promise<Unlisten>;
   invoke(command: "run_pipeline", args: RunPipelineRequest): Promise<unknown>;
+  invoke(command: "generate_criteria", args: GenerateCriteriaRequest): Promise<unknown>;
 }
 
 async function createTauriPipelineClient(): Promise<PipelineClient> {
@@ -48,6 +63,36 @@ function isProgressEvent(payload: unknown): payload is ProgressEvent {
     payload !== null &&
     (payload as { type?: unknown }).type === "progress"
   );
+}
+
+function stringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.map(String).filter(Boolean) : [];
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function normalizeCriteria(value: unknown): CriteriaResult {
+  if (!isRecord(value)) {
+    throw new Error("Provider returned invalid criteria.");
+  }
+  const threshold = value.min_score_threshold;
+  return {
+    titles: stringArray(value.titles),
+    keywords: stringArray(value.keywords),
+    exclude_keywords: stringArray(value.exclude_keywords),
+    seniority_levels: stringArray(value.seniority_levels),
+    locations: stringArray(value.locations),
+    min_score_threshold:
+      typeof threshold === "number" && Number.isFinite(threshold) ? threshold : 40,
+    max_results: typeof value.max_results === "number" ? value.max_results : undefined,
+    date_posted_days:
+      typeof value.date_posted_days === "number" || value.date_posted_days === null
+        ? value.date_posted_days
+        : undefined,
+    raw_profile: typeof value.raw_profile === "string" ? value.raw_profile : null,
+  };
 }
 
 export const usePipelineStore = defineStore("pipeline", {
@@ -122,6 +167,19 @@ export const usePipelineStore = defineStore("pipeline", {
         throw error;
       } finally {
         unlisten();
+      }
+    },
+
+    async generateCriteria(request: GenerateCriteriaRequest, client?: PipelineClient) {
+      this.error = null;
+      const ipc = client ?? (await createTauriPipelineClient());
+      try {
+        const result = await ipc.invoke("generate_criteria", request);
+        return normalizeCriteria(result);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        this.setError(message);
+        throw error;
       }
     },
   },

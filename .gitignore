@@ -20,6 +20,7 @@ venv/
 env/
 *.egg-info/
 .pytest_cache/
+tmppytest-cache/
 .mypy_cache/
 .ruff_cache/
 build/
@@ -28,6 +29,7 @@ dist/
 # Node / Vite (ui/desktop)
 node_modules/
 ui/desktop/dist/
+ui/desktop/src/coverage/
 .vite/
 
 # Tauri / Rust

@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { usePipelineStore } from "@/stores/pipeline";
+import type { CriteriaResult } from "@/stores/pipeline";
 import CriteriaView from "./CriteriaView.vue";
 
 const routerMocks = vi.hoisted(() => ({
@@ -16,6 +17,14 @@ vi.mock("vue-router", () => ({
 }));
 
 const storageKey = "jobhunter.criteriaDraft.v1";
+const generatedCriteria: CriteriaResult = {
+  titles: ["Platform Engineer", "Python Developer"],
+  keywords: ["python", "kubernetes", "gcp", "ci/cd"],
+  exclude_keywords: [],
+  seniority_levels: ["senior"],
+  locations: ["remote", "cairo"],
+  min_score_threshold: 40,
+};
 
 function wrapperText(wrapper: ReturnType<typeof mount>) {
   return wrapper.text().replace(/\s+/g, " ");
@@ -25,9 +34,11 @@ function inputValues(wrapper: ReturnType<typeof mount>, testId: string) {
   return wrapper.findAll(`[data-testid="${testId}"]`).map((chip) => (chip.element as HTMLInputElement).value);
 }
 
-async function mountView() {
+async function mountView(criteriaResponse: Promise<CriteriaResult> = Promise.resolve(generatedCriteria)) {
   setActivePinia(createPinia());
   routerMocks.push.mockReset();
+  const store = usePipelineStore();
+  vi.spyOn(store, "generateCriteria").mockReturnValue(criteriaResponse);
   return mount(CriteriaView, {
     attachTo: document.body,
   });
@@ -53,18 +64,29 @@ describe("CriteriaView", () => {
     expect(wrapper.get('[data-testid="generate-button"]').attributes("disabled")).toBeDefined();
   });
 
-  it("generates editable criteria chips from the profile", async () => {
-    const wrapper = await mountView();
+  it("generates editable criteria chips through the provider IPC path", async () => {
+    let resolveCriteria: (criteria: CriteriaResult) => void;
+    const pendingCriteria = new Promise<CriteriaResult>((resolve) => {
+      resolveCriteria = resolve;
+    });
+    const wrapper = await mountView(pendingCriteria);
+    const store = usePipelineStore();
 
     await wrapper.get('[data-testid="profile-input"]').setValue(
       "Senior .NET DevOps engineer in Cairo. Python, C#, Kubernetes, GCP, CI/CD, remote.",
     );
+    await wrapper.get('[data-testid="provider-select"]').setValue("gemini");
     await wrapper.get('[data-testid="generate-button"]').trigger("click");
 
     expect(wrapperText(wrapper)).toContain("Generating");
+    resolveCriteria!(generatedCriteria);
     await vi.waitFor(() => expect(wrapperText(wrapper)).toContain("Generated criteria"));
+    expect(store.generateCriteria).toHaveBeenCalledWith({
+      profile: "Senior .NET DevOps engineer in Cairo. Python, C#, Kubernetes, GCP, CI/CD, remote.",
+      provider: "gemini",
+    });
     expect(inputValues(wrapper, "keywords-chip-input")).toEqual(
-      expect.arrayContaining(["python", "c#", "kubernetes", "gcp", "ci/cd"]),
+      expect.arrayContaining(["python", "kubernetes", "gcp", "ci/cd"]),
     );
     expect(inputValues(wrapper, "locations-chip-input")).toEqual(expect.arrayContaining(["remote", "cairo"]));
   });

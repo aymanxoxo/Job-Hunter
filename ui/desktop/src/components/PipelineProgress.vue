@@ -79,6 +79,7 @@ const elapsedLabel = computed(() => {
         :key="stage.key"
         class="pp-stage"
         :class="`is-${stage.state}`"
+        tabindex="0"
         :aria-label="`${stage.label}: ${stage.state}`"
       >
         <div class="pp-node">
@@ -140,25 +141,28 @@ const elapsedLabel = computed(() => {
 
 <style scoped>
 .pipeline-progress {
-  --pp-pending: var(--color-muted, #9ca3af);
-  --pp-active: var(--color-accent, #2563eb);
-  --pp-done: var(--score-high, #16a34a);
-  --pp-failed: var(--score-mid, #d97706);
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--sh-1);
 }
 .pp-header {
   display: flex;
-  gap: 0.75rem;
+  gap: var(--sp-3);
   align-items: center;
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
 }
 .pp-provider {
-  font-weight: 600;
-  padding: 0.1rem 0.5rem;
-  border-radius: 999px;
-  background: var(--color-surface-alt, #eef2ff);
+  padding: 1px var(--sp-2);
+  border-radius: var(--r-pill);
+  color: var(--accent);
+  background: var(--accent-soft);
+  font-weight: var(--fw-semibold);
 }
 .pp-position {
   margin-left: auto;
@@ -167,100 +171,113 @@ const elapsedLabel = computed(() => {
 .pp-timeline {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 0.5rem;
+  gap: var(--sp-2);
   list-style: none;
   margin: 0;
   padding: 0;
 }
 .pp-stage {
   min-height: 5.5rem;
-  padding: 0.5rem;
-  border-radius: 0.5rem;
-  background: var(--color-surface, #f8fafc);
-  border: 1px solid var(--color-border, #e5e7eb);
+  padding: var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
 }
 .pp-node {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: var(--sp-2);
 }
 .pp-dot {
-  width: 0.6rem;
-  height: 0.6rem;
-  border-radius: 50%;
-  background: var(--pp-pending);
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--text-subtle);
+  border-radius: var(--r-pill);
+  background: var(--surface);
 }
 .pp-label {
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 .is-active .pp-dot {
-  background: var(--pp-active);
+  border-color: var(--accent);
+  background: var(--accent);
   animation: pp-pulse 1.2s ease-in-out infinite;
 }
 .is-done .pp-dot {
-  background: var(--pp-done);
+  border-color: var(--score-green);
+  background: var(--score-green);
 }
-.is-failed .pp-dot,
-.is-failed .pp-connector-name {
-  color: var(--pp-failed);
-  background: var(--pp-failed);
+.pp-stage.is-failed .pp-dot {
+  color: var(--warning);
+  border-color: var(--warning);
+  background: var(--warning);
 }
-.is-skipped .pp-stage,
+.pp-connector.is-failed .pp-connector-name {
+  color: var(--warning);
+}
+.is-skipped,
 .pp-connector.is-skipped {
   border-style: dashed;
   opacity: 0.6;
 }
 .pp-metric,
 .pp-score-text {
-  font-size: 0.75rem;
-  color: var(--color-muted, #6b7280);
-  margin: 0.35rem 0 0;
+  margin: var(--sp-2) 0 0;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-xs);
 }
 .pp-bar {
-  height: 0.35rem;
-  border-radius: 999px;
-  background: var(--color-border, #e5e7eb);
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: var(--surface-3);
   overflow: hidden;
 }
 .pp-bar-fill {
   height: 100%;
-  background: var(--pp-active);
-  transition: width 0.3s ease;
+  background: var(--accent);
+  transition: width var(--dur) var(--ease);
 }
 .pp-connectors {
   list-style: none;
-  margin: 0.4rem 0 0;
+  margin: var(--sp-2) 0 0;
   padding: 0;
-  font-size: 0.72rem;
+  font-size: var(--fs-xs);
+  line-height: var(--lh-xs);
 }
 .pp-connector {
   display: flex;
   justify-content: space-between;
+  gap: var(--sp-2);
 }
 .pp-connector.is-failed {
-  color: var(--pp-failed);
+  color: var(--warning);
 }
 .pp-summary {
   display: flex;
-  gap: 0.75rem;
+  gap: var(--sp-3);
   flex-wrap: wrap;
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.5rem;
-  background: var(--color-surface-alt, #f0fdf4);
-  font-size: 0.85rem;
+  padding: var(--sp-3);
+  border-radius: var(--r-md);
+  color: var(--success);
+  background: var(--success-soft);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
 }
 .pp-summary.is-failed {
-  background: var(--color-surface-warn, #fffbeb);
+  color: var(--warning);
+  background: var(--warning-soft);
 }
 .pp-warn {
-  color: var(--pp-failed);
+  color: var(--warning);
 }
 .pp-log {
-  font-size: 0.78rem;
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
 }
 .pp-log ul {
-  margin: 0.4rem 0 0;
-  padding-left: 1rem;
+  margin: var(--sp-2) 0 0;
+  padding-left: var(--sp-4);
   max-height: 12rem;
   overflow: auto;
 }

@@ -3,7 +3,7 @@ import { FileUp, Play, Plus, Save, Send, Sparkles, X } from "@lucide/vue";
 import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 
-import { usePipelineStore } from "@/stores/pipeline";
+import { usePipelineStore, type CriteriaResult } from "@/stores/pipeline";
 
 type CriteriaArrayKey =
   | "titles"
@@ -28,22 +28,6 @@ interface ConversationTurn {
 
 const storageKey = "jobhunter.criteriaDraft.v1";
 const seniorityOptions = ["junior", "mid", "senior", "lead", "staff", "principal"];
-const keywordTerms = [
-  "python",
-  "c#",
-  ".net",
-  "kubernetes",
-  "gcp",
-  "aws",
-  "azure",
-  "ci/cd",
-  "devops",
-  "api",
-  "typescript",
-  "vue",
-  "react",
-];
-
 const chipGroups: Array<{ key: CriteriaArrayKey; label: string }> = [
   { key: "titles", label: "Titles" },
   { key: "keywords", label: "Keywords" },
@@ -61,6 +45,7 @@ const isGenerating = ref(false);
 const refineText = ref("");
 const turns = ref<ConversationTurn[]>([]);
 const savedMessage = ref("");
+const generateError = ref("");
 
 const hasProfile = computed(() => profile.value.trim().length > 0);
 const canGenerate = computed(() => hasProfile.value && !isGenerating.value);
@@ -99,64 +84,14 @@ function unique(items: string[]): string[] {
   return result;
 }
 
-function includesTerm(text: string, term: string): boolean {
-  if (term === "c#") {
-    return /(^|[^a-z0-9])c#([^a-z0-9]|$)/i.test(text);
-  }
-  if (term === ".net") {
-    return /\.net/i.test(text);
-  }
-  if (term === "ci/cd") {
-    return /ci\s*\/\s*cd/i.test(text);
-  }
-  return new RegExp(`(^|[^a-z0-9])${term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^a-z0-9]|$)`, "i").test(
-    text,
-  );
-}
-
-function deriveCriteriaDraft(source: string): CriteriaDraft {
-  const text = source.toLowerCase();
-  const keywords = keywordTerms.filter((term) => includesTerm(source, term));
-  const titles: string[] = [];
-
-  if (includesTerm(source, "devops")) {
-    titles.push("DevOps Engineer");
-  }
-  if (includesTerm(source, "python")) {
-    titles.push("Python Developer");
-  }
-  if (includesTerm(source, "c#") || includesTerm(source, ".net")) {
-    titles.push(".NET Engineer");
-  }
-  if (["kubernetes", "gcp", "aws", "azure"].some((term) => includesTerm(source, term))) {
-    titles.push("Platform Engineer");
-  }
-  if (includesTerm(source, "api")) {
-    titles.push("Backend Engineer");
-  }
-  if (titles.length === 0) {
-    titles.push("Software Engineer");
-  }
-
-  const seniority = seniorityOptions.filter((level) => includesTerm(source, level));
-  if (seniority.length === 0 && /\b(7|8|9|10|11|12|13|14|15)\+?\s*(yrs?|years?)\b/i.test(text)) {
-    seniority.push("senior");
-  }
-
-  const locations: string[] = [];
-  if (includesTerm(source, "remote")) {
-    locations.push("remote");
-  }
-  if (includesTerm(source, "cairo")) {
-    locations.push("cairo");
-  }
-
+function criteriaToDraft(criteria: CriteriaResult): CriteriaDraft {
   return {
-    ...emptyDraft(),
-    titles: unique(titles),
-    keywords: unique(keywords),
-    seniority_levels: unique(seniority),
-    locations: unique(locations),
+    titles: unique(criteria.titles),
+    keywords: unique(criteria.keywords),
+    exclude_keywords: unique(criteria.exclude_keywords),
+    seniority_levels: unique(criteria.seniority_levels),
+    locations: unique(criteria.locations),
+    min_score_threshold: criteria.min_score_threshold,
   };
 }
 
@@ -166,9 +101,18 @@ async function generateCriteria() {
   }
   isGenerating.value = true;
   savedMessage.value = "";
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  draft.value = deriveCriteriaDraft(profile.value);
-  isGenerating.value = false;
+  generateError.value = "";
+  try {
+    const criteria = await pipeline.generateCriteria({
+      profile: profile.value.trim(),
+      provider: provider.value,
+    });
+    draft.value = criteriaToDraft(criteria);
+  } catch (error) {
+    generateError.value = error instanceof Error ? error.message : String(error);
+  } finally {
+    isGenerating.value = false;
+  }
 }
 
 function updateChip(key: CriteriaArrayKey, index: number, value: string) {
@@ -386,6 +330,10 @@ async function runSearch() {
       Generating criteria...
     </div>
 
+    <div v-if="generateError" class="criteria-card error-card" role="alert">
+      {{ generateError }}
+    </div>
+
     <div v-if="draft" class="criteria-card criteria-panel" aria-live="polite">
       <div class="panel-header">
         <div>
@@ -531,6 +479,11 @@ async function runSearch() {
   color: var(--text-muted);
   font-size: var(--fs-sm);
   line-height: var(--lh-sm);
+}
+
+.error-card {
+  color: var(--error);
+  background: var(--error-soft);
 }
 
 .criteria-card {

@@ -68,4 +68,34 @@ describe("pipeline store", () => {
     expect(store.error).toBeNull();
     expect(unlistenCalled).toBe(true);
   });
+
+  it("invokes the sidecar criteria generation command", async () => {
+    const store = usePipelineStore();
+    const criteria = {
+      titles: ["Platform Engineer"],
+      keywords: ["python", "kubernetes"],
+      exclude_keywords: ["php"],
+      seniority_levels: ["senior"],
+      locations: ["remote"],
+      min_score_threshold: 70,
+    };
+
+    const result = await store.generateCriteria(
+      { profile: "Senior Python platform engineer", provider: "ollama" },
+      {
+        listen: async () => () => undefined,
+        invoke: async (command, args) => {
+          expect(command).toBe("generate_criteria");
+          expect(args).toEqual({
+            profile: "Senior Python platform engineer",
+            provider: "ollama",
+          });
+          return criteria;
+        },
+      },
+    );
+
+    expect(result).toMatchObject(criteria);
+    expect(store.error).toBeNull();
+  });
 });

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Download, ExternalLink, Play, Search, X } from "@lucide/vue";
+import { Download, ExternalLink, Eye, EyeOff, Play, Search, X } from "@lucide/vue";
 import { computed, ref, watch } from "vue";
 
 import { usePipelineStore, type JobResult } from "@/stores/pipeline";
@@ -29,6 +29,7 @@ const sortDirection = ref<SortDirection>("desc");
 const selectedId = ref<string | null>(null);
 const rows = ref<ResultRow[]>([]);
 const exportMessage = ref("");
+const showHidden = ref(false);
 
 watch(
   () => pipeline.results,
@@ -42,6 +43,7 @@ watch(
 );
 
 const visibleRows = computed(() => rows.value.filter((row) => row.score === null || row.score >= 40));
+const searchableRows = computed(() => (showHidden.value ? rows.value : visibleRows.value));
 
 const filteredRows = computed(() => {
   const terms = filterText.value
@@ -51,10 +53,10 @@ const filteredRows = computed(() => {
     .filter(Boolean);
 
   if (terms.length === 0) {
-    return visibleRows.value;
+    return searchableRows.value;
   }
 
-  return visibleRows.value.filter((row) => {
+  return searchableRows.value.filter((row) => {
     const haystack = [
       row.title,
       row.company,
@@ -201,6 +203,10 @@ function exportResults() {
   exportMessage.value = `${sortedRows.value.length} exported`;
 }
 
+function toggleHiddenRows() {
+  showHidden.value = !showHidden.value;
+}
+
 async function rerunSearch() {
   if (!pipeline.lastRun || pipeline.status === "running") {
     return;
@@ -236,6 +242,19 @@ async function rerunSearch() {
             placeholder="Filter"
           />
         </label>
+
+        <button
+          v-if="hiddenCount"
+          class="secondary-action"
+          type="button"
+          data-testid="toggle-hidden-results"
+          :aria-pressed="showHidden"
+          @click="toggleHiddenRows"
+        >
+          <EyeOff v-if="showHidden" aria-hidden="true" />
+          <Eye v-else aria-hidden="true" />
+          <span>{{ showHidden ? "Hide low scores" : `Show ${hiddenCount} hidden` }}</span>
+        </button>
 
         <button
           class="secondary-action"

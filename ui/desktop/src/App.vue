@@ -3,6 +3,7 @@ import { BriefcaseBusiness, ListChecks, Moon, Settings, Sun } from "@lucide/vue"
 import { computed, ref, watchEffect } from "vue";
 import { RouterLink, RouterView, useRoute } from "vue-router";
 
+import PipelineProgress from "@/components/PipelineProgress.vue";
 import { usePipelineStore } from "@/stores/pipeline";
 
 const pipeline = usePipelineStore();
@@ -16,6 +17,7 @@ const navItems = [
 ];
 
 const screenTitle = computed(() => String(route.meta.title ?? "JobHunter"));
+const showProgress = computed(() => pipeline.status !== "idle" || pipeline.events.length > 0);
 
 watchEffect(() => {
   document.documentElement.dataset.theme = darkMode.value ? "dark" : "light";
@@ -63,6 +65,14 @@ watchEffect(() => {
           <Sun v-else aria-hidden="true" />
         </button>
       </header>
+
+      <div
+        v-if="showProgress"
+        class="app-progress"
+        data-testid="app-pipeline-progress"
+      >
+        <PipelineProgress />
+      </div>
 
       <RouterView />
     </main>

@@ -74,11 +74,14 @@
 | C-034 | Criteria View | Phase 2 | C-032 | done | 9316f09 |
 | C-035 | Results View | Phase 2 | C-032 | done | cf05c5f |
 | C-036 | Settings View | Phase 2 | C-032, C-003 | done | a94c750 |
-| C-037 | Windows installer | Phase 2 | C-033, C-034, C-035, C-036, C-030 | todo | — |
+| C-052 | Desktop integration refinement + deep validation | Phase 2 | C-031, C-032, C-033, C-034, C-035, C-036, C-030 | done | pending |
+| C-037 | Windows installer | Phase 2 | C-033, C-034, C-035, C-036, C-030, C-052 | todo | — |
 | C-038 | Authoring docs — **M-06 gate** | Phase 2 | C-005, C-006, C-007 | done | 1392942 |
 | C-051 | Adzuna connector | Connectors | C-005 | done | 581166a |
 
 ## Changelog (newest first)
+
+- 2026-06-21 - **C-052** Desktop integration refinement + deep validation on `chunk/C-052-desktop-integration-refinement`: wires Criteria "Generate with AI" through the Python sidecar/provider IPC (`generate_criteria`), mounts global pipeline progress in the app shell, adds explicit Results hidden-row reveal, refreshes desktop coverage/audit tooling, and documents the refined desktop contracts. Added sidecar, store, app-shell, Criteria, and Results coverage. Frontend tests/build/coverage green; npm audit clean; repo gate green (275 pytest, Ruff, doctor, import smoke); Vite served smoke green. Tauri release/debug builds remain blocked locally by Windows Application Control on WebView2 proc-macro DLL loading (`os error 4551`). Merge pending.
 
 - 2026-06-21 - **C-036** Settings View on `chunk/C-036-settings-view`: replaces the thin Settings scaffold with provider selection, connector toggles for Mock/Adzuna, max-results and delay sliders, auth status, disabled deferred OAuth/LinkedIn controls, and masked API-key handling that clears typed secrets and persists only non-secret config-shaped settings. Adds Vue component tests for provider/connector controls, persistence round-trip, secret non-rendering/non-persistence, and deferred auth controls. Frontend tests/build green; repo gate green (274 pytest, Ruff, doctor, import smoke). Merged `a94c750` (PR #74).
 

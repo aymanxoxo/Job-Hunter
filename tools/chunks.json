@@ -630,6 +630,29 @@
         "ui/desktop/src/views/SettingsView.vue"
       ]
     },
+    "C-052": {
+      "title": "Desktop integration refinement + deep validation",
+      "stage": "Phase 2",
+      "depends_on": [
+        "C-031",
+        "C-032",
+        "C-033",
+        "C-034",
+        "C-035",
+        "C-036",
+        "C-030"
+      ],
+      "risk_flagged": false,
+      "tests": [
+        "tests/test_sidecar.py"
+      ],
+      "sdd_anchor": "§11.1, §11.2",
+      "files": [
+        "ui/desktop/src/**",
+        "ui/desktop/src-tauri/src/lib.rs",
+        "ui/cli/sidecar.py"
+      ]
+    },
     "C-037": {
       "title": "Windows installer",
       "stage": "Phase 2",
@@ -638,7 +661,8 @@
         "C-034",
         "C-035",
         "C-036",
-        "C-030"
+        "C-030",
+        "C-052"
       ],
       "risk_flagged": false,
       "tests": [],
