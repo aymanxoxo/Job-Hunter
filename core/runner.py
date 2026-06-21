@@ -237,7 +237,10 @@ def build_runner(
     connector_classes = _discover_unique(
         discover, BaseConnector, root / "core" / "connectors", drop / "connectors"
     )
-    provider = _select_named(providers, config.ai.provider)()
+    provider = _select_named(providers, config.ai.provider)(
+        model=config.ai.model,
+        batch_size=config.ai.batch_size,
+    )
     connector_map: dict = getattr(config, "connectors", {}) or {}
     connector_instances: list[BaseConnector] = []
     for cls in connector_classes:

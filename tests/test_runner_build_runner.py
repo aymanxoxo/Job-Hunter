@@ -14,6 +14,9 @@ class StubProvider(BaseAIProvider):
     name = "stub"
     auth_methods = ("none",)
 
+    def __init__(self, **_kw) -> None:
+        pass
+
     async def generate_criteria(self, profile):
         return SearchCriteria(raw_profile=profile)
 
@@ -77,7 +80,7 @@ def _config(**connector_settings):
         else:
             connectors[name] = settings
     return SimpleNamespace(
-        ai=SimpleNamespace(provider="stub"),
+        ai=SimpleNamespace(provider="stub", model="stub-model", batch_size=10),
         connectors=connectors,
         output=SimpleNamespace(directory="output/", format="both"),
     )

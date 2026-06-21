@@ -102,6 +102,9 @@ def test_build_runner_selects_provider_by_name_and_instantiates_connectors():
     class Alpha(BaseAIProvider):
         name = "alpha"
 
+        def __init__(self, **_kw) -> None:
+            pass
+
         async def generate_criteria(self, profile):
             return SearchCriteria(raw_profile=profile)
 
@@ -122,7 +125,8 @@ def test_build_runner_selects_provider_by_name_and_instantiates_connectors():
         return []
 
     config = SimpleNamespace(
-        ai=SimpleNamespace(provider="alpha"),
+        ai=SimpleNamespace(provider="alpha", model="x", batch_size=10),
+        connectors={},
         output=SimpleNamespace(directory="output/", format="both"),
     )
     runner = build_runner(config, discover=fake_discover)
