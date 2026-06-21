@@ -1,6 +1,6 @@
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import SettingsView from "./SettingsView.vue";
 
@@ -18,6 +18,13 @@ describe("SettingsView", () => {
   beforeEach(() => {
     document.body.innerHTML = "";
     localStorage.clear();
+    vi.restoreAllMocks();
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+      },
+    });
   });
 
   it("lets the user select providers, connectors, max results, and delay", async () => {
@@ -62,7 +69,7 @@ describe("SettingsView", () => {
     expect((restored.get("[data-testid='max-results']").element as HTMLInputElement).value).toBe("25");
   });
 
-  it("masks API keys and never writes the secret into persisted config", async () => {
+  it("copies API keys to the clipboard and never writes the secret into persisted config", async () => {
     const wrapper = await mountView();
     const secret = "sk-test-super-secret";
 
@@ -74,12 +81,43 @@ describe("SettingsView", () => {
     await wrapper.get("[data-testid='save-api-key']").trigger("click");
     await wrapper.vm.$nextTick();
 
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(secret);
     expect(wrapper.text()).not.toContain(secret);
     expect(wrapper.html()).not.toContain(secret);
     expect((wrapper.get("[data-testid='api-key']").element as HTMLInputElement).value).toBe("");
     expect(localStorage.getItem(configKey) ?? "").not.toContain(secret);
-    expect(localStorage.getItem(secureStatusKey) ?? "").not.toContain(secret);
-    expect(wrapper.text()).toContain("Saved to OS secure store");
+    expect(localStorage.getItem(secureStatusKey)).toBeNull();
+    expect(wrapper.text()).toContain("GEMINI_API_KEY");
+    expect(wrapper.text()).toContain("Copied!");
+    expect(wrapper.text()).not.toContain("Saved to OS secure store");
+  });
+
+  it("does not mark providers ready from stale secureStatus or clipboard copy", async () => {
+    localStorage.setItem(secureStatusKey, JSON.stringify({ gemini: true, openrouter: true }));
+    const wrapper = await mountView();
+
+    await wrapper.get("[data-testid='provider-select']").setValue("openrouter");
+    await wrapper.get("[data-testid='api-key']").setValue("router-secret");
+    await wrapper.get("[data-testid='save-api-key']").trigger("click");
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.text()).toContain("OPENROUTER_API_KEY");
+    expect(wrapper.text()).toContain("Needs key");
+    expect(wrapper.text()).toContain("Missing");
+    expect(localStorage.getItem(secureStatusKey)).toBe(JSON.stringify({ gemini: true, openrouter: true }));
+  });
+
+  it("shows a manual environment message when clipboard copy fails", async () => {
+    vi.mocked(navigator.clipboard.writeText).mockRejectedValueOnce(new Error("denied"));
+    const wrapper = await mountView();
+
+    await wrapper.get("[data-testid='provider-select']").setValue("gemini");
+    await wrapper.get("[data-testid='api-key']").setValue("secret");
+    await wrapper.get("[data-testid='save-api-key']").trigger("click");
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.text()).toContain("Copy failed");
+    expect((wrapper.get("[data-testid='api-key']").element as HTMLInputElement).value).toBe("");
   });
 
   it("shows deferred OAuth and LinkedIn auth controls as disabled", async () => {
