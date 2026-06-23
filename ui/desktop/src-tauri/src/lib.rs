@@ -95,18 +95,20 @@ async fn call_sidecar(
     command: &str,
     profile: String,
     provider: Option<String>,
+    connector_overrides: Option<serde_json::Value>,
     result_type: &str,
 ) -> Result<serde_json::Value, String> {
     let python = find_python();
     let project_root = project_root_from_env();
 
-    let request = serde_json::json!({
-        "command": command,
-        "args": {
-            "profile": profile,
-            "provider": provider,
-        }
+    let mut args = serde_json::json!({
+        "profile": profile,
+        "provider": provider,
     });
+    if let Some(overrides) = connector_overrides {
+        args["connector_overrides"] = overrides;
+    }
+    let request = serde_json::json!({ "command": command, "args": args });
     let request_line = format!("{}\n", request);
 
     let mut child = Command::new(&python)
@@ -178,8 +180,9 @@ async fn run_pipeline(
     app: tauri::AppHandle,
     profile: String,
     provider: Option<String>,
+    connector_overrides: Option<serde_json::Value>,
 ) -> Result<serde_json::Value, String> {
-    call_sidecar(app, "run_pipeline", profile, provider, "result").await
+    call_sidecar(app, "run_pipeline", profile, provider, connector_overrides, "result").await
 }
 
 /// Invoke provider-backed criteria generation through the same Python sidecar
@@ -190,7 +193,7 @@ async fn generate_criteria(
     profile: String,
     provider: Option<String>,
 ) -> Result<serde_json::Value, String> {
-    call_sidecar(app, "generate_criteria", profile, provider, "criteria").await
+    call_sidecar(app, "generate_criteria", profile, provider, None, "criteria").await
 }
 
 // ---------------------------------------------------------------------------

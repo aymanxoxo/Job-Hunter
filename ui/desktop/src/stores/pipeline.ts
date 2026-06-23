@@ -15,12 +15,23 @@ export interface ProgressEvent {
   metric?: unknown;
 }
 
+export interface ConnectorOverride {
+  enabled?: boolean;
+  max_results?: number;
+  delay_min?: number;
+  delay_max?: number;
+  results_per_query?: number;
+  trust_threshold?: number;
+  trust_check_enabled?: boolean;
+}
+
 export interface RunPipelineRequest {
   profile: string;
   provider?: string;
+  connector_overrides?: Record<string, ConnectorOverride>;
 }
 
-export type GenerateCriteriaRequest = RunPipelineRequest;
+export type GenerateCriteriaRequest = Omit<RunPipelineRequest, "connector_overrides">;
 
 export interface CriteriaResult {
   titles: string[];
@@ -55,6 +66,18 @@ async function createTauriPipelineClient(): Promise<PipelineClient> {
     listen,
     invoke: (command, args) => invoke(command, args as unknown as Record<string, unknown>),
   };
+}
+
+function buildConnectorOverrides(): Record<string, ConnectorOverride> | undefined {
+  try {
+    const raw = localStorage.getItem("jobhunter.desktopConfig.v1");
+    if (!raw) return undefined;
+    const parsed = JSON.parse(raw);
+    if (typeof parsed?.connectors !== "object" || parsed.connectors === null) return undefined;
+    return parsed.connectors as Record<string, ConnectorOverride>;
+  } catch {
+    return undefined;
+  }
 }
 
 function isProgressEvent(payload: unknown): payload is ProgressEvent {
@@ -151,6 +174,12 @@ export const usePipelineStore = defineStore("pipeline", {
       this.status = "running";
       this.lastRun = request;
 
+      const overrides = buildConnectorOverrides();
+      const ipcRequest: RunPipelineRequest = {
+        ...request,
+        ...(overrides ? { connector_overrides: overrides } : {}),
+      };
+
       const ipc = client ?? (await createTauriPipelineClient());
       const unlisten = await ipc.listen("pipeline-progress", (event) => {
         if (isProgressEvent(event.payload)) {
@@ -159,7 +188,7 @@ export const usePipelineStore = defineStore("pipeline", {
       });
 
       try {
-        const result = await ipc.invoke("run_pipeline", request);
+        const result = await ipc.invoke("run_pipeline", ipcRequest);
         this.setResult(result);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

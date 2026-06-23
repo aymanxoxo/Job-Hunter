@@ -12,6 +12,9 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+from unittest.mock import patch
+
+from core.config import AIConfig, AuthConfig, Config, ConnectorSettings, OutputConfig
 
 # ---------------------------------------------------------------------------
 # Offline project fixture (same pattern as tests/e2e/test_cli_run.py)
@@ -115,6 +118,27 @@ def _parse_lines(text: str) -> list[dict]:
             continue
         events.append(json.loads(line))
     return events
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _fake_config() -> Config:
+    """Return a deterministic Config for unit tests."""
+    return Config(
+        ai=AIConfig(provider="gemini", model="gemini-3-flash"),
+        auth=AuthConfig(),
+        output=OutputConfig(),
+        connectors={
+            "mock": ConnectorSettings(enabled=True, max_results=50, delay_min=2.0, delay_max=5.0),
+            "adzuna": ConnectorSettings(enabled=True, max_results=50, delay_min=2.0, delay_max=5.0),
+            "duckduckgo": ConnectorSettings(
+                enabled=True, max_results=50, delay_min=2.0, delay_max=5.0,
+                results_per_query=10, trust_threshold=60, trust_check_enabled=True,
+            ),
+        },
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -250,3 +274,127 @@ def test_sidecar_generate_criteria_returns_structured_criteria(tmp_path):
             },
         }
     ]
+
+
+# ---------------------------------------------------------------------------
+# C-058 — connector overrides unit tests
+# ---------------------------------------------------------------------------
+
+
+def test_apply_connector_overrides_absent():
+    """connector_overrides absent in args → config is unchanged."""
+    from ui.cli.sidecar import _load_request_config
+
+    fake = _fake_config()
+    with patch("ui.cli.sidecar.load_config", return_value=fake):
+        result = _load_request_config({})
+    assert result.connectors == fake.connectors
+
+
+def test_apply_connector_overrides_disable_existing():
+    """connector_overrides with {"adzuna": {"enabled": false}} → adzuna disabled."""
+    from ui.cli.sidecar import _load_request_config
+
+    fake = _fake_config()
+    with patch("ui.cli.sidecar.load_config", return_value=fake):
+        result = _load_request_config(
+            {"connector_overrides": {"adzuna": {"enabled": False}}}
+        )
+    assert result.connectors["adzuna"].enabled is False
+    assert result.connectors["mock"].enabled is True  # unchanged
+
+
+def test_apply_connector_overrides_ddg_fields():
+    """connector_overrides with DDG fields → duckduckgo settings updated correctly."""
+    from ui.cli.sidecar import _load_request_config
+
+    fake = _fake_config()
+    with patch("ui.cli.sidecar.load_config", return_value=fake):
+        result = _load_request_config(
+            {
+                "connector_overrides": {
+                    "duckduckgo": {
+                        "enabled": True,
+                        "max_results": 30,
+                        "results_per_query": 5,
+                        "trust_threshold": 70,
+                        "trust_check_enabled": False,
+                    }
+                }
+            }
+        )
+    ddg = result.connectors["duckduckgo"]
+    assert ddg.enabled is True
+    assert ddg.max_results == 30
+    assert ddg.results_per_query == 5
+    assert ddg.trust_threshold == 70
+    assert ddg.trust_check_enabled is False
+
+
+def test_apply_connector_overrides_unknown_connector():
+    """connector_overrides with unknown connector name not in config.yaml → new entry created."""
+    from ui.cli.sidecar import _load_request_config
+
+    fake = _fake_config()
+    with patch("ui.cli.sidecar.load_config", return_value=fake):
+        result = _load_request_config(
+            {"connector_overrides": {"new_connector": {"enabled": True, "max_results": 10}}}
+        )
+    assert "new_connector" in result.connectors
+    assert result.connectors["new_connector"].enabled is True
+    assert result.connectors["new_connector"].max_results == 10
+
+
+def test_apply_connector_overrides_non_dict_value_skipped():
+    """connector_overrides with a non-dict value for a connector → skipped gracefully."""
+    from ui.cli.sidecar import _load_request_config
+
+    fake = _fake_config()
+    with patch("ui.cli.sidecar.load_config", return_value=fake):
+        result = _load_request_config(
+            {"connector_overrides": {"adzuna": None, "mock": "not_a_dict"}}
+        )
+    assert result.connectors["adzuna"].enabled is True  # unchanged
+    assert result.connectors["mock"].enabled is True    # unchanged
+
+
+def test_apply_connector_overrides_does_not_touch_auth():
+    """connector_overrides containing an auth key → auth config is NOT modified."""
+    from ui.cli.sidecar import _load_request_config
+
+    fake = _fake_config()
+    with patch("ui.cli.sidecar.load_config", return_value=fake):
+        result = _load_request_config(
+            {
+                "connector_overrides": {
+                    "auth": {"gemini_api_key_env": "HACKED"},
+                    "adzuna": {"enabled": False},
+                }
+            }
+        )
+    # auth is untouched
+    assert result.auth.gemini_api_key_env == "GEMINI_API_KEY"
+    # connector override still applied
+    assert result.connectors["adzuna"].enabled is False
+
+
+def test_apply_connector_overrides_with_provider_override():
+    """Provider override and connector overrides applied together in one request."""
+    from ui.cli.sidecar import _load_request_config
+
+    fake = _fake_config()
+    with patch("ui.cli.sidecar.load_config", return_value=fake):
+        result = _load_request_config(
+            {
+                "provider": "ollama",
+                "connector_overrides": {
+                    "mock": {"enabled": False},
+                    "duckduckgo": {"max_results": 25},
+                },
+            }
+        )
+    assert result.ai.provider == "ollama"
+    assert result.connectors["mock"].enabled is False
+    assert result.connectors["duckduckgo"].max_results == 25
+    assert result.connectors["adzuna"].enabled is True  # unchanged
+
