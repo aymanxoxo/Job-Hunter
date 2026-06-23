@@ -17,6 +17,7 @@ dependencies = [
     "playwright",
     "keyring",
     "cryptography",
+    "duckduckgo-search>=6",
 ]
 
 [project.scripts]

@@ -80,6 +80,10 @@ class GeminiProvider(BaseAIProvider):
         except AIEngineError as exc:
             raise GeminiProviderError(str(exc)) from exc
 
+    async def complete(self, prompt: str) -> str:
+        """Raw text completion for connectors that need AI internally."""
+        return await self._call(prompt)
+
     async def _call(self, prompt: str) -> str:
         auth = self._resolve_auth()
         headers = self._auth_headers(auth)

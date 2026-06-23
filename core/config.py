@@ -41,6 +41,10 @@ class ConnectorSettings(BaseModel):
     delay_min: float = Field(default=2.0, ge=0)
     delay_max: float = Field(default=5.0, ge=0)
     fixture_path: str | None = None
+    # DDG connector fields (ignored by other connectors)
+    results_per_query: int = Field(default=10, ge=1)
+    trust_threshold: int = Field(default=60, ge=0, le=100)
+    trust_check_enabled: bool = True
 
     @model_validator(mode="after")
     def _delays_ordered(self) -> ConnectorSettings:
@@ -59,8 +63,6 @@ class OutputConfig(BaseModel):
 
 class AuthConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    google_client_id_env: str = "GOOGLE_CLIENT_ID"
-    google_client_secret_env: str = "GOOGLE_CLIENT_SECRET"
     gemini_api_key_env: str = "GEMINI_API_KEY"
     openrouter_api_key_env: str = "OPENROUTER_API_KEY"
     adzuna_app_id_env: str = "ADZUNA_APP_ID"

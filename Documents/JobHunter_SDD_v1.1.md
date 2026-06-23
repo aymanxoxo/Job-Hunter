@@ -6,9 +6,29 @@
 |---|---|
 | Prepared by | Abdelrahman — Squad 3 Lead, Dsquares |
 | Date | June 2026 |
-| Version | **1.1 — Amended** (supersedes v1.0) |
+| Version | **1.2 — Amended** (supersedes v1.1) |
 | Companion | JobHunter SOW v1.1 |
 | Classification | Internal / Confidential |
+
+---
+
+## Changelog — what changed in v1.2
+
+1. **C-016 (Google OAuth) removed** — Gemini API uses API keys, not OAuth Device Flow. `auth_methods`
+   on `GeminiProvider` simplified to `['api_key']`. `core/auth/google_oauth.py` will not be created.
+   §7.1, §8.2 updated accordingly.
+2. **C-020 redesigned as DDGConnector** — replaces the original Indeed HTML scraper with an open-web
+   DuckDuckGo discovery connector. AI generates search queries (no `site:` restrictions), a single
+   purification pass filters noise and synthesises a company trust score (0–100) via DDG trust searches
+   (Glassdoor, Trustpilot, Reddit, HN snippets) — zero extra API keys required. §6.1 fully rewritten.
+3. **C-021 re-scoped as SettingsView DDG controls** — replaces the LinkedIn Playwright scraper with a
+   UI extension: results-per-query input, trust-threshold slider, trust-check toggle added to the
+   existing SettingsView. §6.2, §11.2 updated.
+4. **Job model extended** — `trust_score: int | None` and `trust_summary: str | None` added (§3.1).
+5. **Config schema updated** — `linkedin`/`indeed` blocks replaced by `duckduckgo` block with
+   `results_per_query`, `trust_threshold`, `trust_check_enabled`; Google OAuth env vars removed (§9.1).
+6. **Folder structure updated** — `indeed_connector.py` / `linkedin_connector.py` replaced by
+   `adzuna_connector.py` / `duckduckgo_connector.py` in §2.
 
 ---
 
@@ -78,10 +98,10 @@ job_hunter/
 │   │   ├── job.py                  # Job dataclass
 │   │   └── search_criteria.py      # SearchCriteria dataclass
 │   ├── connectors/
-│   │   ├── base_connector.py       # ABC — plugin contract
-│   │   ├── indeed_connector.py     # Built-in: Indeed (httpx)
-│   │   ├── linkedin_connector.py   # Built-in: LinkedIn (Playwright)
-│   │   └── mock_connector.py       # Built-in: offline fixture
+│   │   ├── base_connector.py           # ABC — plugin contract
+│   │   ├── adzuna_connector.py         # Built-in: Adzuna jobs API
+│   │   ├── duckduckgo_connector.py     # Built-in: DDG open-web discovery + AI trust filter
+│   │   └── mock_connector.py           # Built-in: offline fixture
 │   ├── ai_providers/
 │   │   ├── base_provider.py        # ABC — provider contract
 │   │   ├── gemini_provider.py      # Google Gemini (gemini-3-flash default)
@@ -92,7 +112,6 @@ job_hunter/
 │   │   └── text_input.py           # Built-in: plain text (v1)
 │   ├── auth/
 │   │   ├── auth_strategy.py         # NEW — ordered oauth→api_key resolver
-│   │   ├── google_oauth.py          # OAuth 2.0 device flow + keyring
 │   │   └── session_store.py         # Playwright storage_state
 │   ├── ai_engine.py                 # Facade: generate + score
 │   ├── output.py                    # NEW (explicit) — CSV/JSON exporter
@@ -148,6 +167,8 @@ connectors populate what they can.
 | match_reason | str \| None | Optional | AI explanation of the score |
 | red_flags | list[str] | Optional | List of AI-identified concerns |
 | raw | dict \| None | Optional | Original scraped payload, for debugging |
+| trust_score | int \| None | Optional | DDG connector only: AI-synthesised company trust score 0–100 |
+| trust_summary | str \| None | Optional | DDG connector only: brief summary of trust evidence |
 
 ### 3.2 SearchCriteria
 
@@ -340,43 +361,65 @@ v1.0 tree; v1.1 gives it an explicit home at `core/output.py`.
 
 ## 6. Connector Specifications
 
-### 6.1 Indeed Connector
+### 6.1 DuckDuckGo Discovery Connector
+
+Replaces the original Indeed/LinkedIn connectors. Discovers real job postings from across the open web
+using DuckDuckGo searches (no ToS issues, no API key required), then applies an AI purification pass
+that filters noise and synthesises a company trust score before handing results to the main pipeline.
 
 | Property | Value |
 |----------|-------|
-| Class name | IndeedConnector |
+| Class name | DDGConnector |
 | auth_methods | ['none'] |
-| HTTP library | httpx (async, http/2) |
-| Pagination | Query param `start=0,10,20…` up to max_results |
-| Data extraction | Reverse-engineered embedded JSON (`window._initialData`) on result page |
-| Rate limiting | Random 2-4 second delay between pages |
-| Base URL template | `https://www.indeed.com/jobs?q={keywords}&l={location}&start={offset}` |
-| Error handling | `httpx.TimeoutException` → log + return partial results |
-| Max results | `config.connectors.indeed.max_results` (default 50) |
+| Search engine | DuckDuckGo (via `duckduckgo_search` Python library — no API key, free) |
+| Queries | AI generates open-web queries from `SearchCriteria` (no `site:` restrictions) |
+| Results per query | `config.connectors.duckduckgo.results_per_query` (default 10; stop before noisy results) |
+| Max results | `config.connectors.duckduckgo.max_results` (default 50) |
+| HTTP fetch | httpx fetches surviving URLs to extract page text |
+| Purification pass | Single AI call per batch: (1) filter to actual job postings, (2) extract company name, (3) run DDG trust searches, (4) AI synthesises trust score, (5) exclude by threshold |
+| Trust sources | DDG searches: `[company] reviews`, `[company] glassdoor`, `[company] site:reddit.com`, `[company] site:trustpilot.com` — no extra API keys |
+| Trust threshold | `config.connectors.duckduckgo.trust_threshold` int 0–100 (default 60; 0 = no filtering) |
+| Trust check toggle | `config.connectors.duckduckgo.trust_check_enabled` bool (default true) |
+| Output | `Job` list with `trust_score` and `trust_summary` populated |
 
-> **DEV NOTE** — Indeed embeds job data as a JSON blob in a `<script>` tag. Extract `window._initialData`
-> via regex and parse as JSON. Fields: `jobTitle`, `companyName`, `jobLocationCity`,
-> `jobLocationState`, `salaryMin`, `salaryMax`, `descriptionSnippet`.
+**Pipeline inside the connector**
 
-### 6.2 LinkedIn Connector
+| Step | Description |
+|------|-------------|
+| 1. Generate queries | AI builds 3–5 open DDG search queries from criteria keywords/titles/locations |
+| 2. DDG search | Execute queries, collect up to `results_per_query` raw results each |
+| 3. Purification | AI batch: keep only real job postings, extract company names |
+| 4. Trust lookup | For each unique company, run 4 DDG trust searches, collect top snippets |
+| 5. Trust scoring | AI synthesises snippet evidence into `trust_score` 0–100 + `trust_summary` |
+| 6. Threshold filter | Drop jobs whose company `trust_score` < `trust_threshold` (when enabled) |
+| 7. Page fetch | httpx fetches job page URLs; AI extracts structured `Job` fields from page text |
+| 8. Return | `list[Job]` with all standard fields + `trust_score` + `trust_summary` |
 
-| Property | Value |
-|----------|-------|
-| Class name | LinkedInConnector |
-| auth_methods | ['session'] |
-| Browser | Playwright Chromium (async) |
-| Login flow | Visible browser (headless=False) on first run; `storage_state` saved after login |
-| Subsequent runs | headless=True, `storage_state` loaded from encrypted file |
-| Search URL | `https://www.linkedin.com/jobs/search/?keywords={kw}&location={loc}&f_TPR=r86400` |
-| Pagination | Scroll-triggered infinite scroll; click 'See more jobs' up to N times |
-| Data extraction | DOM job cards: `.job-card-container__link`, `.job-card-container__company-name` |
-| Anti-detection | Random delays 1500-4000ms, human-like scroll, realistic User-Agent |
-| Session file | `~/.jobhunter/sessions/linkedin.enc` (encrypted via session_store.py) |
-| Max results | `config.connectors.linkedin.max_results` (default 50) |
+**Config block**
 
-> **SECURITY** — The LinkedIn session file contains authentication cookies. It is encrypted at rest
-> using Fernet with a key derived from the machine ID, stored in the OS keyring (Windows Credential
-> Manager / Linux Secret Service).
+```yaml
+connectors:
+  duckduckgo:
+    enabled: true
+    max_results: 50
+    results_per_query: 10       # stop before noisy results appear
+    trust_threshold: 60         # 0 = no filtering, 100 = only household-name companies
+    trust_check_enabled: true
+```
+
+### 6.2 SettingsView DDG Controls  *(formerly LinkedIn connector — re-scoped)*
+
+C-021 adds DDG connector controls to the existing `SettingsView.vue` (built in C-036/C-056).
+No new connector or Python code — purely a UI extension.
+
+| Control | Type | Config field |
+|---------|------|-------------|
+| Results per query | Number input (1–50) | `connectors.duckduckgo.results_per_query` |
+| Trust threshold | Slider 0–100 with label | `connectors.duckduckgo.trust_threshold` |
+| Trust check enabled | Toggle | `connectors.duckduckgo.trust_check_enabled` |
+
+These controls are persisted to the same localStorage-backed config store as existing Settings controls
+and included in the `run_pipeline` IPC args.
 
 ### 6.3 Mock Connector
 
@@ -399,29 +442,15 @@ v1.0 tree; v1.1 gives it an explicit home at `core/output.py`.
 |----------|-------|
 | Class name | GeminiProvider |
 | Model | `gemini-3-flash` (default as of 2026; `gemini-2.5-flash` / `-flash-lite` still selectable) |
-| auth_methods | ['oauth', 'api_key'] |
-| API key type | Restricted **authorization key** (AI Studio). Unrestricted standard keys are being rejected through 2026 and must not be used |
-| OAuth | Google OAuth 2.0 Device Authorization Grant (preferred where the user has configured it) |
-| Token storage | OS keyring: service=jobhunter |
+| auth_methods | ['api_key'] |
+| API key type | AI Studio API key (`GEMINI_API_KEY`) — read at call time, never stored in config or logs |
 | Free tier | ~1,500 requests/day, 1M TPM (Flash family) — sufficient for daily personal use |
 | API endpoint | `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent` |
-| Required env | `GEMINI_API_KEY` (api_key path); `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (oauth path) |
+| Required env | `GEMINI_API_KEY` |
 
-> The provider declares `auth_methods = ['oauth', 'api_key']`; the runner prefers OAuth when client
-> credentials are present, otherwise uses the authorization API key. Both resolve to a valid bearer for
-> the generateContent call.
-
-**OAuth Device Flow Sequence**
-
-| Step | Description |
-|------|-------------|
-| 1 | Provider calls Google's device auth endpoint with client_id and scope |
-| 2 | Google returns device_code, user_code, verification_url |
-| 3 | Provider opens verification_url in default browser |
-| 4 | User sees user_code and approves in browser |
-| 5 | Provider polls token endpoint every 5s (max 5 min) |
-| 6 | On approval, Google returns access_token + refresh_token |
-| 7 | Tokens stored in OS keyring; refresh token used silently on later runs |
+> **Note** — The Gemini API (`generativelanguage.googleapis.com`) uses API keys, not OAuth Device Flow.
+> OAuth Device Flow is for user-data Google APIs (Drive, Calendar, etc.) — it does not apply here.
+> C-017 ships the correct API-key path; no OAuth implementation is needed for Gemini.
 
 ### 7.2 Ollama Provider (Local / Testing)
 
@@ -467,17 +496,11 @@ A single resolver consumes a plugin's ordered `auth_methods` and returns a ready
 The first method that succeeds wins. If none succeed and the plugin requires auth, the runner logs a
 clear message and skips that plugin (fail-graceful).
 
-### 8.2 google_oauth.py
+### 8.2 google_oauth.py — **REMOVED**
 
-Implements the OAuth 2.0 Device Authorization Grant — optimal for desktop apps (no redirect-URI server).
-
-| Method | Description |
-|--------|-------------|
-| get_token() | Returns a valid access token; checks keyring, refreshes if expired, triggers device flow if missing |
-| _device_flow() | Initiates device auth, polls for token, stores result in keyring |
-| _refresh_token() | Uses stored refresh_token to obtain a new access_token silently |
-| revoke() | Deletes tokens from keyring (`jobhunter auth logout google`) |
-| is_authenticated() | True if a valid (non-expired) token exists |
+`core/auth/google_oauth.py` was planned for the Gemini provider but is not needed. The Gemini API
+(`generativelanguage.googleapis.com`) authenticates via API keys, not OAuth Device Flow.
+C-017 (GeminiProvider) uses `GEMINI_API_KEY` directly. This file will not be created.
 
 ### 8.3 session_store.py
 
@@ -512,16 +535,17 @@ ai:
 profile:
   input: text                  # active profile-input plugin (text | pdf | docx | image …)
 connectors:
-  linkedin:
+  adzuna:
     enabled: true
     max_results: 50
-    delay_min: 1.5
-    delay_max: 4.0
-  indeed:
+    page_size: 50
+    country: gb
+  duckduckgo:
     enabled: true
     max_results: 50
-    delay_min: 2.0
-    delay_max: 5.0
+    results_per_query: 10      # stop before noisy results appear
+    trust_threshold: 60        # 0 = no filtering, 100 = only household-name companies
+    trust_check_enabled: true
   mock:
     enabled: false
     fixture_path: fixtures/jobs.json
@@ -529,8 +553,6 @@ output:
   format: both                 # csv | json | both
   directory: output/
 auth:
-  google_client_id_env: GOOGLE_CLIENT_ID
-  google_client_secret_env: GOOGLE_CLIENT_SECRET
   gemini_api_key_env: GEMINI_API_KEY
   openrouter_api_key_env: OPENROUTER_API_KEY
   adzuna_app_id_env: ADZUNA_APP_ID
@@ -636,9 +658,10 @@ running. File upload (PDF/Word/image) is shown as a future-enabled control backe
 badges (green 80-100, amber 60-79, orange 40-59, gray <40 hidden), row-click detail panel
 (description, match_reason, red_flags, link), filter bar, export, re-run (merges new results).
 
-**Settings View** — AI provider selector, API key field (saved to env/secure store, not config),
-OAuth connect button, connector toggles, max-results and delay sliders, auth status panel, LinkedIn
-auth button.
+**Settings View** — AI provider selector, API key field (clipboard-copy helper with env-var setup
+guidance, not stored in config), connector toggles (Adzuna, DuckDuckGo, Mock), Adzuna max-results
+slider, DuckDuckGo controls: results-per-query input, trust-threshold slider 0–100, trust-check
+enabled toggle, auth status panel. (C-021 adds the DDG controls to the existing view.)
 
 ---
 

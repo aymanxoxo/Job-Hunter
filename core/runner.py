@@ -197,20 +197,25 @@ def _select_named(plugins: list[type], name: str) -> type:
     raise ValueError(f"No plugin named {name!r} discovered (available: {available})")
 
 
-def _instantiate_connector(cls, settings) -> BaseConnector:
+def _instantiate_connector(cls, settings, provider=None) -> BaseConnector:
     """Instantiate a connector class, passing only kwargs its constructor accepts."""
     if settings is None:
         return cls()
     sig = inspect.signature(cls)
     acceptable = set(sig.parameters.keys())
-    config_kwargs = {
+    config_kwargs: dict = {
         "enabled": getattr(settings, "enabled", True),
         "max_results": getattr(settings, "max_results", 50),
         "delay_min": getattr(settings, "delay_min", 2.0),
         "delay_max": getattr(settings, "delay_max", 5.0),
+        "results_per_query": getattr(settings, "results_per_query", 10),
+        "trust_threshold": getattr(settings, "trust_threshold", 60),
+        "trust_check_enabled": getattr(settings, "trust_check_enabled", True),
     }
     if hasattr(settings, "fixture_path") and settings.fixture_path is not None:
         config_kwargs["fixture_path"] = settings.fixture_path
+    if provider is not None and hasattr(provider, "complete"):
+        config_kwargs["ai_complete"] = provider.complete
     kwargs = {k: v for k, v in config_kwargs.items() if k in acceptable}
     return cls(**kwargs)
 
@@ -248,7 +253,7 @@ def build_runner(
         settings = connector_map.get(name) if name else None
         if settings is not None and not getattr(settings, "enabled", True):
             continue
-        connector_instances.append(_instantiate_connector(cls, settings))
+        connector_instances.append(_instantiate_connector(cls, settings, provider=provider))
     return Runner(
         provider=provider,
         connectors=connector_instances,

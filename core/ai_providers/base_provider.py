@@ -32,3 +32,8 @@ class BaseAIProvider(ABC):
     async def initialize(self) -> None:
         """Optional startup hook for auth token refresh, health checks, or readiness checks."""
         return None
+
+    async def complete(self, prompt: str) -> str:
+        """Raw text completion — used by connectors that need AI internally (e.g. DDGConnector).
+        Not abstract; providers that don't expose this raise NotImplementedError."""
+        raise NotImplementedError(f"{type(self).__name__} does not implement complete()")
