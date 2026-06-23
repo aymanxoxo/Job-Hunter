@@ -67,6 +67,19 @@ class CommandResult:
 
 
 @dataclass(frozen=True)
+class FocusedTestCommand:
+    command: tuple[str, ...]
+    cwd_relpath: str
+
+
+@dataclass(frozen=True)
+class FocusedTestPlan:
+    commands: tuple[FocusedTestCommand, ...]
+    unsupported_targets: tuple[str, ...]
+    config_errors: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class GitHubCredential:
     source: str
     token: str
@@ -415,17 +428,105 @@ def pr_requests_auto_merge(
 def gate_commands(
     *,
     python: str,
-    focused_targets: list[str],
     test_command_tail: tuple[str, ...],
     test_flags: tuple[str, ...],
     lint_command_tail: tuple[str, ...],
 ) -> dict[str, tuple[str, ...]]:
     """Build the gate command tuples from adapter-supplied tool invocations."""
     return {
-        "focused": (python, *test_command_tail, *focused_targets, *test_flags),
         "full": (python, *test_command_tail, *test_flags),
         "lint": (python, *lint_command_tail),
     }
+
+
+def focused_test_plan(
+    *,
+    python: str,
+    focused_targets: list[str],
+    test_command_tail: tuple[str, ...],
+    test_flags: tuple[str, ...],
+    frontend_root_relpath: str,
+    frontend_test_command: tuple[str, ...],
+    frontend_test_extensions: tuple[str, ...],
+    rust_root_relpath: str,
+    rust_test_command: tuple[str, ...],
+    rust_test_extensions: tuple[str, ...],
+) -> FocusedTestPlan:
+    """Split focused test targets into project-supplied runner commands."""
+    python_targets: list[str] = []
+    frontend_targets: list[str] = []
+    rust_targets: list[str] = []
+    unsupported: list[str] = []
+    config_errors: list[str] = []
+    frontend_prefix = _normalized_prefix(frontend_root_relpath)
+    rust_tests_prefix = _normalized_prefix(f"{rust_root_relpath}/tests")
+    frontend_extensions = _lower_extensions(frontend_test_extensions)
+    rust_extensions = _lower_extensions(rust_test_extensions)
+
+    for target in focused_targets:
+        normalized = target.replace("\\", "/")
+        lower = normalized.lower()
+        if lower.endswith(frontend_extensions):
+            frontend_targets.append(_strip_prefix(normalized, frontend_prefix))
+        elif lower.endswith(rust_extensions):
+            rust_targets.append(_rust_test_name(_strip_prefix(normalized, rust_tests_prefix)))
+        elif lower.endswith(".py"):
+            python_targets.append(target)
+        else:
+            unsupported.append(target)
+
+    commands: list[FocusedTestCommand] = []
+    if python_targets or not (frontend_targets or rust_targets or unsupported):
+        commands.append(
+            FocusedTestCommand(
+                command=(python, *test_command_tail, *python_targets, *test_flags),
+                cwd_relpath=".",
+            )
+        )
+    if frontend_targets:
+        if frontend_test_command:
+            commands.append(
+                FocusedTestCommand(
+                    command=(*frontend_test_command, *frontend_targets),
+                    cwd_relpath=frontend_root_relpath,
+                )
+            )
+        else:
+            config_errors.append("frontend focused tests are configured but no command is set")
+    if rust_targets:
+        if rust_test_command:
+            for rust_target in rust_targets:
+                commands.append(
+                    FocusedTestCommand(
+                        command=(*rust_test_command, rust_target),
+                        cwd_relpath=rust_root_relpath,
+                    )
+                )
+        else:
+            config_errors.append("Rust focused tests are configured but no command is set")
+    return FocusedTestPlan(
+        commands=tuple(commands),
+        unsupported_targets=tuple(unsupported),
+        config_errors=tuple(config_errors),
+    )
+
+
+def _normalized_prefix(path: str) -> str:
+    normalized = path.replace("\\", "/").strip("/")
+    return f"{normalized}/" if normalized else ""
+
+
+def _lower_extensions(extensions: tuple[str, ...]) -> tuple[str, ...]:
+    return tuple(ext.lower() for ext in extensions) or ("\0",)
+
+
+def _strip_prefix(path: str, prefix: str) -> str:
+    return path.removeprefix(prefix) if prefix and path.startswith(prefix) else path
+
+
+def _rust_test_name(path: str) -> str:
+    name = path.rsplit("/", 1)[-1]
+    return name.removesuffix(".rs")
 
 
 def find_project_identifiers(source: str, forbidden: tuple[str, ...]) -> list[str]:

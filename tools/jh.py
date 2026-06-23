@@ -41,6 +41,7 @@ from tools.jh_engine import (  # noqa: E402
     clamp_wait_seconds,
     detect_stale_done_placeholders,
     evaluate_pr_merge_readiness,
+    focused_test_plan,
     gate_commands,
     pr_already_merged,
     pr_requests_auto_merge,
@@ -880,6 +881,10 @@ def project_python(root: Path = ROOT) -> str:
     return sys.executable
 
 
+def resolve_tool(name: str) -> str:
+    return shutil.which(name) or name
+
+
 def run_gate(root: Path = ROOT, *, chunk_id: str | None = None, ci: bool = False) -> GateEvidence:
     chunk_id = chunk_id or PROJECT.default_gate_chunk
     output_dir = root / "output" / "agent"
@@ -905,12 +910,20 @@ def run_gate(root: Path = ROOT, *, chunk_id: str | None = None, ci: bool = False
     python = project_python(root)
     commands = gate_commands(
         python=python,
-        focused_targets=focused_targets,
         test_command_tail=PROJECT.test_command_tail,
         test_flags=PROJECT.test_flags,
         lint_command_tail=PROJECT.lint_command_tail,
     )
-    focused = _run_and_summarize(commands["focused"], root)
+    focused, focused_error = _run_focused_tests(
+        root=root,
+        project=PROJECT,
+        python=python,
+        focused_targets=focused_targets,
+    )
+    if focused_error:
+        evidence = GateEvidence(chunk_id, doctor_summary, focused, "SKIP", "SKIP", "SKIP")
+        _write_gate_log(log_file, evidence)
+        raise RuntimeError(focused_error)
     full_pytest = _run_and_summarize(commands["full"], root)
     ruff = _run_and_summarize(commands["lint"], root)
     smoke = _import_smoke(config.get("smoke_imports", list(PROJECT.default_smoke_imports)), root)
@@ -920,13 +933,58 @@ def run_gate(root: Path = ROOT, *, chunk_id: str | None = None, ci: bool = False
     return evidence
 
 
+def _run_focused_tests(
+    *,
+    root: Path,
+    project: jh_project.ProjectConfig,
+    python: str,
+    focused_targets: list[str],
+) -> tuple[str, str]:
+    plan = focused_test_plan(
+        python=python,
+        focused_targets=focused_targets,
+        test_command_tail=project.test_command_tail,
+        test_flags=project.test_flags,
+        frontend_root_relpath=project.frontend_test_root_relpath,
+        frontend_test_command=project.frontend_test_command,
+        frontend_test_extensions=project.frontend_test_extensions,
+        rust_root_relpath=project.rust_test_root_relpath,
+        rust_test_command=project.rust_test_command,
+        rust_test_extensions=project.rust_test_extensions,
+    )
+    parts = [f"FAIL {message}" for message in plan.config_errors]
+    if plan.unsupported_targets:
+        parts.append(f"FAIL unsupported focused tests: {', '.join(plan.unsupported_targets)}")
+    failures = list(parts)
+    for planned in plan.commands:
+        command = _resolve_command_tools(planned.command)
+        result = run(command, cwd=root / planned.cwd_relpath, check=False)
+        summary = summarize_result(result)
+        parts.append(summary)
+        if result.returncode != 0:
+            failures.append(format_result(result))
+    return " | ".join(parts), "\n".join(failures)
+
+
+def _resolve_command_tools(command: tuple[str, ...]) -> tuple[str, ...]:
+    if not command:
+        return command
+    tool, *tail = command
+    return (resolve_tool(tool), *tail)
+
+
 def _run_and_summarize(command: tuple[str, ...], root: Path) -> str:
     result = run(command, cwd=root, check=False)
-    summary = _last_non_empty_line(result.stdout) or _last_non_empty_line(result.stderr)
-    status = "PASS" if result.returncode == 0 else "FAIL"
+    summary = summarize_result(result)
     if result.returncode != 0:
         raise RuntimeError(format_result(result))
-    return f"{status} {' '.join(command[2:])}: {summary}"
+    return summary
+
+
+def summarize_result(result: CommandResult) -> str:
+    summary = _last_non_empty_line(result.stdout) or _last_non_empty_line(result.stderr)
+    status = "PASS" if result.returncode == 0 else "FAIL"
+    return f"{status} {' '.join(result.command[2:])}: {summary}"
 
 
 def _import_smoke(imports: list[str], root: Path) -> str:
@@ -957,7 +1015,20 @@ def _dependency_hash(root: Path) -> str:
 
 def _input_hash(root: Path) -> str:
     digest = hashlib.sha256()
-    for path in _iter_text_files(root, ("*.py", "*.md", "*.toml", "*.yaml", "*.yml", "*.json")):
+    patterns = (
+        "*.py",
+        "*.md",
+        "*.toml",
+        "*.yaml",
+        "*.yml",
+        "*.json",
+        "*.ts",
+        "*.tsx",
+        "*.vue",
+        "*.rs",
+        "package-lock.json",
+    )
+    for path in _iter_text_files(root, patterns):
         rel_path = path.relative_to(root).as_posix()
         if rel_path.startswith("output/"):
             continue
