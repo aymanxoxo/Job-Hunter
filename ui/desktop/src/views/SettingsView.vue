@@ -11,9 +11,15 @@ interface DesktopSettings {
   connectors: {
     mock: boolean;
     adzuna: boolean;
+    duckduckgo: boolean;
   };
   maxResults: number;
   delaySeconds: number;
+  ddg: {
+    resultsPerQuery: number;
+    trustThreshold: number;
+    trustCheckEnabled: boolean;
+  };
 }
 
 interface PersistedConfig {
@@ -32,6 +38,15 @@ interface PersistedConfig {
       max_results: number;
       delay_min: number;
       delay_max: number;
+    };
+    duckduckgo: {
+      enabled: boolean;
+      max_results: number;
+      delay_min: number;
+      delay_max: number;
+      results_per_query: number;
+      trust_threshold: number;
+      trust_check_enabled: boolean;
     };
   };
   auth: {
@@ -99,9 +114,15 @@ function defaultSettings(): DesktopSettings {
     connectors: {
       mock: true,
       adzuna: false,
+      duckduckgo: false,
     },
     maxResults: 50,
     delaySeconds: 2,
+    ddg: {
+      resultsPerQuery: 10,
+      trustThreshold: 60,
+      trustCheckEnabled: true,
+    },
   };
 }
 
@@ -135,18 +156,28 @@ function loadSettings(): DesktopSettings {
     const connectors = isRecord(parsed.connectors) ? parsed.connectors : {};
     const mock = isRecord(connectors.mock) ? connectors.mock : {};
     const adzuna = isRecord(connectors.adzuna) ? connectors.adzuna : {};
+    const duckduckgo = isRecord(connectors.duckduckgo) ? connectors.duckduckgo : {};
     const mockEnabled = typeof mock.enabled === "boolean" ? mock.enabled : defaultSettings().connectors.mock;
     const adzunaEnabled =
       typeof adzuna.enabled === "boolean" ? adzuna.enabled : defaultSettings().connectors.adzuna;
+    const ddgEnabled =
+      typeof duckduckgo.enabled === "boolean" ? duckduckgo.enabled : defaultSettings().connectors.duckduckgo;
 
     return {
       provider: isProvider(ai.provider) ? ai.provider : defaultSettings().provider,
       connectors: {
         mock: mockEnabled,
         adzuna: adzunaEnabled,
+        duckduckgo: ddgEnabled,
       },
       maxResults: clampNumber(mock.max_results ?? adzuna.max_results, defaultSettings().maxResults, 1, 100),
       delaySeconds: clampNumber(mock.delay_min ?? adzuna.delay_min, defaultSettings().delaySeconds, 0, 10),
+      ddg: {
+        resultsPerQuery: clampNumber(duckduckgo.results_per_query, 10, 1, 50),
+        trustThreshold: clampNumber(duckduckgo.trust_threshold, 60, 0, 100),
+        trustCheckEnabled:
+          typeof duckduckgo.trust_check_enabled === "boolean" ? duckduckgo.trust_check_enabled : true,
+      },
     };
   } catch {
     return defaultSettings();
@@ -170,6 +201,15 @@ function configPayload(): PersistedConfig {
         max_results: settings.value.maxResults,
         delay_min: settings.value.delaySeconds,
         delay_max: settings.value.delaySeconds,
+      },
+      duckduckgo: {
+        enabled: settings.value.connectors.duckduckgo,
+        max_results: settings.value.maxResults,
+        delay_min: settings.value.delaySeconds,
+        delay_max: settings.value.delaySeconds,
+        results_per_query: settings.value.ddg.resultsPerQuery,
+        trust_threshold: settings.value.ddg.trustThreshold,
+        trust_check_enabled: settings.value.ddg.trustCheckEnabled,
       },
     },
     auth: {
@@ -240,6 +280,10 @@ async function saveApiKey() {
             <input v-model="settings.connectors.adzuna" type="checkbox" data-testid="connector-adzuna" />
             <span>Adzuna connector</span>
           </label>
+          <label class="check-row">
+            <input v-model="settings.connectors.duckduckgo" type="checkbox" data-testid="connector-duckduckgo" />
+            <span>DuckDuckGo connector</span>
+          </label>
         </div>
       </section>
 
@@ -288,6 +332,44 @@ async function saveApiKey() {
     </div>
 
     <div class="settings-grid">
+      <section v-if="settings.connectors.duckduckgo" class="settings-card" aria-labelledby="ddg-title">
+        <div class="card-header">
+          <div>
+            <h3 id="ddg-title">DuckDuckGo controls</h3>
+            <p>Tune open-web discovery and trust filtering.</p>
+          </div>
+        </div>
+
+        <label class="field">
+          <span>Results per query</span>
+          <input
+            v-model.number="settings.ddg.resultsPerQuery"
+            type="number"
+            min="1"
+            max="50"
+            data-testid="ddg-results-per-query"
+          />
+        </label>
+
+        <label class="slider-field">
+          <span>Trust threshold</span>
+          <input
+            v-model.number="settings.ddg.trustThreshold"
+            type="range"
+            min="0"
+            max="100"
+            step="1"
+            data-testid="ddg-trust-threshold"
+          />
+          <output>{{ settings.ddg.trustThreshold }}</output>
+        </label>
+
+        <label class="check-row">
+          <input v-model="settings.ddg.trustCheckEnabled" type="checkbox" data-testid="ddg-trust-check" />
+          <span>Enable trust check</span>
+        </label>
+      </section>
+
       <section class="settings-card" aria-labelledby="secret-title">
         <div class="card-header">
           <div>
