@@ -80,6 +80,10 @@ class OpenRouterProvider(BaseAIProvider):
         except AIEngineError as exc:
             raise OpenRouterProviderError(str(exc)) from exc
 
+    async def complete(self, prompt: str) -> str:
+        """Raw text completion for connectors that need AI internally."""
+        return await self._call(prompt)
+
     async def _call(self, prompt: str) -> str:
         api_key = self._resolve_api_key()
         models = [self.model]

@@ -9,10 +9,10 @@
 ## Orientation
 
 <!-- jh:orientation:start -->
-- **Phase:** Phase 1 + Phase 2 complete. **M-03 gate cleared** (C-029). **M-06 gate cleared** (C-037 + C-038). All planned chunks done.
-- **Last done:** **C-037** - Windows installer (`3fa7ac9`). Prior done: **C-056** - Desktop API key clipboard copy (`d895aa8`); **C-055** - Adzuna pagination + provider config pass-through (`4d4aa12`).
-- **Next ready:** none — all unblocked chunks complete.
-- **Blocked:** **C-016** - Google OAuth device flow (risk-flagged; design sign-off required); **C-020** - Indeed connector (risk-flagged; design sign-off required); **C-021** - LinkedIn connector (risk-flagged; design sign-off required).
+- **Phase:** Phase 1 - Foundation (M-03 gate cleared). **Next gate:** M-06 (chunks C-037 + C-038).
+- **Last done:** **C-056** - Desktop API key — honest labeling + clipboard copy (`d895aa8`). Prior done: **C-055** - Adzuna pagination + provider config pass-through (`4d4aa12`); **C-054** - JSON fence stripping + provider HTTP retry (`04a222d`).
+- **Next ready:** **C-021** - SettingsView DDG controls.
+- **Blocked:** none.
 - **Notes:** Dev loop runs through short-lived GitHub PR branches; the user reviews and merges. See [ADR-014/015/016](Documents/DECISIONS.md).
 - **Protocol:** each chunk runs design -> test -> impl -> gate -> verify -> land (plan section 3.3); risky chunks pause for Design sign-off.
 <!-- jh:orientation:end -->
@@ -53,12 +53,11 @@
 | C-013 | Batching util (pure) | AI engine | C-004 | done | 7bef68d |
 | C-014 | AI engine facade | AI engine | C-006, C-010, C-011, C-012, C-013 | done | a9138e2 |
 | C-015 | Ollama provider | Providers | C-006, C-014 | done | 70c71f6 |
-| C-016 | Google OAuth device flow | Providers | C-002, C-008 | blocked | — |
 | C-017 | Gemini provider | Providers | C-006, C-008, C-014 | done | de61ba5 |
 | C-018 | Mock connector + fixtures | Connectors | C-005 | done | 5acca79 |
 | C-019 | Session store | Connectors | C-002 | done | 9fb5ce0 |
-| C-020 | Indeed connector | Connectors | C-005 | blocked | — |
-| C-021 | LinkedIn connector | Connectors | C-005, C-019 | blocked | — |
+| C-020 | DuckDuckGo discovery connector | Connectors | C-005, C-014 | done | — |
+| C-021 | SettingsView DDG controls | Phase 2 | C-036, C-020 | todo | — |
 | C-022 | Pure pipeline transforms | Pipeline | C-004 | done | 26deae7 |
 | C-023 | Progress event emitter | Pipeline | C-002 | done | d5b7e06 |
 | C-024 | Output exporter | Pipeline | C-004 | done | 0313037 |
@@ -84,6 +83,8 @@
 | C-056 | Desktop API key — honest labeling + clipboard copy | Phase 2 | C-036, C-052 | done | d895aa8 |
 
 ## Changelog (newest first)
+
+- 2026-06-24 - **C-020** DuckDuckGo discovery connector on `chunk/C-020-duckduckgo-connector`: adds `DDGConnector` — open-web job discovery via DuckDuckGo with an AI purification pass and optional company trust scoring. AI generates open DDG search queries (no site: restrictions); DDG executes queries; AI batch-purifies to real job postings + extracts company names; DDG trust searches (Glassdoor, Reddit, Trustpilot snippets) feed an AI trust score 0–100; jobs below `trust_threshold` are excluded when `trust_check_enabled`; httpx fetches surviving URLs; AI extracts structured Job fields. All I/O injected for tests — no real network traffic. Adds `trust_score` and `trust_summary` fields to `Job`; adds DDG fields to `ConnectorSettings` (`results_per_query`, `trust_threshold`, `trust_check_enabled`); adds `complete()` to `BaseAIProvider` and all three providers; extends `_instantiate_connector` to wire `ai_complete` from the active provider; updates `config.yaml` + `pyproject.toml` (adds `duckduckgo-search>=6`); removes `google_client_id_env`/`google_client_secret_env` from `AuthConfig` (C-016 removed). 24 focused tests; 329 total pass; gate green.
 
 - 2026-06-21 - **C-037** Windows installer on `chunk/C-037-windows-installer`: tightens the Tauri bundle config to build an MSI target with the tracked app icon and adds a Windows GitHub Actions packaging workflow that runs desktop tests/build, runs `npm run tauri:build`, checks the MSI is under 120 MB, performs a silent-install smoke, and uploads the MSI artifact. Local frontend tests/build green; local Tauri build remains blocked by Windows Application Control (`os error 4551`) before Rust build scripts execute; repo gate green (305 pytest, Ruff, doctor, import smoke). Windows CI packaging passed; `jobhunter-windows-msi` artifact uploaded (zip size 2,611,033 bytes); silent install smoke passed. Merged `3fa7ac9` (PR #84).
 

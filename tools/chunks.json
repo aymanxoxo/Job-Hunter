@@ -314,20 +314,6 @@
         "core/ai_providers/ollama_provider.py"
       ]
     },
-    "C-016": {
-      "title": "Google OAuth device flow",
-      "stage": "Providers",
-      "depends_on": [
-        "C-002",
-        "C-008"
-      ],
-      "risk_flagged": true,
-      "tests": [],
-      "sdd_anchor": "§7.1, §8.2",
-      "files": [
-        "core/auth/google_oauth.py"
-      ]
-    },
     "C-017": {
       "title": "Gemini provider",
       "stage": "Providers",
@@ -377,30 +363,37 @@
       ]
     },
     "C-020": {
-      "title": "Indeed connector",
-      "stage": "Connectors",
-      "depends_on": [
-        "C-005"
-      ],
-      "risk_flagged": true,
-      "tests": [],
-      "sdd_anchor": "§6.1",
-      "files": [
-        "core/connectors/indeed_connector.py"
-      ]
-    },
-    "C-021": {
-      "title": "LinkedIn connector",
+      "title": "DuckDuckGo discovery connector",
       "stage": "Connectors",
       "depends_on": [
         "C-005",
-        "C-019"
+        "C-014"
       ],
-      "risk_flagged": true,
-      "tests": [],
-      "sdd_anchor": "§6.2",
+      "risk_flagged": false,
+      "tests": [
+        "tests/test_ddg_connector.py"
+      ],
+      "sdd_anchor": "§6.1",
       "files": [
-        "core/connectors/linkedin_connector.py"
+        "core/connectors/duckduckgo_connector.py",
+        "core/config.py",
+        "config.yaml"
+      ]
+    },
+    "C-021": {
+      "title": "SettingsView DDG controls",
+      "stage": "Phase 2",
+      "depends_on": [
+        "C-036",
+        "C-020"
+      ],
+      "risk_flagged": false,
+      "tests": [
+        "ui/desktop/src/views/__tests__/SettingsView.ddg.spec.ts"
+      ],
+      "sdd_anchor": "§11.2",
+      "files": [
+        "ui/desktop/src/views/SettingsView.vue"
       ]
     },
     "C-022": {

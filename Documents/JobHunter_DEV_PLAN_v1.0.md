@@ -140,8 +140,8 @@ until the previous is green. This is the guard against hallucinated or half-fini
 
 **Checkpoint policy (ADR-016).** Before step 2 the AI assesses chunk risk. **Higher-risk or
 under-specified chunks pause after step 1 (Design) for the user's sign-off** before any code; **routine
-chunks run the full vertical** and are reviewed only at the PR. Currently risk-flagged: C-008, C-016,
-C-017, C-020, C-021, C-025, C-031, C-033.
+chunks run the full vertical** and are reviewed only at the PR. Currently risk-flagged: C-008,
+C-017, C-025, C-031, C-033.
 
 
 ### 3.4 Per-chunk documentation — technical + business (ADR-017)
@@ -170,7 +170,7 @@ Phase 1 (Core + CLI)                         Phase 2 (Desktop + OpenRouter + Pro
   Contracts:   C-005 … C-009                   Shell/IPC:  C-031
   AI engine:   C-010 … C-014                   Vue app:    C-032
   Providers:   C-015 … C-017                   Progress UI:C-033   ← emphasised feature
-  Connectors:  C-018 … C-021                   Views:      C-034 … C-036
+  Connectors:  C-018 … C-021 (C-020=DDG, C-021=SettingsView DDG controls)     Views: C-034 … C-036
   Pipeline:    C-022 … C-025                   Packaging:  C-037
   CLI:         C-026 … C-029  (→ M-03 gate)    Docs:       C-038   (→ M-06 gate)
 ```
@@ -403,8 +403,7 @@ renderers. The Vue store maps events into the timeline model; the component is p
 | ID | Goal | Files | Depends on | Acceptance | SDD ref |
 |----|------|-------|-----------|------------|---------|
 | C-015 | Ollama provider | `core/ai_providers/ollama_provider.py` | C-006, C-014 | Calls local endpoint (faked in tests); returns valid criteria/scores; `auth_methods=['none']` | §7.2 |
-| C-016 | Google OAuth device flow | `core/auth/google_oauth.py` | C-002, C-008 | Device-flow + refresh logic with faked HTTP/keyring; tokens stored/redacted | §7.1, §8.2 |
-| C-017 | Gemini provider | `core/ai_providers/gemini_provider.py` | C-006, C-008, C-014 | API-key path first (`GEMINI_API_KEY`) resolved via auth_strategy; OAuth path deferred to C-016; `gemini-3-flash` calls faked; parses response | §7.1 |
+| C-017 | Gemini provider | `core/ai_providers/gemini_provider.py` | C-006, C-008, C-014 | `GEMINI_API_KEY` resolved via auth_strategy; `gemini-3-flash` calls faked; parses response | §7.1 |
 
 ### Connectors
 
@@ -412,8 +411,8 @@ renderers. The Vue store maps events into the timeline model; the component is p
 |----|------|-------|-----------|------------|---------|
 | C-018 | Mock connector + fixtures | `core/connectors/mock_connector.py`, `fixtures/jobs.json` | C-005 | Returns Jobs from fixture; passes connector contract test | §6.3, §12 |
 | C-019 | Session store | `core/auth/session_store.py` | C-002 | Fernet encrypt/decrypt round-trip; key via faked keyring; redaction | §8.3 |
-| C-020 | Indeed connector | `core/connectors/indeed_connector.py` (+ pure parser) | C-005 | Pure parser extracts fields from fixture HTML/JSON; fetch faked; partial-on-timeout | §6.1 |
-| C-021 | LinkedIn connector | `core/connectors/linkedin_connector.py` | C-005, C-019 | Pure card-parser tested on fixture DOM; Playwright + session faked; contract test | §6.2 |
+| C-020 | DuckDuckGo discovery connector | `core/connectors/duckduckgo_connector.py`, `core/config.py`, `config.yaml` | C-005, C-014 | DDG search + AI purification + trust scoring with all I/O injected (no real network); 24 focused tests | §6.1 |
+| C-021 | SettingsView DDG controls | `ui/desktop/src/views/SettingsView.vue` | C-036, C-020 | results_per_query input, trust_threshold slider, trust_check_enabled toggle added to SettingsView; Vue component tests | §11.2 |
 
 ### Pipeline, progress emitter & output
 
@@ -429,7 +428,7 @@ renderers. The Vue store maps events into the timeline model; the component is p
 | ID | Goal | Files | Depends on | Acceptance | SDD ref |
 |----|------|-------|-----------|------------|---------|
 | C-026 | CLI skeleton + run + Rich render | `ui/cli/cli.py` | C-025 | `jobhunter run` executes pipeline; Rich table renders from progress/results | §10 |
-| C-027 | CLI auth commands | `ui/cli/auth.py` | C-017, C-019 | `auth status/logout` report available provider (API-key) + session-store auth; OAuth/LinkedIn commands deferred to C-016/C-021 | §10.1, §8 |
+| C-027 | CLI auth commands | `ui/cli/auth.py` | C-017, C-019 | `auth status/logout` report available provider (API-key) + session-store auth | §10.1, §8 |
 | C-028 | CLI config/list/export commands | `ui/cli/config_cmd.py` | C-003, C-009, C-024 | `config show` (redacted), `connectors/providers list`, `export --format` work | §10.1 |
 | C-029 | E2E CLI test (Phase 1 gate) | `tests/e2e/test_cli_run.py` | C-026, C-018, C-015 | `jobhunter run` with Mock+Ollama produces a scored CSV with rows | §12 E2E, **M-03** |
 

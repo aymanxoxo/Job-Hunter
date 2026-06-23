@@ -13,6 +13,12 @@ connectors:
     max_results: 50
     delay_min: 1.5
     delay_max: 4.0
+  duckduckgo:
+    enabled: true
+    max_results: 50
+    results_per_query: 10    # stop before noisy results appear
+    trust_threshold: 60      # 0 = no filtering, 100 = household-name companies only
+    trust_check_enabled: true
   mock:
     enabled: false
     fixture_path: fixtures/jobs.json
@@ -20,8 +26,6 @@ output:
   format: both              # csv | json | both
   directory: output/
 auth:
-  google_client_id_env: GOOGLE_CLIENT_ID
-  google_client_secret_env: GOOGLE_CLIENT_SECRET
   gemini_api_key_env: GEMINI_API_KEY
   openrouter_api_key_env: OPENROUTER_API_KEY
   adzuna_app_id_env: ADZUNA_APP_ID

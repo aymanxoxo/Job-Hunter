@@ -84,7 +84,7 @@ JOBHUNTER = ProjectConfig(
     chunk_id_regex=r"C-\d{3}",
     branch_regex=r"chunk/C-\d{3}-[a-z0-9][a-z0-9-]*",
     default_risk_flagged=frozenset(
-        {"C-008", "C-016", "C-017", "C-020", "C-021", "C-025", "C-031", "C-033"}
+        {"C-008", "C-017", "C-025", "C-031", "C-033"}
     ),
     default_smoke_imports=("core",),
     plugin_boundaries=(

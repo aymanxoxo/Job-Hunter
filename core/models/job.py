@@ -33,6 +33,9 @@ class Job(BaseModel):
     match_reason: str | None = None
     red_flags: tuple[str, ...] = ()
 
+    trust_score: int | None = Field(default=None, ge=0, le=100)
+    trust_summary: str | None = None
+
     raw: Mapping[str, Any] | None = None
 
     @field_validator("raw", mode="after")
