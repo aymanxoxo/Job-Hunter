@@ -24,7 +24,7 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": "§2, §13.1",
+      "sdd_anchor": "\u00a72, \u00a713.1",
       "files": [
         "pyproject.toml",
         "requirements.txt",
@@ -41,7 +41,7 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": "§1.2, §5.1",
+      "sdd_anchor": "\u00a71.2, \u00a75.1",
       "files": [
         "core/*",
         "ui/cli"
@@ -55,7 +55,7 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": "§6 (this doc)",
+      "sdd_anchor": "\u00a76 (this doc)",
       "files": [
         "core/logging.py"
       ]
@@ -69,7 +69,7 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": "§9",
+      "sdd_anchor": "\u00a79",
       "files": [
         "core/config.py",
         "config.yaml"
@@ -83,7 +83,7 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": "§3",
+      "sdd_anchor": "\u00a73",
       "files": [
         "core/models/job.py",
         "core/models/search_criteria.py"
@@ -97,7 +97,7 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": "§4.1",
+      "sdd_anchor": "\u00a74.1",
       "files": [
         "core/connectors/base_connector.py"
       ]
@@ -110,7 +110,7 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": "§4.2",
+      "sdd_anchor": "\u00a74.2",
       "files": [
         "core/ai_providers/base_provider.py"
       ]
@@ -180,7 +180,7 @@
       "tests": [
         "tests/test_profile_inputs.py"
       ],
-      "sdd_anchor": "§3.3, §5.3",
+      "sdd_anchor": "\u00a73.3, \u00a75.3",
       "files": [
         "core/profile_inputs/base_profile_input.py",
         "text_input.py"
@@ -197,7 +197,7 @@
       "tests": [
         "tests/test_auth_strategy.py"
       ],
-      "sdd_anchor": "§8.1",
+      "sdd_anchor": "\u00a78.1",
       "files": [
         "core/auth/auth_strategy.py"
       ]
@@ -214,7 +214,7 @@
       "tests": [
         "tests/test_runner_plugin_discovery.py"
       ],
-      "sdd_anchor": "§5.1",
+      "sdd_anchor": "\u00a75.1",
       "files": [
         "core/runner.py"
       ]
@@ -229,7 +229,7 @@
       "tests": [
         "tests/ai_engine/test_prompts.py"
       ],
-      "sdd_anchor": "§5.2",
+      "sdd_anchor": "\u00a75.2",
       "files": [
         "core/ai_engine/prompts.py"
       ]
@@ -244,7 +244,7 @@
       "tests": [
         "tests/ai_engine/test_parsing.py"
       ],
-      "sdd_anchor": "§5.2",
+      "sdd_anchor": "\u00a75.2",
       "files": [
         "core/ai_engine/parsing.py"
       ]
@@ -259,7 +259,7 @@
       "tests": [
         "tests/ai_engine/test_scrub.py"
       ],
-      "sdd_anchor": "§5.2 IMPORTANT",
+      "sdd_anchor": "\u00a75.2 IMPORTANT",
       "files": [
         "core/ai_engine/scrub.py"
       ]
@@ -274,7 +274,7 @@
       "tests": [
         "tests/ai_engine/test_batching.py"
       ],
-      "sdd_anchor": "§5.1 step 9",
+      "sdd_anchor": "\u00a75.1 step 9",
       "files": [
         "core/ai_engine/batching.py"
       ]
@@ -293,7 +293,7 @@
       "tests": [
         "tests/ai_engine/test_facade.py"
       ],
-      "sdd_anchor": "§5.2",
+      "sdd_anchor": "\u00a75.2",
       "files": [
         "core/ai_engine/__init__.py"
       ]
@@ -309,7 +309,7 @@
       "tests": [
         "tests/test_ollama_provider.py"
       ],
-      "sdd_anchor": "§7.2",
+      "sdd_anchor": "\u00a77.2",
       "files": [
         "core/ai_providers/ollama_provider.py"
       ]
@@ -326,7 +326,7 @@
       "tests": [
         "tests/test_gemini_provider.py"
       ],
-      "sdd_anchor": "§7.1",
+      "sdd_anchor": "\u00a77.1",
       "files": [
         "core/ai_providers/gemini_provider.py"
       ]
@@ -341,7 +341,7 @@
       "tests": [
         "tests/test_mock_connector.py"
       ],
-      "sdd_anchor": "§6.3, §12",
+      "sdd_anchor": "\u00a76.3, \u00a712",
       "files": [
         "core/connectors/mock_connector.py",
         "fixtures/jobs.json"
@@ -357,7 +357,7 @@
       "tests": [
         "tests/test_session_store.py"
       ],
-      "sdd_anchor": "§8.3",
+      "sdd_anchor": "\u00a78.3",
       "files": [
         "core/auth/session_store.py"
       ]
@@ -373,7 +373,7 @@
       "tests": [
         "tests/test_ddg_connector.py"
       ],
-      "sdd_anchor": "§6.1",
+      "sdd_anchor": "\u00a76.1",
       "files": [
         "core/connectors/duckduckgo_connector.py",
         "core/config.py",
@@ -391,7 +391,7 @@
       "tests": [
         "ui/desktop/src/views/__tests__/SettingsView.ddg.spec.ts"
       ],
-      "sdd_anchor": "§11.2",
+      "sdd_anchor": "\u00a711.2",
       "files": [
         "ui/desktop/src/views/SettingsView.vue"
       ]
@@ -406,7 +406,7 @@
       "tests": [
         "tests/test_pipeline.py"
       ],
-      "sdd_anchor": "§5.1 steps 7–10",
+      "sdd_anchor": "\u00a75.1 steps 7\u201310",
       "files": [
         "core/pipeline.py"
       ]
@@ -421,7 +421,7 @@
       "tests": [
         "tests/test_progress.py"
       ],
-      "sdd_anchor": "§9 (this doc), §11.1",
+      "sdd_anchor": "\u00a79 (this doc), \u00a711.1",
       "files": [
         "core/progress.py"
       ]
@@ -436,7 +436,7 @@
       "tests": [
         "tests/test_output.py"
       ],
-      "sdd_anchor": "§5.4, §9 SDD",
+      "sdd_anchor": "\u00a75.4, \u00a79 SDD",
       "files": [
         "core/output.py"
       ]
@@ -455,7 +455,7 @@
       "tests": [
         "tests/test_runner_orchestrator.py"
       ],
-      "sdd_anchor": "§5.1",
+      "sdd_anchor": "\u00a75.1",
       "files": [
         "core/runner.py"
       ]
@@ -470,7 +470,7 @@
       "tests": [
         "tests/test_cli_run.py"
       ],
-      "sdd_anchor": "§10",
+      "sdd_anchor": "\u00a710",
       "files": [
         "ui/cli/cli.py"
       ]
@@ -486,7 +486,7 @@
       "tests": [
         "tests/test_cli_auth_cmd.py"
       ],
-      "sdd_anchor": "§10.1, §8",
+      "sdd_anchor": "\u00a710.1, \u00a78",
       "files": [
         "ui/cli/auth.py"
       ]
@@ -503,13 +503,13 @@
       "tests": [
         "tests/test_cli_config_cmd.py"
       ],
-      "sdd_anchor": "§10.1",
+      "sdd_anchor": "\u00a710.1",
       "files": [
         "ui/cli/config_cmd.py"
       ]
     },
     "C-029": {
-      "title": "E2E CLI test — **M-03 gate**",
+      "title": "E2E CLI test \u2014 **M-03 gate**",
       "stage": "CLI",
       "depends_on": [
         "C-026",
@@ -518,7 +518,7 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": "§12 E2E, **M-03**",
+      "sdd_anchor": "\u00a712 E2E, **M-03**",
       "files": [
         "tests/e2e/test_cli_run.py"
       ]
@@ -534,7 +534,7 @@
       "tests": [
         "tests/test_openrouter_provider.py"
       ],
-      "sdd_anchor": "§7.3",
+      "sdd_anchor": "\u00a77.3",
       "files": [
         "core/ai_providers/openrouter_provider.py"
       ]
@@ -550,7 +550,7 @@
       "tests": [
         "tests/test_sidecar.py"
       ],
-      "sdd_anchor": "§11.1",
+      "sdd_anchor": "\u00a711.1",
       "files": [
         "ui/desktop/src-tauri/**",
         "ui/cli/sidecar.py"
@@ -564,7 +564,7 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": "§11",
+      "sdd_anchor": "\u00a711",
       "files": [
         "ui/desktop/src/**"
       ]
@@ -578,7 +578,7 @@
       ],
       "risk_flagged": true,
       "tests": [],
-      "sdd_anchor": "§9 (this doc), §11.2",
+      "sdd_anchor": "\u00a79 (this doc), \u00a711.2",
       "files": [
         "ui/desktop/src/components/PipelineProgress.vue"
       ]
@@ -591,7 +591,7 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": "§11.2",
+      "sdd_anchor": "\u00a711.2",
       "files": [
         "ui/desktop/src/views/CriteriaView.vue"
       ]
@@ -604,7 +604,7 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": "§11.2",
+      "sdd_anchor": "\u00a711.2",
       "files": [
         "ui/desktop/src/views/ResultsView.vue"
       ]
@@ -618,7 +618,7 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": "§11.2",
+      "sdd_anchor": "\u00a711.2",
       "files": [
         "ui/desktop/src/views/SettingsView.vue"
       ]
@@ -639,7 +639,7 @@
       "tests": [
         "tests/test_sidecar.py"
       ],
-      "sdd_anchor": "§11.1, §11.2",
+      "sdd_anchor": "\u00a711.1, \u00a711.2",
       "files": [
         "ui/desktop/src/**",
         "ui/desktop/src-tauri/src/lib.rs",
@@ -659,14 +659,14 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": "§13.2",
+      "sdd_anchor": "\u00a713.2",
       "files": [
         "ui/desktop/src-tauri/tauri.conf.json",
         ".github/workflows/desktop-windows.yml"
       ]
     },
     "C-038": {
-      "title": "Authoring docs — **M-06 gate**",
+      "title": "Authoring docs \u2014 **M-06 gate**",
       "stage": "Phase 2",
       "depends_on": [
         "C-005",
@@ -677,7 +677,7 @@
       "tests": [
         "tests/test_authoring_docs.py"
       ],
-      "sdd_anchor": "§14, **M-06**",
+      "sdd_anchor": "\u00a714, **M-06**",
       "files": [
         "README.md",
         "CONNECTOR_GUIDE.md",
@@ -817,7 +817,7 @@
       "tests": [
         "tests/test_adzuna_connector.py"
       ],
-      "sdd_anchor": "§4.1",
+      "sdd_anchor": "\u00a74.1",
       "files": [
         "core/connectors/adzuna_connector.py"
       ]
@@ -834,7 +834,7 @@
       "tests": [
         "tests/test_runner_build_runner.py"
       ],
-      "sdd_anchor": "§5.1, §9",
+      "sdd_anchor": "\u00a75.1, \u00a79",
       "files": [
         "config.yaml",
         "core/runner.py",
@@ -856,7 +856,7 @@
         "tests/test_parsing_fence.py",
         "tests/test_provider_retry.py"
       ],
-      "sdd_anchor": "§5.2, §7",
+      "sdd_anchor": "\u00a75.2, \u00a77",
       "files": [
         "core/ai_engine/parsing.py",
         "core/ai_providers/_retry.py",
@@ -877,14 +877,14 @@
         "tests/test_adzuna_pagination.py",
         "tests/test_runner_provider_config.py"
       ],
-      "sdd_anchor": "§5.1, §6, §7",
+      "sdd_anchor": "\u00a75.1, \u00a76, \u00a77",
       "files": [
         "core/connectors/adzuna_connector.py",
         "core/runner.py"
       ]
     },
     "C-056": {
-      "title": "Desktop API key — honest labeling + clipboard copy",
+      "title": "Desktop API key \u2014 honest labeling + clipboard copy",
       "stage": "Phase 2",
       "depends_on": [
         "C-036",
@@ -892,10 +892,106 @@
       ],
       "risk_flagged": false,
       "tests": [],
-      "sdd_anchor": "§11.2",
+      "sdd_anchor": "\u00a711.2",
       "files": [
         "ui/desktop/src/views/SettingsView.vue"
       ]
+    },
+    "C-057": {
+      "title": "Phase 3 backlog + frontend-aware harness",
+      "stage": "Phase 3 Planning",
+      "depends_on": [
+        "C-021",
+        "C-038"
+      ],
+      "risk_flagged": false,
+      "tests": [
+        "tests/test_workflow_harness.py"
+      ],
+      "files": [
+        "tools/chunks.json",
+        "Documents/JobHunter_DEV_PLAN_v1.0.md",
+        "PROGRESS.md",
+        "tools/jh.py"
+      ],
+      "sdd_anchor": "\u00a71"
+    },
+    "C-058": {
+      "title": "Desktop settings runtime config bridge",
+      "stage": "Phase 3 Desktop Hardening",
+      "depends_on": [
+        "C-057"
+      ],
+      "risk_flagged": true,
+      "tests": [
+        "ui/desktop/src/stores/pipeline.test.ts",
+        "tests/test_sidecar.py",
+        "ui/desktop/src-tauri/tests/ipc_integration.rs"
+      ],
+      "files": [
+        "ui/desktop/src/stores/pipeline.ts",
+        "ui/desktop/src/views/SettingsView.vue",
+        "ui/desktop/src-tauri/src/lib.rs",
+        "ui/cli/sidecar.py"
+      ],
+      "sdd_anchor": "\u00a711.1"
+    },
+    "C-059": {
+      "title": "Real run smoke validation command",
+      "stage": "Phase 3 Validation",
+      "depends_on": [
+        "C-057"
+      ],
+      "risk_flagged": true,
+      "tests": [
+        "tests/e2e/test_live_smoke_command.py"
+      ],
+      "files": [
+        "ui/cli/cli.py",
+        "tests/e2e/test_live_smoke_command.py",
+        "README.md"
+      ],
+      "sdd_anchor": "\u00a712"
+    },
+    "C-060": {
+      "title": "ResultsView real export action",
+      "stage": "Phase 3 Desktop UX",
+      "depends_on": [
+        "C-058"
+      ],
+      "risk_flagged": false,
+      "tests": [
+        "ui/desktop/src/views/ResultsView.test.ts",
+        "tests/test_sidecar.py"
+      ],
+      "files": [
+        "ui/desktop/src/views/ResultsView.vue",
+        "ui/desktop/src/stores/pipeline.ts",
+        "ui/desktop/src-tauri/src/lib.rs",
+        "ui/cli/sidecar.py"
+      ],
+      "sdd_anchor": "\u00a711.2"
+    },
+    "C-061": {
+      "title": "Desktop partial failure and empty-state UX",
+      "stage": "Phase 3 Desktop UX",
+      "depends_on": [
+        "C-058"
+      ],
+      "risk_flagged": false,
+      "tests": [
+        "tests/test_runner_orchestrator.py",
+        "ui/desktop/src/lib/timeline.test.ts",
+        "ui/desktop/src/components/PipelineProgress.test.ts"
+      ],
+      "files": [
+        "core/runner.py",
+        "core/progress.py",
+        "ui/desktop/src/lib/timeline.ts",
+        "ui/desktop/src/components/PipelineProgress.vue",
+        "ui/desktop/src/views/ResultsView.vue"
+      ],
+      "sdd_anchor": "\u00a79"
     }
   }
 }

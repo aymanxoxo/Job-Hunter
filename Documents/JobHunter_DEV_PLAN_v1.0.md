@@ -461,4 +461,16 @@ These map the SOW gates onto chunks; a gate is the acceptance test of its final 
 
 ---
 
+### Phase 3 — Hardening, Validation, UX Completion
+
+| ID | Goal | Files | Depends on | Acceptance | SDD ref |
+|----|------|-------|-----------|------------|---------|
+| C-057 | Phase 3 backlog + frontend-aware harness | `tools/chunks.json`, `Documents/JobHunter_DEV_PLAN_v1.0.md`, `PROGRESS.md`, `tools/jh.py` | C-021, C-038 | C-058+ are registered as ready/todo Phase 3 chunks; `jh.py next` works again; harness validates frontend/Vitest chunk tests without running `.ts` specs through pytest | §1 |
+| C-058 | Desktop settings runtime config bridge | `ui/desktop/src/stores/pipeline.ts`, `ui/desktop/src/views/SettingsView.vue`, `ui/desktop/src-tauri/src/lib.rs`, `ui/cli/sidecar.py` | C-057 | Desktop runs pass persisted Settings config through IPC so connector toggles, limits, delay, and DDG fields override `config.yaml` for that run without storing secrets | §11.1 |
+| C-059 | Real run smoke validation command | `ui/cli/cli.py`, `tests/e2e/test_live_smoke_command.py`, `README.md` | C-057 | Guarded opt-in command validates a real Adzuna + Gemini/OpenRouter run only when required env vars are present; skips cleanly with no secrets printed | §12 |
+| C-060 | ResultsView real export action | `ui/desktop/src/views/ResultsView.vue`, `ui/desktop/src/stores/pipeline.ts`, `ui/desktop/src-tauri/src/lib.rs`, `ui/cli/sidecar.py` | C-058 | Results export calls the Python exporter, writes configured CSV/JSON files, and shows returned output paths in the UI | §11.2 |
+| C-061 | Desktop partial failure and empty-state UX | `core/runner.py`, `core/progress.py`, `ui/desktop/src/lib/timeline.ts`, `ui/desktop/src/components/PipelineProgress.vue`, `ui/desktop/src/views/ResultsView.vue` | C-058 | Connector-level done/failed/zero-result progress events reach the desktop; UI shows clear partial-success and empty-result states | §9 |
+
+---
+
 *End of Development Plan v1.0 — keep [`../PROGRESS.md`](../PROGRESS.md) and commits in lockstep with this file.*
