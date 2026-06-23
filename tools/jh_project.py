@@ -56,6 +56,12 @@ class ProjectConfig:
     plugin_boundaries: tuple[tuple[str, str], ...]
     test_command_tail: tuple[str, ...]
     test_flags: tuple[str, ...]
+    frontend_test_root_relpath: str
+    frontend_test_command: tuple[str, ...]
+    frontend_test_extensions: tuple[str, ...]
+    rust_test_root_relpath: str
+    rust_test_command: tuple[str, ...]
+    rust_test_extensions: tuple[str, ...]
     lint_command_tail: tuple[str, ...]
     default_gate_chunk: str
     orientation_start_marker: str
@@ -95,13 +101,19 @@ JOBHUNTER = ProjectConfig(
     ),
     test_command_tail=("-m", "pytest"),
     test_flags=("-q", "--asyncio-mode=auto"),
+    frontend_test_root_relpath="ui/desktop",
+    frontend_test_command=("npm", "run", "test", "--"),
+    frontend_test_extensions=(".ts", ".tsx"),
+    rust_test_root_relpath="ui/desktop/src-tauri",
+    rust_test_command=("cargo", "test", "--test"),
+    rust_test_extensions=(".rs",),
     lint_command_tail=("-m", "ruff", "check", "."),
     default_gate_chunk="C-040",
     orientation_start_marker="<!-- jh:orientation:start -->",
     orientation_end_marker="<!-- jh:orientation:end -->",
     orientation_prelude_lines=(
-        "- **Phase:** Phase 1 - Foundation (M-03 gate cleared). "
-        "**Next gate:** M-06 (chunks C-037 + C-038).",
+        "- **Phase:** Phase 3 hardening active (M-03 and M-06 gates cleared). "
+        "**Next gate:** Phase 3 hardening backlog (C-058-C-061).",
     ),
     orientation_footer_lines=(
         "- **Notes:** Dev loop runs through short-lived GitHub PR branches; the user reviews "

@@ -1080,6 +1080,12 @@ DEMO_PROJECT = jh_project.ProjectConfig(
     plugin_boundaries=(("src/a", "b"),),
     test_command_tail=("-m", "unittest"),
     test_flags=("-v",),
+    frontend_test_root_relpath="web",
+    frontend_test_command=("npm", "run", "test", "--"),
+    frontend_test_extensions=(".ts",),
+    rust_test_root_relpath="native",
+    rust_test_command=("cargo", "test", "--test"),
+    rust_test_extensions=(".rs",),
     lint_command_tail=("-m", "flake8"),
     default_gate_chunk="T-01",
     orientation_start_marker="<!-- demo:orientation:start -->",
@@ -1123,14 +1129,175 @@ def test_engine_runs_status_next_against_a_non_jobhunter_adapter():
 def test_engine_gate_plan_uses_adapter_supplied_tools():
     commands = engine.gate_commands(
         python="py",
-        focused_targets=["tests/test_demo.py"],
         test_command_tail=DEMO_PROJECT.test_command_tail,
         test_flags=DEMO_PROJECT.test_flags,
         lint_command_tail=DEMO_PROJECT.lint_command_tail,
     )
     assert commands["full"] == ("py", "-m", "unittest", "-v")
     assert commands["lint"] == ("py", "-m", "flake8")
-    assert "pytest" not in " ".join(commands["focused"])
+
+
+def test_engine_focused_test_plan_uses_adapter_supplied_frontend_and_rust_roots():
+    plan = engine.focused_test_plan(
+        python="py",
+        focused_targets=[
+            "tests/test_demo.py",
+            "web/src/demo.test.ts",
+            "native/tests/ipc_integration.rs",
+        ],
+        test_command_tail=DEMO_PROJECT.test_command_tail,
+        test_flags=DEMO_PROJECT.test_flags,
+        frontend_root_relpath=DEMO_PROJECT.frontend_test_root_relpath,
+        frontend_test_command=DEMO_PROJECT.frontend_test_command,
+        frontend_test_extensions=DEMO_PROJECT.frontend_test_extensions,
+        rust_root_relpath=DEMO_PROJECT.rust_test_root_relpath,
+        rust_test_command=DEMO_PROJECT.rust_test_command,
+        rust_test_extensions=DEMO_PROJECT.rust_test_extensions,
+    )
+
+    assert plan.commands == (
+        engine.FocusedTestCommand(
+            ("py", "-m", "unittest", "tests/test_demo.py", "-v"), "."
+        ),
+        engine.FocusedTestCommand(("npm", "run", "test", "--", "src/demo.test.ts"), "web"),
+        engine.FocusedTestCommand(("cargo", "test", "--test", "ipc_integration"), "native"),
+    )
+    assert plan.unsupported_targets == ()
+    assert plan.config_errors == ()
+
+
+def test_engine_focused_test_plan_reports_empty_frontend_command():
+    plan = engine.focused_test_plan(
+        python="py",
+        focused_targets=["web/src/demo.test.ts"],
+        test_command_tail=DEMO_PROJECT.test_command_tail,
+        test_flags=DEMO_PROJECT.test_flags,
+        frontend_root_relpath=DEMO_PROJECT.frontend_test_root_relpath,
+        frontend_test_command=(),
+        frontend_test_extensions=DEMO_PROJECT.frontend_test_extensions,
+        rust_root_relpath=DEMO_PROJECT.rust_test_root_relpath,
+        rust_test_command=DEMO_PROJECT.rust_test_command,
+        rust_test_extensions=DEMO_PROJECT.rust_test_extensions,
+    )
+
+    assert plan.commands == ()
+    assert plan.config_errors == (
+        "frontend focused tests are configured but no command is set",
+    )
+
+
+def test_engine_focused_test_plan_reports_empty_rust_command_once():
+    plan = engine.focused_test_plan(
+        python="py",
+        focused_targets=[
+            "native/tests/ipc_integration.rs",
+            "native/tests/settings_bridge.rs",
+        ],
+        test_command_tail=DEMO_PROJECT.test_command_tail,
+        test_flags=DEMO_PROJECT.test_flags,
+        frontend_root_relpath=DEMO_PROJECT.frontend_test_root_relpath,
+        frontend_test_command=DEMO_PROJECT.frontend_test_command,
+        frontend_test_extensions=DEMO_PROJECT.frontend_test_extensions,
+        rust_root_relpath=DEMO_PROJECT.rust_test_root_relpath,
+        rust_test_command=(),
+        rust_test_extensions=DEMO_PROJECT.rust_test_extensions,
+    )
+
+    assert plan.commands == ()
+    assert plan.config_errors == (
+        "Rust focused tests are configured but no command is set",
+    )
+
+
+def test_gate_splits_python_and_frontend_focused_tests(monkeypatch, tmp_path):
+    (tmp_path / "output" / "agent").mkdir(parents=True)
+    captured = []
+
+    monkeypatch.setattr(jh, "_input_hash", lambda root: "hash")
+    monkeypatch.setattr(jh, "run_doctor_checks", lambda root, git_messages: [])
+    monkeypatch.setattr(jh, "git_recent_messages", lambda root: [])
+    monkeypatch.setattr(
+        jh,
+        "load_config",
+        lambda root: {
+            "chunk_tests": {
+                "C-999": [
+                    "tests/test_demo.py",
+                    "ui/desktop/src/settings.test.ts",
+                    "ui/desktop/src-tauri/tests/ipc_integration.rs",
+                ]
+            },
+            "smoke_imports": [],
+        },
+    )
+    monkeypatch.setattr(jh, "project_python", lambda root: "py")
+    monkeypatch.setattr(jh, "resolve_tool", lambda name: name)
+    monkeypatch.setattr(jh, "_import_smoke", lambda imports, root: "PASS import smoke")
+
+    def fake_run(command, *, cwd=jh.ROOT, check=True):
+        captured.append((command, cwd))
+        return jh.CommandResult(command, 0, f"PASS {' '.join(command)}", "")
+
+    monkeypatch.setattr(jh, "run", fake_run)
+
+    evidence = jh.run_gate(tmp_path, chunk_id="C-999", ci=True)
+
+    assert captured == [
+        (("py", "-m", "pytest", "tests/test_demo.py", "-q", "--asyncio-mode=auto"), tmp_path),
+        (("npm", "run", "test", "--", "src/settings.test.ts"), tmp_path / "ui" / "desktop"),
+        (
+            ("cargo", "test", "--test", "ipc_integration"),
+            tmp_path / "ui" / "desktop" / "src-tauri",
+        ),
+        (("py", "-m", "pytest", "-q", "--asyncio-mode=auto"), tmp_path),
+        (("py", "-m", "ruff", "check", "."), tmp_path),
+    ]
+    assert "tests/test_demo.py" in evidence.focused
+    assert "src/settings.test.ts" in evidence.focused
+    assert "ipc_integration" in evidence.focused
+
+
+def test_gate_collects_all_focused_failures_before_raising(monkeypatch, tmp_path):
+    (tmp_path / "output" / "agent").mkdir(parents=True)
+    calls = []
+    monkeypatch.setattr(jh, "resolve_tool", lambda name: name)
+
+    def fake_run(command, *, cwd=jh.ROOT, check=True):
+        calls.append((command, cwd))
+        return jh.CommandResult(command, 1, "", f"failed {' '.join(command)}")
+
+    monkeypatch.setattr(jh, "run", fake_run)
+
+    focused, error = jh._run_focused_tests(
+        root=tmp_path,
+        project=DEMO_PROJECT,
+        python="py",
+        focused_targets=["tests/test_demo.py", "web/src/settings.test.ts"],
+    )
+
+    assert len(calls) == 2
+    assert "FAIL unittest tests/test_demo.py" in focused
+    assert "FAIL test -- src/settings.test.ts" in focused
+    assert "tests/test_demo.py" in error
+    assert "src/settings.test.ts" in error
+
+
+def test_input_hash_includes_frontend_and_rust_files(tmp_path):
+    (tmp_path / "ui" / "desktop" / "src").mkdir(parents=True)
+    ts_file = tmp_path / "ui" / "desktop" / "src" / "demo.test.ts"
+    rs_file = tmp_path / "ui" / "desktop" / "src-tauri" / "tests" / "ipc_integration.rs"
+    rs_file.parent.mkdir(parents=True)
+    ts_file.write_text("test('one', () => {})", encoding="utf-8")
+    rs_file.write_text("#[test]\nfn one() {}\n", encoding="utf-8")
+
+    original = jh._input_hash(tmp_path)
+    ts_file.write_text("test('two', () => {})", encoding="utf-8")
+    after_ts = jh._input_hash(tmp_path)
+    rs_file.write_text("#[test]\nfn two() {}\n", encoding="utf-8")
+    after_rs = jh._input_hash(tmp_path)
+
+    assert original != after_ts
+    assert after_ts != after_rs
 
 
 def test_engine_module_has_no_jobhunter_identifiers():
