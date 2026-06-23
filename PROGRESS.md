@@ -56,7 +56,7 @@
 | C-017 | Gemini provider | Providers | C-006, C-008, C-014 | done | de61ba5 |
 | C-018 | Mock connector + fixtures | Connectors | C-005 | done | 5acca79 |
 | C-019 | Session store | Connectors | C-002 | done | 9fb5ce0 |
-| C-020 | DuckDuckGo discovery connector | Connectors | C-005, C-014 | done | — |
+| C-020 | DuckDuckGo discovery connector | Connectors | C-005, C-014 | done | 3d10708 |
 | C-021 | SettingsView DDG controls | Phase 2 | C-036, C-020 | todo | — |
 | C-022 | Pure pipeline transforms | Pipeline | C-004 | done | 26deae7 |
 | C-023 | Progress event emitter | Pipeline | C-002 | done | d5b7e06 |
