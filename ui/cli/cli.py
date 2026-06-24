@@ -204,7 +204,11 @@ def run(profile: str | None, profile_file: Path | None) -> None:
         runner = build_runner(config, emitter=ProgressEmitter(stream=sys.stderr))
     except ValueError as exc:
         raise click.ClickException(str(exc)) from exc
-    result = asyncio.run(runner.run(source))
+    try:
+        result = asyncio.run(runner.run(source))
+    except Exception as exc:
+        msg = _redact_secret_values(str(exc), config.auth)
+        raise click.ClickException(f"Run failed: {msg}") from exc
     _console().print(_results_table(result.jobs))
     for path in result.exported:
         click.echo(f"Exported: {path}")

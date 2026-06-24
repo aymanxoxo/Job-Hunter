@@ -429,6 +429,15 @@ def test_apply_connector_overrides_existing_connector_with_invalid_type_raises()
         )
 
 
+def test_sidecar_redact_secrets_masks_known_credential_values(monkeypatch):
+    """_redact_secrets replaces env-var values with *** before IPC output."""
+    from ui.cli.sidecar import _redact_secrets
+
+    monkeypatch.setenv("GEMINI_API_KEY", "my-secret-key-abc")
+    assert _redact_secrets("auth failed: Bearer my-secret-key-abc") == "auth failed: Bearer ***"
+    assert _redact_secrets("no secret here") == "no secret here"
+
+
 def test_apply_connector_overrides_reserved_keys_skipped():
     """Reserved config keys (ai, profile, output, auth) are silently skipped."""
     from ui.cli.sidecar import _apply_connector_overrides

@@ -25,12 +25,13 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import sys
 from pathlib import Path
 
 from pydantic import ValidationError
 
-from core.config import Config, ConnectorSettings, load_config
+from core.config import AuthConfig, Config, ConnectorSettings, load_config
 from core.logging import get_logger
 from core.models.job import Job
 from core.progress import ProgressEmitter
@@ -40,6 +41,21 @@ _CONFIG_PATH = Path("config.yaml")
 _log = get_logger("ui.sidecar")
 
 _RESERVED_CONFIG_KEYS = frozenset({"ai", "profile", "connectors", "output", "auth"})
+
+
+def _redact_secrets(msg: str) -> str:
+    """Replace known credential values with *** before writing to IPC stdout."""
+    auth = AuthConfig()
+    for name in (
+        auth.gemini_api_key_env,
+        auth.openrouter_api_key_env,
+        auth.adzuna_app_id_env,
+        auth.adzuna_app_key_env,
+    ):
+        val = os.environ.get(name)
+        if val and val in msg:
+            msg = msg.replace(val, "***")
+    return msg
 
 
 def _job_to_dict(job: Job) -> dict:
@@ -178,7 +194,7 @@ def main() -> None:
             sys.exit(1)
     except Exception as exc:
         _log.error("sidecar command failed", command=command, error=str(exc))
-        _error(f"{command or 'command'} failed: {exc}")
+        _error(f"{command or 'command'} failed: {_redact_secrets(str(exc))}")
         sys.exit(1)
 
 

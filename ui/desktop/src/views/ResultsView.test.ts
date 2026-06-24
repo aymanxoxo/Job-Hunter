@@ -140,6 +140,24 @@ describe("ResultsView", () => {
     expect(wrapper.find("[data-testid='result-detail']").exists()).toBe(false);
   });
 
+  it("does not render the detail link for javascript: URLs", async () => {
+    const { wrapper } = mountView([
+      {
+        id: "job-evil",
+        title: "Malicious Job",
+        company: "Bad Corp",
+        location: "Remote",
+        source: "mock",
+        score: 85,
+        url: "javascript:alert(document.cookie)",
+      },
+    ]);
+
+    await wrapper.get("[data-testid='result-row-job-evil']").trigger("click");
+
+    expect(wrapper.find("[data-testid='result-detail-link']").exists()).toBe(false);
+  });
+
   it("merges newly run results with existing rows", async () => {
     const { store, wrapper } = mountView();
     vi.spyOn(store, "runPipeline").mockImplementation(async () => {

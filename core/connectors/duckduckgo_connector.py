@@ -19,12 +19,14 @@ Pipeline inside ``search()``:
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 import json
 import logging
 import re
 import uuid
 from collections.abc import Awaitable, Callable
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 
@@ -33,6 +35,33 @@ from core.models.job import Job
 from core.models.search_criteria import SearchCriteria
 
 log = logging.getLogger(__name__)
+
+_SAFE_URL_SCHEMES = frozenset({"http", "https"})
+
+
+def _is_safe_url(url: str) -> bool:
+    """Return True only for public http(s) URLs; block private/loopback/non-http targets."""
+    try:
+        parsed = urlparse(url)
+    except ValueError:
+        return False
+    if parsed.scheme not in _SAFE_URL_SCHEMES:
+        return False
+    host = parsed.hostname
+    if not host:
+        return False
+    try:
+        addr = ipaddress.ip_address(host)
+        return not (
+            addr.is_private
+            or addr.is_loopback
+            or addr.is_link_local
+            or addr.is_multicast
+            or addr.is_reserved
+        )
+    except ValueError:
+        return host.lower() != "localhost"
+
 
 AiCompleteFn = Callable[[str], Awaitable[str]]
 DdgSearchFn = Callable[[str, int], Awaitable[list[dict[str, str]]]]
@@ -162,7 +191,7 @@ class DDGConnector(BaseConnector):
             if len(jobs) >= self.max_results:
                 break
             url = item.get("url", "")
-            if not url:
+            if not url or not _is_safe_url(url):
                 continue
             try:
                 page_text = await self._http_fetch(url)
