@@ -12,6 +12,7 @@ from core.connectors.duckduckgo_connector import (
     _extract_job,
     _gather_trust_snippets,
     _generate_queries,
+    _is_safe_url,
     _loads,
     _purify_results,
     _score_companies_trust,
@@ -43,6 +44,62 @@ async def _ddg_empty(query: str, n: int) -> list[dict]:
 
 async def _http_hello(url: str) -> str:
     return "<html><body>Python Engineer at Acme Corp. Apply now.</body></html>"
+
+
+# ---------------------------------------------------------------------------
+# _is_safe_url — SSRF guard
+# ---------------------------------------------------------------------------
+
+def test_is_safe_url_allows_public_http_and_https():
+    assert _is_safe_url("https://example.com/jobs/1")
+    assert _is_safe_url("http://careers.company.co.uk/apply")
+
+
+def test_is_safe_url_blocks_non_http_schemes():
+    assert not _is_safe_url("javascript:alert(1)")
+    assert not _is_safe_url("file:///etc/passwd")
+    assert not _is_safe_url("ftp://files.example.com/data")
+
+
+def test_is_safe_url_blocks_private_and_loopback_ips():
+    assert not _is_safe_url("http://192.168.1.1/admin")
+    assert not _is_safe_url("http://10.0.0.1/secret")
+    assert not _is_safe_url("http://172.16.0.1/internal")
+    assert not _is_safe_url("http://127.0.0.1:6379/")
+    assert not _is_safe_url("http://localhost/health")
+
+
+async def test_search_skips_private_ip_urls():
+    """Purified URLs pointing at RFC1918 addresses must not be fetched."""
+    fetched: list[str] = []
+
+    async def _http(url: str) -> str:
+        fetched.append(url)
+        return "<html>job</html>"
+
+    async def _ai(prompt: str) -> str:
+        if "DuckDuckGo" in prompt or "queries" in prompt.lower():
+            return json.dumps(["python jobs"])
+        if "genuine" in prompt.lower() or "filter" in prompt.lower():
+            return json.dumps([
+                {"url": "http://192.168.1.100/jobs", "title": "Dev", "company": "Co"}
+            ])
+        return json.dumps({"title": "Dev", "company": "Co", "location": None,
+                           "description": "x", "salary_range": None})
+
+    async def _ddg(query: str, n: int) -> list[dict]:
+        return [{"href": "http://192.168.1.100/jobs", "title": "Dev", "body": "x"}]
+
+    connector = DDGConnector(
+        trust_check_enabled=False,
+        ai_complete=_ai,
+        ddg_search_fn=_ddg,
+        http_fetch_fn=_http,
+    )
+    jobs = await connector.search(_CRITERIA)
+
+    assert fetched == []
+    assert jobs == []
 
 
 # ---------------------------------------------------------------------------

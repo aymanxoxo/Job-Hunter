@@ -207,6 +207,16 @@ function toggleHiddenRows() {
   showHidden.value = !showHidden.value;
 }
 
+function safeUrl(url: string): string {
+  if (!url) return "";
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" || parsed.protocol === "http:" ? url : "";
+  } catch {
+    return "";
+  }
+}
+
 async function rerunSearch() {
   if (!pipeline.lastRun || pipeline.status === "running") {
     return;
@@ -387,10 +397,10 @@ async function rerunSearch() {
         </section>
 
         <a
-          v-if="selectedRow.url"
+          v-if="selectedRow.url && safeUrl(selectedRow.url)"
           class="detail-link"
           data-testid="result-detail-link"
-          :href="selectedRow.url"
+          :href="safeUrl(selectedRow.url)"
           target="_blank"
           rel="noreferrer"
         >
