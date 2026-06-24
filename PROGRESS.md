@@ -9,10 +9,10 @@
 ## Orientation
 
 <!-- jh:orientation:start -->
-- **Phase:** Phase 3 hardening active (M-03 and M-06 gates cleared). **Next gate:** Phase 3 hardening backlog (C-058-C-061).
-- **Last done:** **C-059** - Real run smoke validation command (merge pending). Prior done: **C-058** - Desktop settings runtime config bridge (`5376cf2`); **C-057** - Phase 3 backlog + frontend-aware harness (`5043a0d`).
-- **Next ready:** **C-060** - ResultsView real export action; **C-061** - Desktop partial failure and empty-state UX.
-- **Blocked:** none.
+- **Phase:** Phase 3 hardening active (M-03 and M-06 gates cleared). **Next gate:** Phase 3 hardening backlog (C-058–C-068).
+- **Last done:** **C-059** - Real run smoke validation command (`7cf654a`). Prior done: **C-058** - Desktop settings runtime config bridge (`5376cf2`); **C-057** - Phase 3 backlog + frontend-aware harness (`5043a0d`).
+- **Next ready:** **C-062** (security hardening), **C-063** (runner correctness), **C-064** (AI provider reliability — showstopper: wrong Gemini model), **C-065** (connector hardening), **C-066** (config + pipeline correctness), **C-067** (session store hardening) — all self/unlocked; **C-068** (desktop hardening, external).
+- **Blocked:** C-060, C-061 pending C-062–C-068.
 - **Notes:** Dev loop runs through short-lived GitHub PR branches; the user reviews and merges. See [ADR-014/015/016](Documents/DECISIONS.md).
 - **Protocol:** each chunk runs design -> test -> impl -> gate -> verify -> land (plan section 3.3); risky chunks pause for Design sign-off.
 <!-- jh:orientation:end -->
@@ -83,11 +83,22 @@
 | C-056 | Desktop API key — honest labeling + clipboard copy | Phase 2 | C-036, C-052 | done | d895aa8 |
 | C-057 | Phase 3 backlog + frontend-aware harness | Phase 3 Planning | C-021, C-038 | done | 5043a0d |
 | C-058 | Desktop settings runtime config bridge | Phase 3 Desktop Hardening | C-057 | done | 5376cf2 |
-| C-059 | Real run smoke validation command | Phase 3 Validation | C-057 | done | — |
-| C-060 | ResultsView real export action | Phase 3 Desktop UX | C-058 | todo | — |
-| C-061 | Desktop partial failure and empty-state UX | Phase 3 Desktop UX | C-058 | todo | — |
+| C-059 | Real run smoke validation command | Phase 3 Validation | C-057 | done | 7cf654a |
+| C-062 | Security hardening — sidecar secret leak + CLI unguarded run + DDG SSRF + JS-URL injection | Phase 3 Hardening | C-059, C-020 | todo | — |
+| C-063 | Runner correctness — False-drop in kwargs filter + disabled-connector gate + fail-graceful scoring | Phase 3 Hardening | C-059 | todo | — |
+| C-064 | AI provider reliability — Gemini model name + retry Retry-After + batch-parse resilience | Phase 3 Hardening | C-054, C-059 | todo | — |
+| C-065 | Connector hardening — Adzuna retry/creds/silent-drop + DDG trust_summary + Mock fixture path | Phase 3 Hardening | C-051, C-020 | todo | — |
+| C-066 | Config + pipeline correctness — env-override clobber + min_score wiring + unscored-job log | Phase 3 Hardening | C-003, C-022, C-025 | todo | — |
+| C-067 | Session store hardening — UUID instability + static PBKDF2 salt | Phase 3 Hardening | C-019 | todo | — |
+| C-068 | Desktop hardening — pipeline store crashes + race conditions + hard-coded threshold | Phase 3 Hardening | C-058, C-059 | todo | — |
+| C-060 | ResultsView real export action | Phase 3 Desktop UX | C-058, C-062, C-063, C-064, C-065, C-066, C-067, C-068 | todo | — |
+| C-061 | Desktop partial failure and empty-state UX | Phase 3 Desktop UX | C-058, C-062, C-063, C-064, C-065, C-066, C-067, C-068 | todo | — |
 
 ## Changelog (newest first)
+
+- 2026-06-24 - **C-059** Real run smoke validation command on `chunk/C-059-smoke-validate`: adds `jobhunter smoke-validate` CLI command — runs a minimal real Adzuna + AI pipeline (3 results, 0–0.5 s delay, single provider) to confirm credentials and connectivity; skips cleanly (exit 0) when any required env var is absent; redacts credential values from all exception messages before display; `--provider` flag selects gemini or openrouter with auto-detect fallback; `_smoke_discover_factory` restricts plugin discovery to the selected provider + Adzuna only; `_smoke_config` overrides the base config for a fast smoke run. Extends `_instantiate_connector` and `_instantiate_provider` to thread `auth` env-var names through the runner. 19 focused tests (skip paths, redaction guard, discovery filter, openrouter default model); gate green (329 pytest, Ruff, doctor, import smoke). Merged `7cf654a` (PR #90).
+
+- 2026-06-24 - **Full codebase review** (planning only, no feature code): comprehensive review across all layers surfaced 7 hardening chunks inserted before C-060/C-061. Showstoppers: `gemini-3-flash` model name returns 404 on every default call (C-064); Adzuna credentials sent in query-string params exposing them in proxy logs (C-065); sidecar emits raw exception messages (including potential API key fragments) verbatim to the IPC JSON stream (C-062). Critical correctness: `_filter_constructor_kwargs` drops `False`/`0` values so `enabled=False` is silently stripped (C-063); `Runner.run` does not catch `score_jobs` exceptions, aborting the entire run on any AI error (C-063); `_retry.py` ignores `Retry-After` header on 429 and has an unbound `response` on `max_attempts=0` (C-064); one malformed item in a scored-jobs list aborts the entire batch (C-064); DDG SSRF via AI-generated URLs (C-062); `javascript:` URL injection in Tauri WebView (C-062); `uuid.getnode()` unstable on containers making all sessions permanently unreadable (C-067); `trust_summary` always `None` in DDG connector (C-065). Desktop: pipeline store stuck permanently at `'running'` on IPC import failure (C-068); stale results re-merged on run failure (C-068); hard-coded 40pt threshold ignoring user config (C-068). C-060 and C-061 deps updated to gate on all 7 new hardening chunks.
 
 - 2026-06-24 - **C-020** DuckDuckGo discovery connector on `chunk/C-020-duckduckgo-connector`: adds `DDGConnector` — open-web job discovery via DuckDuckGo with an AI purification pass and optional company trust scoring. AI generates open DDG search queries (no site: restrictions); DDG executes queries; AI batch-purifies to real job postings + extracts company names; DDG trust searches (Glassdoor, Reddit, Trustpilot snippets) feed an AI trust score 0–100; jobs below `trust_threshold` are excluded when `trust_check_enabled`; httpx fetches surviving URLs; AI extracts structured Job fields. All I/O injected for tests — no real network traffic. Adds `trust_score` and `trust_summary` fields to `Job`; adds DDG fields to `ConnectorSettings` (`results_per_query`, `trust_threshold`, `trust_check_enabled`); adds `complete()` to `BaseAIProvider` and all three providers; extends `_instantiate_connector` to wire `ai_complete` from the active provider; updates `config.yaml` + `pyproject.toml` (adds `duckduckgo-search>=6`); removes `google_client_id_env`/`google_client_secret_env` from `AuthConfig` (C-016 removed). 24 focused tests; 329 total pass; gate green.
 
