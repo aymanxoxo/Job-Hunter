@@ -24,6 +24,28 @@ class StubProvider(BaseAIProvider):
         return jobs
 
 
+class AuthAwareProvider(BaseAIProvider):
+    name = "gemini"
+    auth_methods = ("api_key",)
+
+    def __init__(
+        self,
+        *,
+        api_key_env: str = "GEMINI_API_KEY",
+        model: str = "default-model",
+        batch_size: int = 15,
+    ) -> None:
+        self.api_key_env = api_key_env
+        self.model = model
+        self.batch_size = batch_size
+
+    async def generate_criteria(self, profile):
+        return SearchCriteria(raw_profile=profile)
+
+    async def score_jobs(self, jobs, criteria):
+        return jobs
+
+
 class ConfigurableConnector(BaseConnector):
     """Stub connector that accepts the same config kwargs as real connectors."""
 
@@ -72,26 +94,53 @@ class FixtureConnector(BaseConnector):
         return []
 
 
+class AuthAwareAdzunaConnector(BaseConnector):
+    name = "adzuna"
+    auth_methods = ("api_key",)
+
+    def __init__(
+        self,
+        *,
+        app_id_env: str = "ADZUNA_APP_ID",
+        app_key_env: str = "ADZUNA_APP_KEY",
+        max_results: int = 50,
+    ) -> None:
+        self.app_id_env = app_id_env
+        self.app_key_env = app_key_env
+        self.max_results = max_results
+
+    async def search(self, criteria):
+        return []
+
+
 def _config(**connector_settings):
     connectors = {}
+    auth = connector_settings.pop("auth", None) or SimpleNamespace(
+        gemini_api_key_env="GEMINI_API_KEY",
+        openrouter_api_key_env="OPENROUTER_API_KEY",
+        adzuna_app_id_env="ADZUNA_APP_ID",
+        adzuna_app_key_env="ADZUNA_APP_KEY",
+    )
+    provider = connector_settings.pop("provider", "stub")
     for name, settings in connector_settings.items():
         if isinstance(settings, dict):
             connectors[name] = SimpleNamespace(**settings)
         else:
             connectors[name] = settings
     return SimpleNamespace(
-        ai=SimpleNamespace(provider="stub", model="stub-model", batch_size=10),
+        ai=SimpleNamespace(provider=provider, model="stub-model", batch_size=10),
         connectors=connectors,
         output=SimpleNamespace(directory="output/", format="both"),
+        auth=auth,
     )
 
 
-def _discover_factory(connector_classes):
+def _discover_factory(connector_classes, provider_classes=None):
     """Return a discover function that yields the given connector classes by name match."""
 
     def fake_discover(directory, base):
         if base is BaseAIProvider and "ai_providers" in str(directory):
-            return [StubProvider]
+            return list(provider_classes or [StubProvider])
         if base is BaseConnector and "connectors" in str(directory):
             return list(connector_classes)
         return []
@@ -141,3 +190,27 @@ def test_build_runner_passes_fixture_path_to_mock():
     runner = build_runner(config, discover=discover)
     assert len(runner.connectors) == 1
     assert runner.connectors[0].fixture_path == Path("f.json")
+
+
+def test_build_runner_passes_auth_env_names_to_provider_and_connector():
+    discover = _discover_factory([AuthAwareAdzunaConnector], provider_classes=[AuthAwareProvider])
+    config = _config(
+        provider="gemini",
+        auth=SimpleNamespace(
+            gemini_api_key_env="MY_GEMINI_KEY",
+            openrouter_api_key_env="MY_OPENROUTER_KEY",
+            adzuna_app_id_env="MY_ADZUNA_ID",
+            adzuna_app_key_env="MY_ADZUNA_KEY",
+        ),
+        adzuna={"max_results": 3},
+    )
+
+    runner = build_runner(config, discover=discover)
+
+    assert runner.provider.api_key_env == "MY_GEMINI_KEY"
+    assert runner.provider.model == "stub-model"
+    assert runner.provider.batch_size == 10
+    assert len(runner.connectors) == 1
+    assert runner.connectors[0].app_id_env == "MY_ADZUNA_ID"
+    assert runner.connectors[0].app_key_env == "MY_ADZUNA_KEY"
+    assert runner.connectors[0].max_results == 3

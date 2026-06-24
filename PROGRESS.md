@@ -10,8 +10,8 @@
 
 <!-- jh:orientation:start -->
 - **Phase:** Phase 3 hardening active (M-03 and M-06 gates cleared). **Next gate:** Phase 3 hardening backlog (C-058-C-061).
-- **Last done:** **C-058** - Desktop settings runtime config bridge (`5376cf2`). Prior done: **C-057** - Phase 3 backlog + frontend-aware harness (`5043a0d`); **C-056** - Desktop API key — honest labeling + clipboard copy (`d895aa8`).
-- **Next ready:** **C-059** - Real run smoke validation command (risk-flagged; design sign-off required); **C-060** - ResultsView real export action; **C-061** - Desktop partial failure and empty-state UX.
+- **Last done:** **C-059** - Real run smoke validation command (merge pending). Prior done: **C-058** - Desktop settings runtime config bridge (`5376cf2`); **C-057** - Phase 3 backlog + frontend-aware harness (`5043a0d`).
+- **Next ready:** **C-060** - ResultsView real export action; **C-061** - Desktop partial failure and empty-state UX.
 - **Blocked:** none.
 - **Notes:** Dev loop runs through short-lived GitHub PR branches; the user reviews and merges. See [ADR-014/015/016](Documents/DECISIONS.md).
 - **Protocol:** each chunk runs design -> test -> impl -> gate -> verify -> land (plan section 3.3); risky chunks pause for Design sign-off.
@@ -83,7 +83,7 @@
 | C-056 | Desktop API key — honest labeling + clipboard copy | Phase 2 | C-036, C-052 | done | d895aa8 |
 | C-057 | Phase 3 backlog + frontend-aware harness | Phase 3 Planning | C-021, C-038 | done | 5043a0d |
 | C-058 | Desktop settings runtime config bridge | Phase 3 Desktop Hardening | C-057 | done | 5376cf2 |
-| C-059 | Real run smoke validation command | Phase 3 Validation | C-057 | todo | — |
+| C-059 | Real run smoke validation command | Phase 3 Validation | C-057 | done | — |
 | C-060 | ResultsView real export action | Phase 3 Desktop UX | C-058 | todo | — |
 | C-061 | Desktop partial failure and empty-state UX | Phase 3 Desktop UX | C-058 | todo | — |
 
