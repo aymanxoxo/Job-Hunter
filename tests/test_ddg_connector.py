@@ -207,12 +207,16 @@ async def test_score_companies_trust_returns_ai_score():
         _ddg,
         _ai_returns({"trust_score": 82, "trust_summary": "Highly rated"}),
     )
-    assert scores["Acme"] == 82
+    score, summary = scores["Acme"]
+    assert score == 82
+    assert summary == "Highly rated"
 
 
 async def test_score_companies_trust_defaults_to_50_when_no_snippets():
     scores = await _score_companies_trust(["Unknown Co"], _ddg_empty, _ai_returns({}))
-    assert scores["Unknown Co"] == 50
+    score, summary = scores["Unknown Co"]
+    assert score == 50
+    assert summary is None
 
 
 async def test_score_companies_trust_defaults_to_50_on_bad_ai():
@@ -223,7 +227,9 @@ async def test_score_companies_trust_defaults_to_50_on_bad_ai():
         return "not json"
 
     scores = await _score_companies_trust(["Acme"], _ddg, _bad_ai)
-    assert scores["Acme"] == 50
+    score, summary = scores["Acme"]
+    assert score == 50
+    assert summary is None
 
 
 # ---------------------------------------------------------------------------
@@ -407,3 +413,35 @@ async def test_search_job_source_is_duckduckgo():
     )
     jobs = await connector.search(_CRITERIA)
     assert jobs and jobs[0].source == "duckduckgo"
+
+
+async def test_search_trust_summary_populated_from_ai():
+    """trust_summary on returned jobs must reflect the AI assessment, not always be None."""
+    async def _ai(prompt: str) -> str:
+        if "DuckDuckGo" in prompt or "queries" in prompt.lower():
+            return json.dumps(["python jobs"])
+        if "genuine" in prompt.lower() or "filter" in prompt.lower():
+            return json.dumps([{"url": "https://goodco.com/job", "title": "Dev",
+                                "company": "GoodCo"}])
+        if "trustworthy" in prompt.lower() or "trust score" in prompt.lower() \
+                or "glassdoor" in prompt.lower() or "trustpilot" in prompt.lower():
+            return json.dumps({"trust_score": 85, "trust_summary": "Excellent employer"})
+        return json.dumps({"title": "Dev", "company": "GoodCo", "location": "Remote",
+                           "description": "coding", "salary_range": None})
+
+    async def _ddg(query: str, n: int) -> list[dict]:
+        if any(kw in query for kw in ("glassdoor", "reddit", "trustpilot")):
+            return [{"body": "Great reviews, very positive"}]
+        return [{"href": "https://goodco.com/job", "title": "Dev", "body": "Apply now"}]
+
+    connector = DDGConnector(
+        trust_threshold=60,
+        trust_check_enabled=True,
+        ai_complete=_ai,
+        ddg_search_fn=_ddg,
+        http_fetch_fn=_http_hello,
+    )
+    jobs = await connector.search(_CRITERIA)
+    assert len(jobs) == 1
+    assert jobs[0].trust_score == 85
+    assert jobs[0].trust_summary == "Excellent employer"

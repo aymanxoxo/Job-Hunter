@@ -97,3 +97,8 @@ async def test_search_rejects_non_array_fixture(tmp_path: Path):
 
     with pytest.raises(ValueError, match="JSON array"):
         await connector.search(SearchCriteria())
+
+
+def test_default_fixture_path_is_absolute():
+    """DEFAULT_FIXTURE_PATH must be absolute so MockConnector works regardless of CWD."""
+    assert DEFAULT_FIXTURE_PATH.is_absolute()

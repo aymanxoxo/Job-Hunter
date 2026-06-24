@@ -1,6 +1,8 @@
-"""Adzuna job-search connector (C-051)."""
+"""Adzuna job-search connector (C-051, hardened C-065)."""
 from __future__ import annotations
 
+import asyncio
+import logging
 import os
 from collections.abc import Callable
 from contextlib import AbstractAsyncContextManager
@@ -20,6 +22,9 @@ DEFAULT_ADZUNA_TIMEOUT = 30.0
 DEFAULT_ADZUNA_PAGE_SIZE = 50
 DEFAULT_ADZUNA_APP_ID_ENV = "ADZUNA_APP_ID"
 DEFAULT_ADZUNA_APP_KEY_ENV = "ADZUNA_APP_KEY"
+
+_RETRYABLE_CODES = frozenset({429, 500, 502, 503, 504})
+log = logging.getLogger(__name__)
 
 ClientFactory = Callable[[], AbstractAsyncContextManager[httpx.AsyncClient]]
 
@@ -50,6 +55,8 @@ class AdzunaConnector(BaseConnector):
         max_results: int = 50,
         delay_min: float = 2.0,
         delay_max: float = 5.0,
+        max_attempts: int = 3,
+        base_delay: float = 1.0,
     ) -> None:
         self.app_id = app_id
         self.app_key = app_key
@@ -64,21 +71,28 @@ class AdzunaConnector(BaseConnector):
         self.max_results = max_results
         self.delay_min = delay_min
         self.delay_max = delay_max
+        self.max_attempts = max_attempts
+        self.base_delay = base_delay
 
     async def search(self, criteria: SearchCriteria) -> list[Job]:
         """Search Adzuna and return raw unscored jobs, paginating until max_results reached."""
         app_id, app_key = self._credentials()
         collected: list[Job] = []
         page = 1
+        # Credentials go in Authorization header to keep them out of URL query strings
+        # (URL params appear in proxy logs and server access logs; Basic Auth does not).
+        auth = (app_id, app_key)
         async with self._client_factory() as client:
             while len(collected) < self.max_results:
                 remaining = self.max_results - len(collected)
                 page_size = min(self.page_size, remaining)
-                params = _params_for(
-                    criteria, app_id=app_id, app_key=app_key, page_size=page_size
-                )
+                params = _params_for(criteria, page_size=page_size)
                 endpoint = self.endpoint_template.format(country=self.country, page=page)
-                response = await client.get(endpoint, params=params, timeout=self.timeout)
+                response = await _adzuna_get(
+                    client, endpoint,
+                    auth=auth, params=params, timeout=self.timeout,
+                    max_attempts=self.max_attempts, base_delay=self.base_delay,
+                )
                 if response.status_code >= 400:
                     raise AdzunaConnectorError(
                         f"Adzuna search failed with HTTP {response.status_code}."
@@ -94,9 +108,16 @@ class AdzunaConnector(BaseConnector):
                     raise AdzunaConnectorError(
                         "Adzuna response JSON must include a results list."
                     )
-                page_jobs = [
-                    job for item in results if (job := _job_from_result(item)) is not None
-                ]
+                page_jobs: list[Job] = []
+                for item in results:
+                    job = _job_from_result(item)
+                    if job is not None:
+                        page_jobs.append(job)
+                    else:
+                        log.debug(
+                            "adzuna: dropped malformed result record id=%s",
+                            item.get("id") if isinstance(item, dict) else "?",
+                        )
                 if not page_jobs:
                     break
                 collected.extend(page_jobs)
@@ -116,12 +137,36 @@ class AdzunaConnector(BaseConnector):
         return httpx.AsyncClient()
 
 
+async def _adzuna_get(
+    client: httpx.AsyncClient,
+    url: str,
+    *,
+    auth: tuple[str, str],
+    params: dict,
+    timeout: float,
+    max_attempts: int,
+    base_delay: float,
+) -> httpx.Response:
+    """GET with exponential-backoff retry on transient network errors and 429/5xx."""
+    last_exc: Exception | None = None
+    for attempt in range(max_attempts):
+        try:
+            response = await client.get(url, auth=auth, params=params, timeout=timeout)
+            if response.status_code not in _RETRYABLE_CODES or attempt == max_attempts - 1:
+                return response
+            await asyncio.sleep(base_delay * (2 ** attempt))
+        except (httpx.NetworkError, httpx.TimeoutException) as exc:
+            last_exc = exc
+            if attempt == max_attempts - 1:
+                raise
+            await asyncio.sleep(base_delay * (2 ** attempt))
+    raise AdzunaConnectorError("unreachable retry state") from last_exc
+
+
 def _params_for(
-    criteria: SearchCriteria, *, app_id: str, app_key: str, page_size: int
+    criteria: SearchCriteria, *, page_size: int
 ) -> dict[str, str | int]:
     params: dict[str, str | int] = {
-        "app_id": app_id,
-        "app_key": app_key,
         "results_per_page": page_size,
         "content-type": "application/json",
     }

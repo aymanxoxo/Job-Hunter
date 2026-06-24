@@ -176,14 +176,16 @@ class DDGConnector(BaseConnector):
         if not purified:
             return []
 
-        # 4. Optional trust scoring + threshold filter
-        if self.trust_check_enabled and self.trust_threshold > 0:
+        # 4. Compute trust data once for all companies (when trust check enabled)
+        trust_map: dict[str, tuple[int, str | None]] = {}
+        if self.trust_check_enabled:
             companies = list({item.get("company", "") for item in purified if item.get("company")})
             trust_map = await _score_companies_trust(companies, self._ddg_search, self._ai_complete)
-            purified = [
-                item for item in purified
-                if trust_map.get(item.get("company", ""), 50) >= self.trust_threshold
-            ]
+            if self.trust_threshold > 0:
+                purified = [
+                    item for item in purified
+                    if trust_map.get(item.get("company", ""), (50, None))[0] >= self.trust_threshold
+                ]
 
         # 5. Fetch pages + extract Job fields
         jobs: list[Job] = []
@@ -197,15 +199,12 @@ class DDGConnector(BaseConnector):
                 page_text = await self._http_fetch(url)
                 job = await _extract_job(item, page_text, self._ai_complete)
                 if job is not None:
-                    trust_score = None
-                    trust_summary = None
+                    trust_score: int | None = None
+                    trust_summary: str | None = None
                     if self.trust_check_enabled:
                         company = item.get("company", "")
-                        if company:
-                            trust_data = await _score_companies_trust(
-                                [company], self._ddg_search, self._ai_complete
-                            )
-                            trust_score = trust_data.get(company)
+                        if company and company in trust_map:
+                            trust_score, trust_summary = trust_map[company]
                     job = job.model_copy(update={
                         "trust_score": trust_score,
                         "trust_summary": trust_summary,
@@ -259,12 +258,13 @@ async def _score_companies_trust(
     companies: list[str],
     ddg_search: DdgSearchFn,
     ai_complete: AiCompleteFn,
-) -> dict[str, int]:
-    trust_map: dict[str, int] = {}
+) -> dict[str, tuple[int, str | None]]:
+    """Return per-company (trust_score, trust_summary) pairs."""
+    trust_map: dict[str, tuple[int, str | None]] = {}
     for company in companies:
         snippets = await _gather_trust_snippets(company, ddg_search)
         if not snippets:
-            trust_map[company] = 50
+            trust_map[company] = (50, None)
             continue
         prompt = _TRUST_PROMPT.format(
             company=company,
@@ -274,11 +274,14 @@ async def _score_companies_trust(
             response = await ai_complete(prompt)
             data = _loads(response)
             if isinstance(data, dict):
-                trust_map[company] = int(data.get("trust_score", 50))
+                trust_map[company] = (
+                    int(data.get("trust_score", 50)),
+                    data.get("trust_summary") or None,
+                )
             else:
-                trust_map[company] = 50
+                trust_map[company] = (50, None)
         except Exception:
-            trust_map[company] = 50
+            trust_map[company] = (50, None)
     return trust_map
 
 
