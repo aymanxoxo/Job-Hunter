@@ -10,8 +10,8 @@
 
 <!-- jh:orientation:start -->
 - **Phase:** Phase 3 hardening active (M-03 and M-06 gates cleared). **Next gate:** Phase 3 hardening backlog (C-058-C-068).
-- **Last done:** **C-064** - AI provider reliability — Gemini model name + retry Retry-After + batch-parse resilience (`78074ff`). Prior done: **C-059** - Real run smoke validation command (`7cf654a`); **C-058** - Desktop settings runtime config bridge (`5376cf2`).
-- **Next ready:** **C-062** - Security hardening — sidecar secret leak + CLI unguarded run + DDG SSRF + JS-URL injection; **C-063** - Runner correctness — False-drop in kwargs filter + disabled-connector gate + fail-graceful scoring; **C-065** - Connector hardening — Adzuna retry/creds/silent-drop + DDG trust_summary + Mock fixture path; **C-066** - Config + pipeline correctness — env-override clobber + min_score wiring + unscored-job log; **C-067** - Session store hardening — UUID instability + static PBKDF2 salt; **C-068** - Desktop hardening — pipeline store crashes + race conditions + hard-coded threshold.
+- **Last done:** **C-064** - AI provider reliability — Gemini model name + retry Retry-After + batch-parse resilience (`78074ff`). Prior done: **C-062** - Security hardening — sidecar secret leak + CLI unguarded run + DDG SSRF + JS-URL injection (`8acda3b`); **C-059** - Real run smoke validation command (`7cf654a`).
+- **Next ready:** **C-063** - Runner correctness — False-drop in kwargs filter + disabled-connector gate + fail-graceful scoring; **C-065** - Connector hardening — Adzuna retry/creds/silent-drop + DDG trust_summary + Mock fixture path; **C-066** - Config + pipeline correctness — env-override clobber + min_score wiring + unscored-job log; **C-067** - Session store hardening — UUID instability + static PBKDF2 salt; **C-068** - Desktop hardening — pipeline store crashes + race conditions + hard-coded threshold.
 - **Blocked:** none.
 - **Notes:** Dev loop runs through short-lived GitHub PR branches; the user reviews and merges. See [ADR-014/015/016](Documents/DECISIONS.md).
 - **Protocol:** each chunk runs design -> test -> impl -> gate -> verify -> land (plan section 3.3); risky chunks pause for Design sign-off.
@@ -84,7 +84,7 @@
 | C-057 | Phase 3 backlog + frontend-aware harness | Phase 3 Planning | C-021, C-038 | done | 5043a0d |
 | C-058 | Desktop settings runtime config bridge | Phase 3 Desktop Hardening | C-057 | done | 5376cf2 |
 | C-059 | Real run smoke validation command | Phase 3 Validation | C-057 | done | 7cf654a |
-| C-062 | Security hardening — sidecar secret leak + CLI unguarded run + DDG SSRF + JS-URL injection | Phase 3 Hardening | C-059, C-020 | todo | — |
+| C-062 | Security hardening — sidecar secret leak + CLI unguarded run + DDG SSRF + JS-URL injection | Phase 3 Hardening | C-059, C-020 | done | 8acda3b |
 | C-063 | Runner correctness — False-drop in kwargs filter + disabled-connector gate + fail-graceful scoring | Phase 3 Hardening | C-059 | todo | — |
 | C-064 | AI provider reliability — Gemini model name + retry Retry-After + batch-parse resilience | Phase 3 Hardening | C-054, C-059 | done | 78074ff |
 | C-065 | Connector hardening — Adzuna retry/creds/silent-drop + DDG trust_summary + Mock fixture path | Phase 3 Hardening | C-051, C-020 | todo | — |
@@ -95,6 +95,8 @@
 | C-061 | Desktop partial failure and empty-state UX | Phase 3 Desktop UX | C-058, C-062, C-063, C-064, C-065, C-066, C-067, C-068 | todo | — |
 
 ## Changelog (newest first)
+
+- 2026-06-24 - **C-062** Security hardening on `chunk/C-062-security-hardening`: four security issues fixed. (1) Sidecar IPC secret leak: `_redact_secrets()` scrubs known credential env-var values from all error messages before they are written to IPC stdout — prevents API key fragments reaching the Tauri frontend JSON stream. (2) CLI unguarded run: `run` command wraps `asyncio.run(runner.run())` in a try/except that redacts secrets before raising `ClickException` (was a bare unhandled raise). (3) DDG SSRF via AI-generated URLs: `_is_safe_url()` blocks non-http(s) schemes and RFC1918/loopback IP targets; `DDGConnector.search()` skips any purified URL that fails the check. (4) `javascript:` URL injection in Tauri WebView: `safeUrl()` validates the href before binding; `v-if` hides the Open listing link entirely for `javascript:`/`file:` URLs. 6 new Python tests + 1 vitest; 367 pytest passed, 44 vitest passed; ruff clean; doctor PASS. Merged `8acda3b` (PR #92).
 
 - 2026-06-24 - **C-064** AI provider reliability on `chunk/C-064-ai-provider-reliability`: corrects the built-in Gemini/default config model from the invalid `gemini-3-flash` slug to `gemini-3.5-flash`; hardens shared provider retry so `Retry-After` is honored (capped at 60 s to prevent server-driven multi-hour hangs), `inf`/`nan` in `Retry-After` parsed to `None` not infinite sleep, and `max_attempts < 1` fails explicitly; makes scored-job parsing return `None` when all items in a batch are malformed (not silently pass back unscored originals). Backfills missing Phase 3 hardening metadata into `tools/chunks.json`/dev plan so the workflow harness can gate C-062-C-068 consistently. Focused tests green (39 → 41 after bug-fix additions); full pytest green (361 passed, 1 skipped); Ruff, doctor, and import smoke green. Merged `78074ff` (PR #91).
 
