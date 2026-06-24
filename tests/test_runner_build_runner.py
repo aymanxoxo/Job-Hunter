@@ -1,4 +1,4 @@
-"""C-053 — build_runner connector config wiring tests."""
+"""C-053 — build_runner connector config wiring tests (hardened C-063)."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -7,7 +7,7 @@ from types import SimpleNamespace
 from core.ai_providers import BaseAIProvider
 from core.connectors import BaseConnector
 from core.models.search_criteria import SearchCriteria
-from core.runner import build_runner
+from core.runner import _filter_constructor_kwargs, build_runner
 
 
 class StubProvider(BaseAIProvider):
@@ -214,3 +214,55 @@ def test_build_runner_passes_auth_env_names_to_provider_and_connector():
     assert runner.connectors[0].app_id_env == "MY_ADZUNA_ID"
     assert runner.connectors[0].app_key_env == "MY_ADZUNA_KEY"
     assert runner.connectors[0].max_results == 3
+
+
+# ---------------------------------------------------------------------------
+# _filter_constructor_kwargs — False/0 preservation (C-063)
+# ---------------------------------------------------------------------------
+
+
+def test_filter_constructor_kwargs_preserves_false_enabled():
+    """enabled=False must not be stripped — False is not None."""
+    class C:
+        def __init__(self, *, enabled: bool = True, max_results: int = 50):
+            pass
+
+    result = _filter_constructor_kwargs(C, {"enabled": False, "max_results": 50})
+    assert result.get("enabled") is False
+
+
+def test_filter_constructor_kwargs_preserves_zero_values():
+    """Numeric zero and 0.0 are valid config values and must not be stripped."""
+    class C:
+        def __init__(self, *, max_results: int = 50, delay_min: float = 2.0):
+            pass
+
+    result = _filter_constructor_kwargs(C, {"max_results": 0, "delay_min": 0.0})
+    assert result["max_results"] == 0
+    assert result["delay_min"] == 0.0
+
+
+def test_filter_constructor_kwargs_preserves_false_for_var_kwargs_class():
+    """Classes with **kwargs use the VAR_KEYWORD branch; False values must still be kept."""
+    class C:
+        def __init__(self, *, enabled: bool = True, trust_check_enabled: bool = True, **_kw):
+            pass
+
+    result = _filter_constructor_kwargs(C, {"enabled": False, "trust_check_enabled": False})
+    assert result.get("enabled") is False
+    assert result.get("trust_check_enabled") is False
+
+
+def test_filter_constructor_kwargs_drops_none_but_keeps_other_falsy():
+    """Only None should be filtered; False, 0, and '' all pass through."""
+    class C:
+        def __init__(self, *, enabled: bool = True, count: int = 1, label: str = "x"):
+            pass
+
+    result = _filter_constructor_kwargs(
+        C, {"enabled": False, "count": 0, "label": "", "missing_key": None}
+    )
+    assert result.get("enabled") is False
+    assert result["count"] == 0
+    assert result["label"] == ""
+    assert "missing_key" not in result

@@ -146,7 +146,11 @@ class Runner:
         emit("search", "done", current=len(merged))
 
         emit("score", "active", total=len(merged))
-        scored = await self.provider.score_jobs(list(merged), criteria) if merged else []
+        try:
+            scored = await self.provider.score_jobs(list(merged), criteria) if merged else []
+        except Exception as exc:
+            self.log.warning("score_jobs failed; run continues with unscored jobs", error=str(exc))
+            scored = list(merged)
         ranked = filter_below_threshold(
             sort_by_score(scored), min_score_threshold=criteria.min_score_threshold
         )

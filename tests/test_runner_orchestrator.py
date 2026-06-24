@@ -98,6 +98,59 @@ async def test_run_with_no_results_exports_empty(tmp_path):
     assert result.exported[0].exists()
 
 
+async def test_run_is_fail_graceful_when_score_jobs_raises(tmp_path):
+    """score_jobs raising must not abort the run — pipeline completes with unscored results."""
+    good = _job("1", "https://example.com/1")
+
+    class BoomProvider(BaseAIProvider):
+        name = "boom"
+        auth_methods = ("none",)
+
+        async def generate_criteria(self, profile):
+            return SearchCriteria(raw_profile=profile, min_score_threshold=0)
+
+        async def score_jobs(self, jobs, criteria):
+            raise RuntimeError("AI service down")
+
+    runner, _ = _runner(
+        [FakeConnector([good])],
+        output_dir=tmp_path,
+        output_format="json",
+    )
+    runner.provider = BoomProvider()
+
+    result = await runner.run("profile")
+
+    # Run must complete (not raise) and export a file even though scoring failed.
+    assert isinstance(result, RunResult)
+    assert result.exported[0].exists()
+
+
+async def test_search_all_skips_connectors_with_enabled_false(tmp_path):
+    """Connectors that have enabled=False on themselves must be excluded from search."""
+    searched: list[str] = []
+
+    class TrackingConnector(BaseConnector):
+        name = "tracking"
+        auth_methods = ("none",)
+
+        def __init__(self, *, enabled: bool = True, jobs=None):
+            self.enabled = enabled
+            self._jobs = jobs or []
+
+        async def search(self, criteria):
+            searched.append(self.name)
+            return list(self._jobs)
+
+    disabled = TrackingConnector(enabled=False)
+    active = TrackingConnector(enabled=True, jobs=[_job("1", "https://x.com/1")])
+    runner, _ = _runner([disabled, active], output_dir=tmp_path, output_format="json")
+
+    await runner.run("profile")
+
+    assert searched == ["tracking"]  # only the enabled one was searched
+
+
 def test_build_runner_selects_provider_by_name_and_instantiates_connectors():
     class Alpha(BaseAIProvider):
         name = "alpha"
