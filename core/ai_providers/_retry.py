@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import math
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
@@ -11,6 +12,7 @@ import httpx
 
 T = TypeVar("T")
 _RETRYABLE_STATUS = frozenset({429, 500, 502, 503, 504})
+_MAX_RETRY_AFTER = 60.0
 
 
 async def http_call_with_retry(
@@ -49,16 +51,20 @@ def _retry_delay(response: httpx.Response, attempt: int, base_delay: float) -> f
     if retry_after:
         parsed = _parse_retry_after(retry_after)
         if parsed is not None:
-            return parsed
+            return min(parsed, _MAX_RETRY_AFTER)
     return base_delay * (2**attempt)
 
 
 def _parse_retry_after(value: str) -> float | None:
     value = value.strip()
     try:
-        return max(0.0, float(value))
+        seconds = float(value)
     except ValueError:
         pass
+    else:
+        if math.isfinite(seconds):
+            return max(0.0, seconds)
+        return None
     try:
         retry_at = parsedate_to_datetime(value)
     except (TypeError, ValueError):

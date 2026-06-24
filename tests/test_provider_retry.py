@@ -185,6 +185,23 @@ async def test_retry_rejects_non_positive_max_attempts():
     assert t.call_count == 0
 
 
+async def test_retry_after_header_is_capped_at_max(monkeypatch):
+    sleeps: list[float] = []
+
+    async def fake_sleep(delay: float) -> None:
+        sleeps.append(delay)
+
+    monkeypatch.setattr("core.ai_providers._retry.asyncio.sleep", fake_sleep)
+    t = _SequenceTransport([_err_with_headers(429, {"Retry-After": "3600"}), _ollama_ok_response()])
+    provider = _make_ollama(t, max_attempts=3, base_delay=0.0)
+
+    criteria = await provider.generate_criteria("python dev")
+
+    assert criteria is not None
+    assert sleeps == [60.0]
+    assert t.call_count == 2
+
+
 # ---------------------------------------------------------------------------
 # Gemini retry tests
 # ---------------------------------------------------------------------------

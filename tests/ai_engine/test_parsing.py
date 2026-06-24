@@ -124,6 +124,12 @@ def test_parse_scored_jobs_response_returns_none_for_malformed_top_level_input()
     assert parse_scored_jobs_response("{}", jobs) is None
 
 
+def test_parse_scored_jobs_response_returns_none_when_all_items_malformed():
+    jobs = [_job()]
+
+    assert parse_scored_jobs_response('[{"bad": true}]', jobs) is None
+
+
 def test_parse_scored_jobs_response_ignores_unknown_job_ids():
     original = _job()
 

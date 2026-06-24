@@ -57,6 +57,9 @@ def parse_scored_jobs_response(text: str, jobs: Sequence[Job]) -> list[Job] | No
         except ValidationError:
             continue
 
+    if not scores and data:
+        return None
+
     by_id = {score.id: score for score in scores}
     scored_jobs: list[Job] = []
     for job in jobs:
