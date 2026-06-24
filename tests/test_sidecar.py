@@ -129,7 +129,7 @@ def _parse_lines(text: str) -> list[dict]:
 def _fake_config() -> Config:
     """Return a deterministic Config for unit tests."""
     return Config(
-        ai=AIConfig(provider="gemini", model="gemini-3-flash"),
+        ai=AIConfig(provider="gemini", model="gemini-3.5-flash"),
         auth=AuthConfig(),
         output=OutputConfig(),
         connectors={

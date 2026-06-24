@@ -4,9 +4,9 @@
 
 | | |
 |---|---|
-| Version | 1.0 |
+| Version | 1.1 |
 | Date | June 2026 |
-| Companion docs | [SDD v1.1](JobHunter_SDD_v1.1.md), [SOW v1.1](JobHunter_SOW_v1.1.md) |
+| Companion docs | [SDD v1.3](JobHunter_SDD_v1.1.md), [SOW v1.2](JobHunter_SOW_v1.1.md) |
 | Live tracker | [`../PROGRESS.md`](../PROGRESS.md) + git log |
 | Classification | Internal / Confidential |
 
@@ -14,6 +14,13 @@
 > code. The plan is therefore optimised for an AI agent that may be **swapped mid-project**: any model
 > must be able to read a tiny amount of state and know exactly where things stand and what to do next,
 > without re-deriving context from the whole repo. That constraint drives every convention below.
+
+---
+
+## Changelog — what changed in v1.1
+
+1. **C-064 provider reliability update** — records the Gemini default model correction to
+   `gemini-3.5-flash` and keeps the chunk plan aligned with the current provider contract.
 
 ---
 
@@ -403,7 +410,7 @@ renderers. The Vue store maps events into the timeline model; the component is p
 | ID | Goal | Files | Depends on | Acceptance | SDD ref |
 |----|------|-------|-----------|------------|---------|
 | C-015 | Ollama provider | `core/ai_providers/ollama_provider.py` | C-006, C-014 | Calls local endpoint (faked in tests); returns valid criteria/scores; `auth_methods=['none']` | §7.2 |
-| C-017 | Gemini provider | `core/ai_providers/gemini_provider.py` | C-006, C-008, C-014 | `GEMINI_API_KEY` resolved via auth_strategy; `gemini-3-flash` calls faked; parses response | §7.1 |
+| C-017 | Gemini provider | `core/ai_providers/gemini_provider.py` | C-006, C-008, C-014 | `GEMINI_API_KEY` resolved via auth_strategy; `gemini-3.5-flash` calls faked; parses response | §7.1 |
 
 ### Connectors
 
@@ -468,8 +475,15 @@ These map the SOW gates onto chunks; a gate is the acceptance test of its final 
 | C-057 | Phase 3 backlog + frontend-aware harness | `tools/chunks.json`, `Documents/JobHunter_DEV_PLAN_v1.0.md`, `PROGRESS.md`, `tools/jh.py` | C-021, C-038 | C-058+ are registered as ready/todo Phase 3 chunks; `jh.py next` works again; harness validates frontend/Vitest chunk tests without running `.ts` specs through pytest | §1 |
 | C-058 | Desktop settings runtime config bridge | `ui/desktop/src/stores/pipeline.ts`, `ui/desktop/src/views/SettingsView.vue`, `ui/desktop/src-tauri/src/lib.rs`, `ui/cli/sidecar.py` | C-057 | Desktop runs pass persisted Settings config through IPC so connector toggles, limits, delay, and DDG fields override `config.yaml` for that run without storing secrets | §11.1 |
 | C-059 | Real run smoke validation command | `ui/cli/cli.py`, `tests/e2e/test_live_smoke_command.py`, `README.md` | C-057 | Guarded opt-in command validates a real Adzuna + Gemini/OpenRouter run only when required env vars are present; skips cleanly with no secrets printed | §12 |
-| C-060 | ResultsView real export action | `ui/desktop/src/views/ResultsView.vue`, `ui/desktop/src/stores/pipeline.ts`, `ui/desktop/src-tauri/src/lib.rs`, `ui/cli/sidecar.py` | C-058 | Results export calls the Python exporter, writes configured CSV/JSON files, and shows returned output paths in the UI | §11.2 |
-| C-061 | Desktop partial failure and empty-state UX | `core/runner.py`, `core/progress.py`, `ui/desktop/src/lib/timeline.ts`, `ui/desktop/src/components/PipelineProgress.vue`, `ui/desktop/src/views/ResultsView.vue` | C-058 | Connector-level done/failed/zero-result progress events reach the desktop; UI shows clear partial-success and empty-result states | §9 |
+| C-062 | Security hardening — sidecar secret leak + CLI unguarded run + DDG SSRF + JS-URL injection | `ui/cli/sidecar.py`, `ui/cli/cli.py`, `core/connectors/duckduckgo_connector.py`, `ui/desktop/src/views/ResultsView.vue` | C-059, C-020 | Sidecar/CLI error paths redact secrets, unsafe DDG-generated URLs are rejected, and desktop external links cannot open `javascript:` URLs | §6.1, §10, §11.1, §11.2 |
+| C-063 | Runner correctness — False-drop in kwargs filter + disabled-connector gate + fail-graceful scoring | `core/runner.py` | C-059 | Constructor kwargs preserve explicit falsey values, disabled connectors never run, and scoring provider failures degrade without aborting the whole run | §5.1 |
+| C-064 | AI provider reliability — Gemini model name + retry Retry-After + batch-parse resilience | `core/ai_providers/_retry.py`, `core/ai_engine/parsing.py`, `core/ai_providers/gemini_provider.py`, `core/config.py`, `config.yaml` | C-054, C-059 | Gemini defaults to a valid current model, retry honors `Retry-After` and rejects invalid attempt counts, and malformed scored rows do not discard a whole batch | §5.2, §7.1, §9 |
+| C-065 | Connector hardening — Adzuna retry/creds/silent-drop + DDG trust_summary + Mock fixture path | `core/connectors/adzuna_connector.py`, `core/connectors/duckduckgo_connector.py`, `core/connectors/mock_connector.py` | C-051, C-020 | Adzuna avoids credential query leaks and silent item drops, DDG fills trust summaries, and mock fixtures resolve predictably | §6 |
+| C-066 | Config + pipeline correctness — env-override clobber + min_score wiring + unscored-job log | `core/config.py`, `core/pipeline.py`, `core/runner.py` | C-003, C-022, C-025 | Env overrides preserve sibling config, generated criteria inherit `ai.min_score`, and unscored filtered jobs are visible in structured logs | §5.1, §9 |
+| C-067 | Session store hardening — UUID instability + static PBKDF2 salt | `core/auth/session_store.py` | C-019 | Session encryption uses a stable per-install identifier and per-record salt so sessions remain readable and key derivation is not static | §8.3 |
+| C-068 | Desktop hardening — pipeline store crashes + race conditions + hard-coded threshold | `ui/desktop/src/stores/pipeline.ts`, `ui/desktop/src/lib/timeline.ts`, `ui/desktop/src/components/PipelineProgress.vue` | C-058, C-059 | Desktop import failures end runs cleanly, stale results are not re-merged after failures, and threshold display follows configured criteria | §9, §11.2 |
+| C-060 | ResultsView real export action | `ui/desktop/src/views/ResultsView.vue`, `ui/desktop/src/stores/pipeline.ts`, `ui/desktop/src-tauri/src/lib.rs`, `ui/cli/sidecar.py` | C-058, C-062, C-063, C-064, C-065, C-066, C-067, C-068 | Results export calls the Python exporter, writes configured CSV/JSON files, and shows returned output paths in the UI | §11.2 |
+| C-061 | Desktop partial failure and empty-state UX | `core/runner.py`, `core/progress.py`, `ui/desktop/src/lib/timeline.ts`, `ui/desktop/src/components/PipelineProgress.vue`, `ui/desktop/src/views/ResultsView.vue` | C-058, C-062, C-063, C-064, C-065, C-066, C-067, C-068 | Connector-level done/failed/zero-result progress events reach the desktop; UI shows clear partial-success and empty-result states | §9 |
 
 ---
 

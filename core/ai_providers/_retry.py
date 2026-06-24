@@ -1,14 +1,18 @@
-"""Shared exponential-backoff retry for provider HTTP calls (C-054, SDD §7)."""
+"""Shared retry handling for provider HTTP calls (C-054/C-064, SDD §7)."""
 from __future__ import annotations
 
 import asyncio
+import math
 from collections.abc import Awaitable, Callable
+from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 from typing import TypeVar
 
 import httpx
 
 T = TypeVar("T")
 _RETRYABLE_STATUS = frozenset({429, 500, 502, 503, 504})
+_MAX_RETRY_AFTER = 60.0
 
 
 async def http_call_with_retry(
@@ -21,23 +25,50 @@ async def http_call_with_retry(
 
     Retries on: NetworkError, TimeoutException, and status codes 429/500/502/503/504.
     Raises immediately on all other errors (4xx auth failures, bad requests, etc.).
-    Delay between attempts: base_delay * 2^attempt (1 s, 2 s on a 3-attempt sequence).
+    Delay between attempts: Retry-After when provided, else base_delay * 2^attempt.
     """
-    last_exc: BaseException | None = None
+    if max_attempts < 1:
+        raise ValueError("max_attempts must be >= 1")
+
     for attempt in range(max_attempts):
         try:
             response = await fn()
             if response.status_code in _RETRYABLE_STATUS:
                 if attempt < max_attempts - 1:
-                    await asyncio.sleep(base_delay * (2**attempt))
+                    await asyncio.sleep(_retry_delay(response, attempt, base_delay))
                     continue
             return response
-        except (httpx.NetworkError, httpx.TimeoutException) as exc:
-            last_exc = exc
+        except (httpx.NetworkError, httpx.TimeoutException):
             if attempt < max_attempts - 1:
                 await asyncio.sleep(base_delay * (2**attempt))
-    if last_exc is not None:
-        raise last_exc
-    # max_attempts exhausted on retryable status — return the last response for
-    # the caller to raise_for_status() so the error propagates normally
-    return response  # type: ignore[return-value]  # assigned in last loop iteration
+                continue
+            raise
+    raise RuntimeError("unreachable retry state")
+
+
+def _retry_delay(response: httpx.Response, attempt: int, base_delay: float) -> float:
+    retry_after = response.headers.get("Retry-After")
+    if retry_after:
+        parsed = _parse_retry_after(retry_after)
+        if parsed is not None:
+            return min(parsed, _MAX_RETRY_AFTER)
+    return base_delay * (2**attempt)
+
+
+def _parse_retry_after(value: str) -> float | None:
+    value = value.strip()
+    try:
+        seconds = float(value)
+    except ValueError:
+        pass
+    else:
+        if math.isfinite(seconds):
+            return max(0.0, seconds)
+        return None
+    try:
+        retry_at = parsedate_to_datetime(value)
+    except (TypeError, ValueError):
+        return None
+    if retry_at.tzinfo is None:
+        retry_at = retry_at.replace(tzinfo=UTC)
+    return max(0.0, (retry_at - datetime.now(UTC)).total_seconds())

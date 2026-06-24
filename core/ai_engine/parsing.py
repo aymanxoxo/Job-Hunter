@@ -50,9 +50,14 @@ def parse_scored_jobs_response(text: str, jobs: Sequence[Job]) -> list[Job] | No
     data = _loads(text)
     if not isinstance(data, list):
         return None
-    try:
-        scores = [_ScorePayload.model_validate(item) for item in data]
-    except ValidationError:
+    scores = []
+    for item in data:
+        try:
+            scores.append(_ScorePayload.model_validate(item))
+        except ValidationError:
+            continue
+
+    if not scores and data:
         return None
 
     by_id = {score.id: score for score in scores}

@@ -74,7 +74,7 @@ are the authority.
    remote deferred.
 
 **Reconciled in v1.1:** output/export module now lives at `core/output.py`; `min_score_threshold` is the
-single effective filter (seeded by `ai.min_score`); model IDs refreshed (Gemini → `gemini-3-flash`,
+single effective filter (seeded by `ai.min_score`); model IDs refreshed (Gemini → `gemini-3.5-flash`,
 OpenRouter fallback → `deepseek-r1:free` since `deepseek-v4-flash:free` left the free tier; Gemini auth
 uses restricted authorization keys + OAuth).
 

@@ -2,7 +2,7 @@
 # Any field can be overridden by an env var using `__` for nesting, e.g. AI__PROVIDER=ollama (§9.2).
 ai:
   provider: gemini          # gemini | ollama | openrouter
-  model: gemini-3-flash     # model id within the provider
+  model: gemini-3.5-flash   # model id within the provider
   batch_size: 15            # jobs per AI scoring call
   min_score: 40             # seeds SearchCriteria.min_score_threshold (ADR-006)
 profile:

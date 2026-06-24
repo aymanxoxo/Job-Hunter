@@ -96,13 +96,38 @@ def test_parse_scored_jobs_response_preserves_unmentioned_jobs():
     assert scored[1] == second
 
 
-def test_parse_scored_jobs_response_returns_none_for_malformed_or_invalid_input():
+def test_parse_scored_jobs_response_skips_malformed_items_and_preserves_jobs():
+    first = _job(id="job-1")
+    second = _job(id="job-2", url="https://example.invalid/job-2")
+
+    scored = parse_scored_jobs_response(
+        """
+        [
+          {"id":"job-1","score":101,"match_reason":"too high","red_flags":[]},
+          {"id":"job-2","score":81,"match_reason":"valid","red_flags":[]},
+          {"id":"job-3","score":80}
+        ]
+        """,
+        [first, second],
+    )
+
+    assert scored is not None
+    assert scored[0] == first
+    assert scored[1].score == 81
+    assert scored[1].match_reason == "valid"
+
+
+def test_parse_scored_jobs_response_returns_none_for_malformed_top_level_input():
     jobs = [_job()]
 
     assert parse_scored_jobs_response("not json", jobs) is None
     assert parse_scored_jobs_response("{}", jobs) is None
-    assert parse_scored_jobs_response('[{"id":"job-1","score":101}]', jobs) is None
-    assert parse_scored_jobs_response('[{"id":"job-1","score":80}]', jobs) is None
+
+
+def test_parse_scored_jobs_response_returns_none_when_all_items_malformed():
+    jobs = [_job()]
+
+    assert parse_scored_jobs_response('[{"bad": true}]', jobs) is None
 
 
 def test_parse_scored_jobs_response_ignores_unknown_job_ids():

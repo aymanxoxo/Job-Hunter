@@ -23,7 +23,7 @@ from core.models.job import Job
 from core.models.search_criteria import SearchCriteria
 
 DEFAULT_GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models"
-DEFAULT_GEMINI_MODEL = "gemini-3-flash"
+DEFAULT_GEMINI_MODEL = "gemini-3.5-flash"
 DEFAULT_GEMINI_API_KEY_ENV = "GEMINI_API_KEY"
 DEFAULT_GEMINI_TIMEOUT = 120.0
 
