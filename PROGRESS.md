@@ -10,7 +10,7 @@
 
 <!-- jh:orientation:start -->
 - **Phase:** Phase 3 hardening active (M-03 and M-06 gates cleared). **Next gate:** Phase 3 hardening backlog (C-058-C-068).
-- **Last done:** **C-064** - AI provider reliability — Gemini model name + retry Retry-After + batch-parse resilience (merge pending). Prior done: **C-059** - Real run smoke validation command (`7cf654a`); **C-058** - Desktop settings runtime config bridge (`5376cf2`).
+- **Last done:** **C-064** - AI provider reliability — Gemini model name + retry Retry-After + batch-parse resilience (`78074ff`). Prior done: **C-059** - Real run smoke validation command (`7cf654a`); **C-058** - Desktop settings runtime config bridge (`5376cf2`).
 - **Next ready:** **C-062** - Security hardening — sidecar secret leak + CLI unguarded run + DDG SSRF + JS-URL injection; **C-063** - Runner correctness — False-drop in kwargs filter + disabled-connector gate + fail-graceful scoring; **C-065** - Connector hardening — Adzuna retry/creds/silent-drop + DDG trust_summary + Mock fixture path; **C-066** - Config + pipeline correctness — env-override clobber + min_score wiring + unscored-job log; **C-067** - Session store hardening — UUID instability + static PBKDF2 salt; **C-068** - Desktop hardening — pipeline store crashes + race conditions + hard-coded threshold.
 - **Blocked:** none.
 - **Notes:** Dev loop runs through short-lived GitHub PR branches; the user reviews and merges. See [ADR-014/015/016](Documents/DECISIONS.md).
@@ -86,7 +86,7 @@
 | C-059 | Real run smoke validation command | Phase 3 Validation | C-057 | done | 7cf654a |
 | C-062 | Security hardening — sidecar secret leak + CLI unguarded run + DDG SSRF + JS-URL injection | Phase 3 Hardening | C-059, C-020 | todo | — |
 | C-063 | Runner correctness — False-drop in kwargs filter + disabled-connector gate + fail-graceful scoring | Phase 3 Hardening | C-059 | todo | — |
-| C-064 | AI provider reliability — Gemini model name + retry Retry-After + batch-parse resilience | Phase 3 Hardening | C-054, C-059 | done | pending |
+| C-064 | AI provider reliability — Gemini model name + retry Retry-After + batch-parse resilience | Phase 3 Hardening | C-054, C-059 | done | 78074ff |
 | C-065 | Connector hardening — Adzuna retry/creds/silent-drop + DDG trust_summary + Mock fixture path | Phase 3 Hardening | C-051, C-020 | todo | — |
 | C-066 | Config + pipeline correctness — env-override clobber + min_score wiring + unscored-job log | Phase 3 Hardening | C-003, C-022, C-025 | todo | — |
 | C-067 | Session store hardening — UUID instability + static PBKDF2 salt | Phase 3 Hardening | C-019 | todo | — |
@@ -96,7 +96,7 @@
 
 ## Changelog (newest first)
 
-- 2026-06-24 - **C-064** AI provider reliability on `chunk/C-064-ai-provider-reliability`: corrects the built-in Gemini/default config model from the invalid `gemini-3-flash` slug to `gemini-3.5-flash`; hardens shared provider retry so `Retry-After` is honored and `max_attempts < 1` fails explicitly; makes scored-job parsing skip malformed per-item rows while preserving valid scored rows and unmentioned jobs. Backfills missing Phase 3 hardening metadata into `tools/chunks.json`/dev plan so the workflow harness can gate C-062-C-068 consistently. Focused tests green (39); full pytest green (359 passed, 1 skipped); Ruff, doctor, and import smoke green. Awaiting review/merge.
+- 2026-06-24 - **C-064** AI provider reliability on `chunk/C-064-ai-provider-reliability`: corrects the built-in Gemini/default config model from the invalid `gemini-3-flash` slug to `gemini-3.5-flash`; hardens shared provider retry so `Retry-After` is honored (capped at 60 s to prevent server-driven multi-hour hangs), `inf`/`nan` in `Retry-After` parsed to `None` not infinite sleep, and `max_attempts < 1` fails explicitly; makes scored-job parsing return `None` when all items in a batch are malformed (not silently pass back unscored originals). Backfills missing Phase 3 hardening metadata into `tools/chunks.json`/dev plan so the workflow harness can gate C-062-C-068 consistently. Focused tests green (39 → 41 after bug-fix additions); full pytest green (361 passed, 1 skipped); Ruff, doctor, and import smoke green. Merged `78074ff` (PR #91).
 
 - 2026-06-24 - **C-059** Real run smoke validation command on `chunk/C-059-smoke-validate`: adds `jobhunter smoke-validate` CLI command — runs a minimal real Adzuna + AI pipeline (3 results, 0–0.5 s delay, single provider) to confirm credentials and connectivity; skips cleanly (exit 0) when any required env var is absent; redacts credential values from all exception messages before display; `--provider` flag selects gemini or openrouter with auto-detect fallback; `_smoke_discover_factory` restricts plugin discovery to the selected provider + Adzuna only; `_smoke_config` overrides the base config for a fast smoke run. Extends `_instantiate_connector` and `_instantiate_provider` to thread `auth` env-var names through the runner. 19 focused tests (skip paths, redaction guard, discovery filter, openrouter default model); gate green (329 pytest, Ruff, doctor, import smoke). Merged `7cf654a` (PR #90).
 
