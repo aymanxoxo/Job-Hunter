@@ -28,6 +28,8 @@ import json
 import sys
 from pathlib import Path
 
+from pydantic import ValidationError
+
 from core.config import Config, ConnectorSettings, load_config
 from core.logging import get_logger
 from core.models.job import Job
@@ -36,6 +38,8 @@ from core.runner import build_runner
 
 _CONFIG_PATH = Path("config.yaml")
 _log = get_logger("ui.sidecar")
+
+_RESERVED_CONFIG_KEYS = frozenset({"ai", "profile", "connectors", "output", "auth"})
 
 
 def _job_to_dict(job: Job) -> dict:
@@ -60,26 +64,38 @@ def _profile_arg(args: dict) -> str:
 def _apply_connector_overrides(config, overrides: dict) -> Config:
     """Merge connector_overrides from the IPC request into the loaded config.
     Only updates fields that are present in the override dict; never touches auth.
+    Raises ValueError for invalid overrides (including Pydantic validation errors).
     """
     connector_map = dict(config.connectors)
     for name, fields in overrides.items():
         if not isinstance(fields, dict):
             continue
+        if name in _RESERVED_CONFIG_KEYS:
+            continue
         existing = connector_map.get(name)
         if existing is not None:
-            # merge into existing ConnectorSettings
+            # merge into existing ConnectorSettings — re-validate to run constraints
             filtered = {
                 k: v for k, v in fields.items()
                 if k in existing.__class__.model_fields
             }
-            updated = existing.model_copy(update=filtered)
+            try:
+                updated = existing.__class__.model_validate({
+                    **existing.model_dump(),
+                    **filtered,
+                })
+            except (ValidationError, ValueError) as exc:
+                raise ValueError(f"invalid connector_overrides for '{name}': {exc}") from exc
         else:
             # new connector not in config.yaml — create from scratch
             filtered = {
                 k: v for k, v in fields.items()
                 if k in ConnectorSettings.model_fields
             }
-            updated = ConnectorSettings(**filtered)
+            try:
+                updated = ConnectorSettings(**filtered)
+            except (ValidationError, ValueError) as exc:
+                raise ValueError(f"invalid connector_overrides for '{name}': {exc}") from exc
         connector_map[name] = updated
     return config.model_copy(update={"connectors": connector_map})
 
@@ -98,7 +114,10 @@ def _load_request_config(args: dict):
 
     connector_overrides = args.get("connector_overrides")
     if isinstance(connector_overrides, dict):
-        config = _apply_connector_overrides(config, connector_overrides)
+        try:
+            config = _apply_connector_overrides(config, connector_overrides)
+        except (ValidationError, ValueError) as exc:
+            raise ValueError(f"invalid connector_overrides: {exc}") from exc
 
     return config
 

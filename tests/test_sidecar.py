@@ -14,6 +14,8 @@ import sys
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from core.config import AIConfig, AuthConfig, Config, ConnectorSettings, OutputConfig
 
 # ---------------------------------------------------------------------------
@@ -376,6 +378,8 @@ def test_apply_connector_overrides_does_not_touch_auth():
     assert result.auth.gemini_api_key_env == "GEMINI_API_KEY"
     # connector override still applied
     assert result.connectors["adzuna"].enabled is False
+    # "auth" must NOT be injected as a spurious connector entry
+    assert "auth" not in result.connectors
 
 
 def test_apply_connector_overrides_with_provider_override():
@@ -398,3 +402,52 @@ def test_apply_connector_overrides_with_provider_override():
     assert result.connectors["duckduckgo"].max_results == 25
     assert result.connectors["adzuna"].enabled is True  # unchanged
 
+
+
+
+def test_apply_connector_overrides_new_connector_with_delay_min_only_raises():
+    """New connector with delay_min alone must raise ValueError (delay_min > default delay_max)."""
+    from ui.cli.sidecar import _apply_connector_overrides
+
+    fake = _fake_config()
+    with pytest.raises(ValueError, match="invalid connector_overrides for 'new_conn'"):
+        _apply_connector_overrides(
+            fake,
+            {"new_conn": {"delay_min": 8.0}},
+        )
+
+
+def test_apply_connector_overrides_existing_connector_with_invalid_type_raises():
+    """Invalid type (str where int expected) on existing connector must raise ValueError."""
+    from ui.cli.sidecar import _apply_connector_overrides
+
+    fake = _fake_config()
+    with pytest.raises(ValueError, match="invalid connector_overrides for 'adzuna'"):
+        _apply_connector_overrides(
+            fake,
+            {"adzuna": {"max_results": "fifty"}},
+        )
+
+
+def test_apply_connector_overrides_reserved_keys_skipped():
+    """Reserved config keys (ai, profile, output, auth) are silently skipped."""
+    from ui.cli.sidecar import _apply_connector_overrides
+
+    fake = _fake_config()
+    result = _apply_connector_overrides(
+        fake,
+        {
+            "ai": {"provider": "hacked"},
+            "profile": {"input": "hacked"},
+            "output": {"format": "hacked"},
+            "auth": {"gemini_api_key_env": "HACKED"},
+        },
+    )
+    assert result.ai.provider == "gemini"  # unchanged
+    assert result.profile.input == "text"  # unchanged
+    assert result.output.format == "both"  # unchanged
+    assert result.auth.gemini_api_key_env == "GEMINI_API_KEY"  # unchanged
+    assert "ai" not in result.connectors
+    assert "profile" not in result.connectors
+    assert "output" not in result.connectors
+    assert "auth" not in result.connectors
