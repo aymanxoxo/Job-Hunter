@@ -1,11 +1,23 @@
 import { setActivePinia, createPinia } from "pinia";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { usePipelineStore, type ProgressEvent } from "./pipeline";
+import { usePipelineStore, type ProgressEvent, type ConnectorOverride } from "./pipeline";
+
+// localStorage helpers for C-058 tests
+const CONFIG_KEY = "jobhunter.desktopConfig.v1";
+
+function setLocalStorage(value: unknown) {
+  localStorage.setItem(CONFIG_KEY, JSON.stringify(value));
+}
+
+function clearLocalStorage() {
+  localStorage.removeItem(CONFIG_KEY);
+}
 
 describe("pipeline store", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
+    clearLocalStorage();
   });
 
   it("records streamed progress events in order", () => {
@@ -97,5 +109,174 @@ describe("pipeline store", () => {
 
     expect(result).toMatchObject(criteria);
     expect(store.error).toBeNull();
+  });
+
+  // -------------------------------------------------------------------------
+  // C-058 — connector overrides via localStorage
+  // -------------------------------------------------------------------------
+
+  it("runPipeline with no localStorage data does not include connector_overrides", async () => {
+    const store = usePipelineStore();
+    const invokeArgs: unknown[] = [];
+
+    await store.runPipeline(
+      { profile: "Senior Python developer", provider: "gemini" },
+      {
+        listen: async () => () => undefined,
+        invoke: async (command, args) => {
+          invokeArgs.push(args);
+          return [];
+        },
+      },
+    );
+
+    expect(invokeArgs).toHaveLength(1);
+    const sent = invokeArgs[0] as Record<string, unknown>;
+    expect(sent.profile).toBe("Senior Python developer");
+    expect(sent.provider).toBe("gemini");
+    expect(sent.connector_overrides).toBeUndefined();
+  });
+
+  it("runPipeline with valid localStorage config includes connector_overrides", async () => {
+    const store = usePipelineStore();
+    setLocalStorage({
+      ai: { provider: "gemini" },
+      connectors: {
+        mock: { enabled: false, max_results: 50, delay_min: 2, delay_max: 2 },
+        adzuna: { enabled: true, max_results: 50, delay_min: 2, delay_max: 2 },
+        duckduckgo: {
+          enabled: true,
+          max_results: 50,
+          delay_min: 2,
+          delay_max: 2,
+          results_per_query: 10,
+          trust_threshold: 60,
+          trust_check_enabled: true,
+        },
+      },
+    });
+
+    const invokeArgs: unknown[] = [];
+    await store.runPipeline(
+      { profile: "Senior Python developer", provider: "gemini" },
+      {
+        listen: async () => () => undefined,
+        invoke: async (command, args) => {
+          invokeArgs.push(args);
+          return [];
+        },
+      },
+    );
+
+    expect(invokeArgs).toHaveLength(1);
+    const sent = invokeArgs[0] as Record<string, unknown>;
+    expect(sent.connector_overrides).toEqual({
+      mock: { enabled: false, max_results: 50, delay_min: 2, delay_max: 2 },
+      adzuna: { enabled: true, max_results: 50, delay_min: 2, delay_max: 2 },
+      duckduckgo: {
+        enabled: true,
+        max_results: 50,
+        delay_min: 2,
+        delay_max: 2,
+        results_per_query: 10,
+        trust_threshold: 60,
+        trust_check_enabled: true,
+      },
+    });
+  });
+
+  it("runPipeline with malformed localStorage JSON falls back to no overrides", async () => {
+    const store = usePipelineStore();
+    localStorage.setItem(CONFIG_KEY, "not-json");
+
+    const invokeArgs: unknown[] = [];
+    await store.runPipeline(
+      { profile: "Senior Python developer", provider: "gemini" },
+      {
+        listen: async () => () => undefined,
+        invoke: async (command, args) => {
+          invokeArgs.push(args);
+          return [];
+        },
+      },
+    );
+
+    expect(invokeArgs).toHaveLength(1);
+    const sent = invokeArgs[0] as Record<string, unknown>;
+    expect(sent.connector_overrides).toBeUndefined();
+  });
+
+  it("generateCriteria does NOT include connector_overrides", async () => {
+    const store = usePipelineStore();
+    setLocalStorage({
+      connectors: {
+        mock: { enabled: false },
+      },
+    });
+
+    const invokeArgs: unknown[] = [];
+    await store.generateCriteria(
+      { profile: "Senior Python developer", provider: "gemini" },
+      {
+        listen: async () => () => undefined,
+        invoke: async (command, args) => {
+          invokeArgs.push(args);
+          return {
+            titles: [],
+            keywords: ["python"],
+            exclude_keywords: [],
+            seniority_levels: [],
+            locations: [],
+            min_score_threshold: 40,
+          };
+        },
+      },
+    );
+
+    expect(invokeArgs).toHaveLength(1);
+    const sent = invokeArgs[0] as Record<string, unknown>;
+    expect(sent.connector_overrides).toBeUndefined();
+  });
+
+  it("buildConnectorOverrides returns undefined when localStorage is empty", async () => {
+    const store = usePipelineStore();
+    clearLocalStorage();
+    // We can't directly test buildConnectorOverrides since it's private,
+    // but we can verify the behaviour through runPipeline.
+    const invokeArgs: unknown[] = [];
+    await store.runPipeline(
+      { profile: "Senior Python developer", provider: "gemini" },
+      {
+        listen: async () => () => undefined,
+        invoke: async (command, args) => {
+          invokeArgs.push(args);
+          return [];
+        },
+      },
+    );
+    const sent = invokeArgs[0] as Record<string, unknown>;
+    expect(sent.connector_overrides).toBeUndefined();
+  });
+
+  it("buildConnectorOverrides returns the connectors sub-object when storage is populated", async () => {
+    const store = usePipelineStore();
+    const connectors: Record<string, ConnectorOverride> = {
+      mock: { enabled: false, max_results: 25 },
+    };
+    setLocalStorage({ connectors });
+
+    const invokeArgs: unknown[] = [];
+    await store.runPipeline(
+      { profile: "Senior Python developer", provider: "gemini" },
+      {
+        listen: async () => () => undefined,
+        invoke: async (command, args) => {
+          invokeArgs.push(args);
+          return [];
+        },
+      },
+    );
+    const sent = invokeArgs[0] as Record<string, unknown>;
+    expect(sent.connector_overrides).toEqual(connectors);
   });
 });
