@@ -10,7 +10,7 @@
 |-----|-------|--------|------|
 | 001 | Plugin-first architecture via importlib drop-zones | Accepted | 2026-06-17 |
 | 002 | Abstract, ordered auth strategy (`oauth → api_key`) | Accepted | 2026-06-17 |
-| 003 | Gemini auth + model choice (authorization key/OAuth, `gemini-3-flash`) | Accepted | 2026-06-17 |
+| 003 | Gemini auth + model choice (authorization key/OAuth, `gemini-3-flash`) | Superseded by 027 | 2026-06-17 |
 | 004 | OpenRouter model selection (`qwen3-coder:free` + `deepseek-r1:free`) | Accepted | 2026-06-17 |
 | 005 | Pluggable Profile Input layer (text-only v1) | Accepted | 2026-06-17 |
 | 006 | Filter precedence: `min_score_threshold` is the single effective filter | Accepted | 2026-06-17 |
@@ -34,6 +34,7 @@
 | 024 | Machine-readable chunk registry as the single source of truth | Accepted | 2026-06-19 |
 | 025 | Decouple the generic workflow engine from project business | Accepted | 2026-06-19 |
 | 026 | Generated PROGRESS orientation and merge-hash sync | Accepted | 2026-06-19 |
+| 027 | Gemini default model slug refresh (`gemini-3.5-flash`) | Accepted | 2026-06-24 |
 
 ---
 
@@ -476,3 +477,19 @@ placeholders from git merge commits. `doctor` now fails if the on-disk generated
 longer hand-maintained. Merge hashes can be recovered from git history instead of patched by docs-only
 follow-ups. Cost: `PROGRESS.md` now has generated sentinels, and any manual edit inside them is treated as
 drift to be regenerated.
+
+
+## ADR-027 - Gemini default model slug refresh
+
+**Context.** C-064 review found the previous default `gemini-3-flash` returns 404 against Google's
+Gemini API. Google AI model documentation checked on 2026-06-24 lists the stable Flash model code as
+`gemini-3.5-flash`, while the bare `gemini-3-flash` slug is not a valid default for the existing
+`generateContent` provider path.
+
+**Decision.** Update the built-in Gemini provider and default config to `gemini-3.5-flash`. Keep the
+model configurable so users can select older or preview models explicitly, but do not ship a default
+that fails every run before criteria generation or scoring can start.
+
+**Consequences.** The out-of-box Gemini path works with the current model catalog again, and future
+model churn remains a config change plus doc update. Cost: docs and tests that referred to the old
+default need to treat ADR-003 as superseded.

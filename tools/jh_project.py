@@ -113,7 +113,7 @@ JOBHUNTER = ProjectConfig(
     orientation_end_marker="<!-- jh:orientation:end -->",
     orientation_prelude_lines=(
         "- **Phase:** Phase 3 hardening active (M-03 and M-06 gates cleared). "
-        "**Next gate:** Phase 3 hardening backlog (C-058-C-061).",
+        "**Next gate:** Phase 3 hardening backlog (C-058-C-068).",
     ),
     orientation_footer_lines=(
         "- **Notes:** Dev loop runs through short-lived GitHub PR branches; the user reviews "

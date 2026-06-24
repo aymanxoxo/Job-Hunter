@@ -953,11 +953,155 @@
       ],
       "sdd_anchor": "\u00a712"
     },
+    "C-062": {
+      "title": "Security hardening \u2014 sidecar secret leak + CLI unguarded run + DDG SSRF + JS-URL injection",
+      "stage": "Phase 3 Hardening",
+      "depends_on": [
+        "C-059",
+        "C-020"
+      ],
+      "risk_flagged": false,
+      "tests": [
+        "tests/test_sidecar.py",
+        "tests/test_cli_run.py",
+        "tests/test_ddg_connector.py",
+        "ui/desktop/src/views/ResultsView.test.ts"
+      ],
+      "files": [
+        "ui/cli/sidecar.py",
+        "ui/cli/cli.py",
+        "core/connectors/duckduckgo_connector.py",
+        "ui/desktop/src/views/ResultsView.vue"
+      ],
+      "sdd_anchor": "\u00a76.1, \u00a710, \u00a711.1, \u00a711.2"
+    },
+    "C-063": {
+      "title": "Runner correctness \u2014 False-drop in kwargs filter + disabled-connector gate + fail-graceful scoring",
+      "stage": "Phase 3 Hardening",
+      "depends_on": [
+        "C-059"
+      ],
+      "risk_flagged": false,
+      "tests": [
+        "tests/test_runner_build_runner.py",
+        "tests/test_runner_orchestrator.py"
+      ],
+      "files": [
+        "core/runner.py"
+      ],
+      "sdd_anchor": "\u00a75.1"
+    },
+    "C-064": {
+      "title": "AI provider reliability \u2014 Gemini model name + retry Retry-After + batch-parse resilience",
+      "stage": "Phase 3 Hardening",
+      "depends_on": [
+        "C-054",
+        "C-059"
+      ],
+      "risk_flagged": false,
+      "tests": [
+        "tests/test_provider_retry.py",
+        "tests/ai_engine/test_parsing.py",
+        "tests/test_gemini_provider.py",
+        "tests/test_config.py"
+      ],
+      "files": [
+        "core/ai_providers/_retry.py",
+        "core/ai_engine/parsing.py",
+        "core/ai_providers/gemini_provider.py",
+        "core/config.py",
+        "config.yaml"
+      ],
+      "sdd_anchor": "\u00a75.2, \u00a77.1, \u00a79"
+    },
+    "C-065": {
+      "title": "Connector hardening \u2014 Adzuna retry/creds/silent-drop + DDG trust_summary + Mock fixture path",
+      "stage": "Phase 3 Hardening",
+      "depends_on": [
+        "C-051",
+        "C-020"
+      ],
+      "risk_flagged": false,
+      "tests": [
+        "tests/test_adzuna_connector.py",
+        "tests/test_ddg_connector.py",
+        "tests/test_mock_connector.py"
+      ],
+      "files": [
+        "core/connectors/adzuna_connector.py",
+        "core/connectors/duckduckgo_connector.py",
+        "core/connectors/mock_connector.py"
+      ],
+      "sdd_anchor": "\u00a76"
+    },
+    "C-066": {
+      "title": "Config + pipeline correctness \u2014 env-override clobber + min_score wiring + unscored-job log",
+      "stage": "Phase 3 Hardening",
+      "depends_on": [
+        "C-003",
+        "C-022",
+        "C-025"
+      ],
+      "risk_flagged": false,
+      "tests": [
+        "tests/test_config.py",
+        "tests/test_pipeline.py",
+        "tests/test_runner_orchestrator.py"
+      ],
+      "files": [
+        "core/config.py",
+        "core/pipeline.py",
+        "core/runner.py"
+      ],
+      "sdd_anchor": "\u00a75.1, \u00a79"
+    },
+    "C-067": {
+      "title": "Session store hardening \u2014 UUID instability + static PBKDF2 salt",
+      "stage": "Phase 3 Hardening",
+      "depends_on": [
+        "C-019"
+      ],
+      "risk_flagged": false,
+      "tests": [
+        "tests/test_session_store.py"
+      ],
+      "files": [
+        "core/auth/session_store.py"
+      ],
+      "sdd_anchor": "\u00a78.3"
+    },
+    "C-068": {
+      "title": "Desktop hardening \u2014 pipeline store crashes + race conditions + hard-coded threshold",
+      "stage": "Phase 3 Hardening",
+      "depends_on": [
+        "C-058",
+        "C-059"
+      ],
+      "risk_flagged": false,
+      "tests": [
+        "ui/desktop/src/stores/pipeline.test.ts",
+        "ui/desktop/src/lib/timeline.test.ts",
+        "ui/desktop/src/components/PipelineProgress.test.ts"
+      ],
+      "files": [
+        "ui/desktop/src/stores/pipeline.ts",
+        "ui/desktop/src/lib/timeline.ts",
+        "ui/desktop/src/components/PipelineProgress.vue"
+      ],
+      "sdd_anchor": "\u00a79, \u00a711.2"
+    },
     "C-060": {
       "title": "ResultsView real export action",
       "stage": "Phase 3 Desktop UX",
       "depends_on": [
-        "C-058"
+        "C-058",
+        "C-062",
+        "C-063",
+        "C-064",
+        "C-065",
+        "C-066",
+        "C-067",
+        "C-068"
       ],
       "risk_flagged": false,
       "tests": [
@@ -976,7 +1120,14 @@
       "title": "Desktop partial failure and empty-state UX",
       "stage": "Phase 3 Desktop UX",
       "depends_on": [
-        "C-058"
+        "C-058",
+        "C-062",
+        "C-063",
+        "C-064",
+        "C-065",
+        "C-066",
+        "C-067",
+        "C-068"
       ],
       "risk_flagged": false,
       "tests": [

@@ -6,10 +6,17 @@
 |---|---|
 | Prepared by | Abdelrahman (Squad 3 Lead, Dsquares) |
 | Document Date | June 2026 |
-| Version | **1.1 — Amended** (supersedes v1.0) |
+| Version | **1.2 — Amended** (supersedes v1.1) |
 | Target Audience | Development Team / Assignee |
 | Classification | Internal / Confidential |
 | Document Status | Final — Ready for Development |
+
+---
+
+## Changelog — what changed in v1.2
+
+1. **C-064 provider reliability update** — Gemini default is now `gemini-3.5-flash`; provider retry
+   honors `Retry-After`; scored-job parsing keeps valid rows when one item in a batch is malformed.
 
 ---
 
@@ -67,7 +74,7 @@ criteria generation in a locally runnable, low-cost application.
 | AI Engine | GENERATE_CRITERIA and SCORE_JOBS operations, provider abstraction | Phase 1 |
 | Profile Input layer | Pluggable parser interface + built-in text parser | Phase 1 |
 | Auth strategy | Ordered `oauth → api_key` resolver + keyring/session store | Phase 1 |
-| Gemini Provider | OAuth + authorization API key, token cache, `gemini-3-flash` calls | Phase 1 |
+| Gemini Provider | OAuth + authorization API key, token cache, `gemini-3.5-flash` calls | Phase 1 |
 | Ollama Provider | Local llama3 via Ollama REST API (dev/testing) | Phase 1 |
 | LinkedIn Connector | Playwright session auth, search scraping, pagination | Phase 1 |
 | Indeed Connector | httpx-based scraper, no login, JSON extraction | Phase 1 |

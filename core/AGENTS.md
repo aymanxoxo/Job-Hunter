@@ -46,8 +46,9 @@ pipeline runner, and shared infra. Pure logic stays side-effect-free; I/O lives 
   `~/.jobhunter/sessions/*.enc` by default.
 - **AI engine prompts (`ai_engine/prompts.py`, C-010).** Prompt builders are deterministic and pure.
   Score prompts include structured criteria plus only job `id`, `title`, `company`, and `description`.
-- **AI response parsing (`ai_engine/parsing.py`, C-011).** Parsers convert provider JSON into
-  `SearchCriteria` or scored `Job` copies and return `None` for malformed/invalid provider output.
+- **AI response parsing (`ai_engine/parsing.py`, C-011/C-064).** Parsers convert provider JSON into
+  `SearchCriteria` or scored `Job` copies, return `None` for malformed top-level provider output, and
+  skip malformed scored-job items so one bad row does not discard the rest of a batch.
 - **AI job scrubbing (`ai_engine/scrub.py`, C-012).** Scrub helpers keep only job `id`, `title`,
   `company`, and `description` before provider calls.
 - **AI batching (`ai_engine/batching.py`, C-013).** `batch_items()` splits sequences into
@@ -64,7 +65,7 @@ pipeline runner, and shared infra. Pure logic stays side-effect-free; I/O lives 
   to `AIEngine`.
 - **Gemini provider (`ai_providers/gemini_provider.py`, C-017).** `GeminiProvider` calls Google's
   `generateContent`; auth resolves via `auth_strategy` (OAuth bearer when wired, else
-  `x-goog-api-key` from `$GEMINI_API_KEY`); default model `gemini-3-flash`; delegates to `AIEngine`.
+  `x-goog-api-key` from `$GEMINI_API_KEY`); default model `gemini-3.5-flash`; delegates to `AIEngine`.
 - **Pipeline transforms (`pipeline.py`, C-022).** `merge_results()`, `dedup_by_url()`,
   `sort_by_score()`, and `filter_below_threshold()` are pure helpers for runner steps 8-10; they do no
   config reads, logging, filesystem, or network work.

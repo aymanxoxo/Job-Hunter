@@ -24,7 +24,7 @@ _SECTIONS = ("ai", "profile", "connectors", "output", "auth")
 class AIConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
     provider: str = "gemini"
-    model: str = "gemini-3-flash"
+    model: str = "gemini-3.5-flash"
     batch_size: int = Field(default=15, ge=1)
     min_score: int = Field(default=40, ge=0, le=100)
 

@@ -64,7 +64,7 @@ async def test_gemini_provider_metadata_matches_sdd():
 
     assert provider.name == "gemini"
     assert ExportedGeminiProvider is GeminiProvider
-    assert provider.model == DEFAULT_GEMINI_MODEL == "gemini-3-flash"
+    assert provider.model == DEFAULT_GEMINI_MODEL == "gemini-3.5-flash"
     assert provider.endpoint == DEFAULT_GEMINI_ENDPOINT
     assert provider.endpoint == "https://generativelanguage.googleapis.com/v1beta/models"
     assert provider.auth_methods == ("oauth", "api_key")

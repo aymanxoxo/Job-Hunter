@@ -17,7 +17,7 @@ from core.config import (
 
 def test_defaults():
     c = Config()
-    assert c.ai.provider == "gemini" and c.ai.model == "gemini-3-flash"
+    assert c.ai.provider == "gemini" and c.ai.model == "gemini-3.5-flash"
     assert c.ai.batch_size == 15 and c.ai.min_score == 40
     assert c.profile.input == "text"
     assert c.output.format == "both"

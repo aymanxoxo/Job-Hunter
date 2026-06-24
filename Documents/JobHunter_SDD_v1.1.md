@@ -6,9 +6,18 @@
 |---|---|
 | Prepared by | Abdelrahman — Squad 3 Lead, Dsquares |
 | Date | June 2026 |
-| Version | **1.2 — Amended** (supersedes v1.1) |
-| Companion | JobHunter SOW v1.1 |
+| Version | **1.3 — Amended** (supersedes v1.2) |
+| Companion | JobHunter SOW v1.2 |
 | Classification | Internal / Confidential |
+
+---
+
+## Changelog — what changed in v1.3
+
+1. **C-064 AI provider reliability hardening** — Gemini default corrected to `gemini-3.5-flash`
+   after the previous `gemini-3-flash` slug was found to 404; provider HTTP retry now honors
+   `Retry-After` and rejects invalid attempt counts; scored-job parsing now skips malformed per-item
+   rows instead of discarding an entire batch.
 
 ---
 
@@ -104,7 +113,7 @@ job_hunter/
 │   │   └── mock_connector.py           # Built-in: offline fixture
 │   ├── ai_providers/
 │   │   ├── base_provider.py        # ABC — provider contract
-│   │   ├── gemini_provider.py      # Google Gemini (gemini-3-flash default)
+│   │   ├── gemini_provider.py      # Google Gemini (gemini-3.5-flash default)
 │   │   ├── ollama_provider.py      # Local Ollama / llama3
 │   │   └── openrouter_provider.py  # OpenRouter free tier
 │   ├── profile_inputs/             # NEW — pluggable profile parsers
@@ -441,7 +450,7 @@ and included in the `run_pipeline` IPC args.
 | Property | Value |
 |----------|-------|
 | Class name | GeminiProvider |
-| Model | `gemini-3-flash` (default as of 2026; `gemini-2.5-flash` / `-flash-lite` still selectable) |
+| Model | `gemini-3.5-flash` (default as of June 2026; `gemini-2.5-flash` / `-flash-lite` still selectable) |
 | auth_methods | ['api_key'] |
 | API key type | AI Studio API key (`GEMINI_API_KEY`) — read at call time, never stored in config or logs |
 | Free tier | ~1,500 requests/day, 1M TPM (Flash family) — sufficient for daily personal use |
@@ -529,7 +538,7 @@ Manages Playwright `storage_state` files for session-based connectors, encrypted
 ```yaml
 ai:
   provider: gemini             # gemini | ollama | openrouter
-  model: gemini-3-flash        # model id within the provider
+  model: gemini-3.5-flash      # model id within the provider
   batch_size: 15               # jobs per AI scoring call
   min_score: 40                # DEFAULT seed for SearchCriteria.min_score_threshold (see below)
 profile:
@@ -600,7 +609,7 @@ AI__BATCH_SIZE=20                      # overrides ai.batch_size
 ### 10.2 CLI Output Example
 
 ```
-JobHunter v1.1  |  Provider: Gemini 3 Flash  |  Connectors: 2
+JobHunter v1.3  |  Provider: Gemini 3.5 Flash  |  Connectors: 2
 [1/4] Generating search criteria from profile...
       Titles: Senior .NET Dev, DevOps Lead, Squad Lead
       Keywords: C#, Kubernetes, GCP, CI/CD, Azure DevOps

@@ -1,4 +1,4 @@
-"""C-054 — HTTP retry in all three providers (SDD §7)."""
+"""C-054/C-064 — HTTP retry in all three providers (SDD §7)."""
 from __future__ import annotations
 
 import json
@@ -72,6 +72,10 @@ def _err(status: int) -> httpx.Response:
     return httpx.Response(status, json={"error": "transient"})
 
 
+def _err_with_headers(status: int, headers: dict[str, str]) -> httpx.Response:
+    return httpx.Response(status, json={"error": "transient"}, headers=headers)
+
+
 def _make_ollama(transport: _SequenceTransport, **kw) -> OllamaProvider:
     return OllamaProvider(
         client_factory=lambda: httpx.AsyncClient(transport=transport),
@@ -133,6 +137,23 @@ async def test_ollama_retry_on_429():
     assert t.call_count == 2
 
 
+async def test_ollama_retry_honors_retry_after_header(monkeypatch):
+    sleeps: list[float] = []
+
+    async def fake_sleep(delay: float) -> None:
+        sleeps.append(delay)
+
+    monkeypatch.setattr("core.ai_providers._retry.asyncio.sleep", fake_sleep)
+    t = _SequenceTransport([_err_with_headers(429, {"Retry-After": "2"}), _ollama_ok_response()])
+    provider = _make_ollama(t, max_attempts=3, base_delay=0.0)
+
+    criteria = await provider.generate_criteria("python dev")
+
+    assert criteria is not None
+    assert sleeps == [2.0]
+    assert t.call_count == 2
+
+
 async def test_ollama_retry_on_network_error():
     call_count = 0
 
@@ -152,6 +173,16 @@ async def test_ollama_retry_on_network_error():
     criteria = await provider.generate_criteria("python dev")
     assert criteria is not None
     assert call_count == 2
+
+
+async def test_retry_rejects_non_positive_max_attempts():
+    t = _SequenceTransport([_ollama_ok_response()])
+    provider = _make_ollama(t, max_attempts=0, base_delay=0.0)
+
+    with pytest.raises(ValueError, match="max_attempts"):
+        await provider.generate_criteria("python dev")
+
+    assert t.call_count == 0
 
 
 # ---------------------------------------------------------------------------
