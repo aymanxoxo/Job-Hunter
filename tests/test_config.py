@@ -51,6 +51,16 @@ def test_env_double_underscore_overrides(tmp_path):
     assert c.connectors["linkedin"].enabled is False
 
 
+def test_env_override_preserves_sibling_config_on_invalid_path():
+    """An env var with a path longer than the config structure must not replace a
+    leaf with a dict."""
+    data = {"ai": {"provider": "gemini", "model": "gemini-3.5-flash"}}
+    env = {"AI__PROVIDER__EXTRA": "foo"}
+    result = apply_env_overrides(data, env)
+    assert result["ai"]["provider"] == "gemini"
+    assert result["ai"]["model"] == "gemini-3.5-flash"
+
+
 def test_apply_env_overrides_is_pure():
     data = {"ai": {"provider": "gemini"}}
     out = apply_env_overrides(data, {"AI__PROVIDER": "ollama"})

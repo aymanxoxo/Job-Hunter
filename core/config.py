@@ -101,13 +101,18 @@ def apply_env_overrides(data: dict[str, Any], env: dict[str, str]) -> dict[str, 
         if parts[0] not in _SECTIONS:
             continue
         node: Any = result
+        valid = True
         for segment in parts[:-1]:
             child = node.get(segment)
-            if not isinstance(child, dict):
+            if child is None:
                 child = {}
                 node[segment] = child
+            elif not isinstance(child, dict):
+                valid = False
+                break
             node = child
-        node[parts[-1]] = value
+        if valid:
+            node[parts[-1]] = value
     return result
 
 

@@ -111,6 +111,7 @@ class Runner:
         profile_input: BaseProfileInput | None = None,
         output_dir: str | Path = "output/",
         output_format: str = "both",
+        min_score_threshold: int | None = None,
         emitter: ProgressEmitter | None = None,
         clock: Callable[[], datetime] | None = None,
         logger=None,
@@ -121,6 +122,7 @@ class Runner:
         self.profile_input = profile_input or TextProfileInput()
         self.output_dir = output_dir
         self.output_format = output_format
+        self.min_score_threshold = min_score_threshold
         self.emitter = emitter or ProgressEmitter()
         self.clock = clock or datetime.now
         self.log = logger or get_logger("core.runner")
@@ -138,6 +140,8 @@ class Runner:
 
         emit("criteria", "active")
         criteria = await self.provider.generate_criteria(profile_text)
+        if self.min_score_threshold is not None:
+            criteria = criteria.model_copy(update={"min_score_threshold": self.min_score_threshold})
         emit("criteria", "done")
 
         emit("search", "active", total=len(self.connectors))
@@ -151,9 +155,17 @@ class Runner:
         except Exception as exc:
             self.log.warning("score_jobs failed; run continues with unscored jobs", error=str(exc))
             scored = list(merged)
+        effective_threshold = criteria.min_score_threshold
         ranked = filter_below_threshold(
-            sort_by_score(scored), min_score_threshold=criteria.min_score_threshold
+            sort_by_score(scored), min_score_threshold=effective_threshold
         )
+        unscored_count = sum(1 for job in scored if job.score is None)
+        if unscored_count:
+            self.log.warning(
+                "unscored jobs filtered below threshold",
+                count=unscored_count,
+                threshold=effective_threshold,
+            )
         emit("score", "done", current=len(ranked))
 
         emit("export", "active")
@@ -296,5 +308,6 @@ def build_runner(
         connectors=connector_instances,
         output_dir=config.output.directory,
         output_format=config.output.format,
+        min_score_threshold=getattr(config.ai, "min_score", None),
         **overrides,
     )
