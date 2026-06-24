@@ -11,7 +11,8 @@ from core.connectors.base_connector import BaseConnector
 from core.models.job import Job
 from core.models.search_criteria import SearchCriteria
 
-DEFAULT_FIXTURE_PATH = Path("fixtures/jobs.json")
+_CONNECTORS_DIR = Path(__file__).resolve().parent  # core/connectors/
+DEFAULT_FIXTURE_PATH = _CONNECTORS_DIR.parent.parent / "fixtures" / "jobs.json"
 
 
 class MockConnector(BaseConnector):

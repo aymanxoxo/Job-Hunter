@@ -1,5 +1,9 @@
-"""C-051 - Adzuna connector."""
+"""C-051 - Adzuna connector (hardened C-065)."""
 from __future__ import annotations
+
+import base64
+import logging
+from collections.abc import Iterator
 
 import httpx
 import pytest
@@ -14,6 +18,18 @@ from core.connectors.adzuna_connector import (
 from core.models.job import Job
 from core.models.search_criteria import SearchCriteria
 from tests.contracts.connector_contract import assert_connector_returns_valid_jobs
+
+
+class _SequenceTransport(httpx.AsyncBaseTransport):
+    """Returns responses from a pre-loaded list, one per request."""
+
+    def __init__(self, responses: list[httpx.Response]) -> None:
+        self._iter: Iterator[httpx.Response] = iter(responses)
+        self.call_count = 0
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        self.call_count += 1
+        return next(self._iter)
 
 
 def _connector_for(handler, **overrides) -> AdzunaConnector:
@@ -54,13 +70,16 @@ async def test_adzuna_connector_metadata_matches_backlog():
 
 async def test_search_builds_adzuna_request_from_criteria_and_maps_jobs():
     requests: list[httpx.Request] = []
+    expected_auth = "Basic " + base64.b64encode(b"app-id:app-key").decode()
 
     def handler(request: httpx.Request) -> httpx.Response:
         requests.append(request)
         assert request.url.path == "/v1/api/jobs/us/search/1"
         params = dict(request.url.params)
-        assert params["app_id"] == "app-id"
-        assert params["app_key"] == "app-key"
+        # Credentials are in Authorization header, not URL query params
+        assert request.headers.get("Authorization") == expected_auth
+        assert "app_id" not in params
+        assert "app_key" not in params
         assert params["results_per_page"] == "1"
         assert params["what"] == "Senior Python Developer python async"
         assert params["what_exclude"] == "contract"
@@ -106,10 +125,10 @@ async def test_search_builds_adzuna_request_from_criteria_and_maps_jobs():
 async def test_search_reads_credentials_from_named_environment(monkeypatch):
     monkeypatch.setenv("ADZUNA_TEST_ID", "env-id")
     monkeypatch.setenv("ADZUNA_TEST_KEY", "env-key")
-    seen: list[dict[str, str]] = []
+    seen: list[httpx.Request] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
-        seen.append(dict(request.url.params))
+        seen.append(request)
         return httpx.Response(200, json={"results": []})
 
     connector = _connector_for(
@@ -121,8 +140,10 @@ async def test_search_reads_credentials_from_named_environment(monkeypatch):
     )
 
     assert await connector.search(SearchCriteria()) == []
-    assert seen[0]["app_id"] == "env-id"
-    assert seen[0]["app_key"] == "env-key"
+    expected_auth = "Basic " + base64.b64encode(b"env-id:env-key").decode()
+    assert seen[0].headers.get("Authorization") == expected_auth
+    assert "app_id" not in dict(seen[0].url.params)
+    assert "app_key" not in dict(seen[0].url.params)
 
 
 async def test_search_missing_credentials_raises_clear_error(monkeypatch):
@@ -174,3 +195,54 @@ def test_config_defaults_include_adzuna_env_var_names():
 
     assert config.auth.adzuna_app_id_env == "ADZUNA_APP_ID"
     assert config.auth.adzuna_app_key_env == "ADZUNA_APP_KEY"
+
+
+async def test_search_retries_on_transient_503():
+    t = _SequenceTransport([
+        httpx.Response(503, json={"error": "Service Unavailable"}),
+        httpx.Response(200, json=_response()),
+    ])
+    connector = AdzunaConnector(
+        app_id="id", app_key="key",
+        client_factory=lambda: httpx.AsyncClient(transport=t),
+        max_results=1,
+        max_attempts=3,
+        base_delay=0.0,
+    )
+    jobs = await connector.search(SearchCriteria())
+    assert len(jobs) == 1
+    assert t.call_count == 2
+
+
+async def test_search_raises_after_max_retry_attempts():
+    t = _SequenceTransport([
+        httpx.Response(503, json={"error": "down"}),
+        httpx.Response(503, json={"error": "down"}),
+        httpx.Response(503, json={"error": "down"}),
+    ])
+    connector = AdzunaConnector(
+        app_id="id", app_key="key",
+        client_factory=lambda: httpx.AsyncClient(transport=t),
+        max_results=1,
+        max_attempts=3,
+        base_delay=0.0,
+    )
+    with pytest.raises(AdzunaConnectorError, match="503"):
+        await connector.search(SearchCriteria())
+    assert t.call_count == 3
+
+
+async def test_search_logs_debug_for_dropped_malformed_records(caplog):
+    connector = _connector_for(
+        lambda _: httpx.Response(
+            200,
+            json={"results": [
+                {"id": "bad-no-title", "company": {"display_name": "Acme"}},
+            ]},
+        ),
+        max_results=1,
+    )
+    with caplog.at_level(logging.DEBUG, logger="core.connectors.adzuna_connector"):
+        jobs = await connector.search(SearchCriteria())
+    assert jobs == []
+    assert any("dropped" in rec.message for rec in caplog.records)
