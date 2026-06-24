@@ -197,27 +197,56 @@ def _select_named(plugins: list[type], name: str) -> type:
     raise ValueError(f"No plugin named {name!r} discovered (available: {available})")
 
 
-def _instantiate_connector(cls, settings, provider=None) -> BaseConnector:
-    """Instantiate a connector class, passing only kwargs its constructor accepts."""
-    if settings is None:
-        return cls()
+def _filter_constructor_kwargs(cls, kwargs: dict) -> dict:
     sig = inspect.signature(cls)
+    if any(param.kind is inspect.Parameter.VAR_KEYWORD for param in sig.parameters.values()):
+        return {key: value for key, value in kwargs.items() if value is not None}
     acceptable = set(sig.parameters.keys())
-    config_kwargs: dict = {
-        "enabled": getattr(settings, "enabled", True),
-        "max_results": getattr(settings, "max_results", 50),
-        "delay_min": getattr(settings, "delay_min", 2.0),
-        "delay_max": getattr(settings, "delay_max", 5.0),
-        "results_per_query": getattr(settings, "results_per_query", 10),
-        "trust_threshold": getattr(settings, "trust_threshold", 60),
-        "trust_check_enabled": getattr(settings, "trust_check_enabled", True),
+    return {key: value for key, value in kwargs.items() if key in acceptable and value is not None}
+
+
+def _instantiate_provider(cls, config) -> BaseAIProvider:
+    auth = getattr(config, "auth", None)
+    kwargs: dict = {
+        "model": config.ai.model,
+        "batch_size": config.ai.batch_size,
     }
-    if hasattr(settings, "fixture_path") and settings.fixture_path is not None:
+    name = getattr(cls, "name", None)
+    if auth is not None:
+        if name == "gemini":
+            kwargs["api_key_env"] = getattr(auth, "gemini_api_key_env", None)
+        elif name == "openrouter":
+            kwargs["api_key_env"] = getattr(auth, "openrouter_api_key_env", None)
+    return cls(**_filter_constructor_kwargs(cls, kwargs))
+
+
+def _instantiate_connector(cls, settings, provider=None, auth=None) -> BaseConnector:
+    """Instantiate a connector class, passing only kwargs its constructor accepts."""
+    config_kwargs: dict = {}
+    if settings is not None:
+        config_kwargs.update(
+            {
+                "enabled": getattr(settings, "enabled", True),
+                "max_results": getattr(settings, "max_results", 50),
+                "delay_min": getattr(settings, "delay_min", 2.0),
+                "delay_max": getattr(settings, "delay_max", 5.0),
+                "results_per_query": getattr(settings, "results_per_query", 10),
+                "trust_threshold": getattr(settings, "trust_threshold", 60),
+                "trust_check_enabled": getattr(settings, "trust_check_enabled", True),
+            }
+        )
+    if (
+        settings is not None
+        and hasattr(settings, "fixture_path")
+        and settings.fixture_path is not None
+    ):
         config_kwargs["fixture_path"] = settings.fixture_path
+    if auth is not None and getattr(cls, "name", None) == "adzuna":
+        config_kwargs["app_id_env"] = getattr(auth, "adzuna_app_id_env", None)
+        config_kwargs["app_key_env"] = getattr(auth, "adzuna_app_key_env", None)
     if provider is not None and hasattr(provider, "complete"):
         config_kwargs["ai_complete"] = provider.complete
-    kwargs = {k: v for k, v in config_kwargs.items() if k in acceptable}
-    return cls(**kwargs)
+    return cls(**_filter_constructor_kwargs(cls, config_kwargs))
 
 
 def build_runner(
@@ -242,10 +271,7 @@ def build_runner(
     connector_classes = _discover_unique(
         discover, BaseConnector, root / "core" / "connectors", drop / "connectors"
     )
-    provider = _select_named(providers, config.ai.provider)(
-        model=config.ai.model,
-        batch_size=config.ai.batch_size,
-    )
+    provider = _instantiate_provider(_select_named(providers, config.ai.provider), config)
     connector_map: dict = getattr(config, "connectors", {}) or {}
     connector_instances: list[BaseConnector] = []
     for cls in connector_classes:
@@ -253,7 +279,14 @@ def build_runner(
         settings = connector_map.get(name) if name else None
         if settings is not None and not getattr(settings, "enabled", True):
             continue
-        connector_instances.append(_instantiate_connector(cls, settings, provider=provider))
+        connector_instances.append(
+            _instantiate_connector(
+                cls,
+                settings,
+                provider=provider,
+                auth=getattr(config, "auth", None),
+            )
+        )
     return Runner(
         provider=provider,
         connectors=connector_instances,

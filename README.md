@@ -44,6 +44,19 @@ jobhunter run --profile "Senior Python developer seeking remote work"
 jobhunter export --format csv
 ```
 
+## Live smoke validation
+
+Run a minimal real Adzuna + AI pipeline to confirm credentials and connectivity:
+
+```bash
+jobhunter smoke-validate
+# or with a specific AI provider:
+jobhunter smoke-validate --provider openrouter
+```
+
+The command skips cleanly (exit 0) when `ADZUNA_APP_ID`, `ADZUNA_APP_KEY`, and
+`GEMINI_API_KEY` (or `OPENROUTER_API_KEY`) are absent. No credentials are printed.
+
 ## Authoring Plugins
 
 Use these guides when adding local drop-ins or new built-ins:
