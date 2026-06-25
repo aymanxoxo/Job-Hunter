@@ -10,7 +10,7 @@
 
 <!-- jh:orientation:start -->
 - **Phase:** Phase 3 hardening active (M-03 and M-06 gates cleared). **Next gate:** Phase 3 hardening backlog (C-058-C-068).
-- **Last done:** **C-066** - Config + pipeline correctness — env-override clobber + min_score wiring + unscored-job log (merge pending). Prior done: **C-065** - Connector hardening — Adzuna retry/creds/silent-drop + DDG trust_summary + Mock fixture path (`6109679`); **C-064** - AI provider reliability — Gemini model name + retry Retry-After + batch-parse resilience (`78074ff`).
+- **Last done:** **C-066** - Config + pipeline correctness — env-override clobber + min_score wiring + unscored-job log (`cfa2590`). Prior done: **C-065** - Connector hardening — Adzuna retry/creds/silent-drop + DDG trust_summary + Mock fixture path (`6109679`); **C-064** - AI provider reliability — Gemini model name + retry Retry-After + batch-parse resilience (`78074ff`).
 - **Next ready:** **C-067** - Session store hardening — UUID instability + static PBKDF2 salt; **C-068** - Desktop hardening — pipeline store crashes + race conditions + hard-coded threshold.
 - **Blocked:** none.
 - **Notes:** Dev loop runs through short-lived GitHub PR branches; the user reviews and merges. See [ADR-014/015/016](Documents/DECISIONS.md).
@@ -88,7 +88,7 @@
 | C-063 | Runner correctness — False-drop in kwargs filter + disabled-connector gate + fail-graceful scoring | Phase 3 Hardening | C-059 | done | 2cad082 |
 | C-064 | AI provider reliability — Gemini model name + retry Retry-After + batch-parse resilience | Phase 3 Hardening | C-054, C-059 | done | 78074ff |
 | C-065 | Connector hardening — Adzuna retry/creds/silent-drop + DDG trust_summary + Mock fixture path | Phase 3 Hardening | C-051, C-020 | done | 6109679 |
-| C-066 | Config + pipeline correctness — env-override clobber + min_score wiring + unscored-job log | Phase 3 Hardening | C-003, C-022, C-025 | done | 5575ac3 |
+| C-066 | Config + pipeline correctness — env-override clobber + min_score wiring + unscored-job log | Phase 3 Hardening | C-003, C-022, C-025 | done | cfa2590 |
 | C-067 | Session store hardening — UUID instability + static PBKDF2 salt | Phase 3 Hardening | C-019 | todo | — |
 | C-068 | Desktop hardening — pipeline store crashes + race conditions + hard-coded threshold | Phase 3 Hardening | C-058, C-059 | todo | — |
 | C-060 | ResultsView real export action | Phase 3 Desktop UX | C-058, C-062, C-063, C-064, C-065, C-066, C-067, C-068 | todo | — |
@@ -96,7 +96,7 @@
 
 ## Changelog (newest first)
 
-- 2026-06-24 - **C-066** Config + pipeline correctness on `chunk/C-066-config-pipeline-correctness`: (1) `apply_env_overrides` now skips env overrides whose path navigates into an existing non-dict leaf value, preventing invalid `KEY__SUBKEY__EXTRA` vars from silently replacing string/int config values with `{}`; (2) `Runner` gains `min_score_threshold` constructor param, and `build_runner` threads `config.ai.min_score` through to it; `run()` overrides the generated `SearchCriteria.min_score_threshold` with the configured value so env overrides like `AI__MIN_SCORE=50` are honoured; (3) `run()` logs a structured warning after `filter_below_threshold` when any jobs remain unscored (score=None), making silent exclusion visible. 3 new tests (+1 config invalid-path, +2 runner orchestrator); 381 pytest passed; ruff clean; gate PASS. Opened PR #95 (`c235a04`).
+- 2026-06-24 - **C-066** Config + pipeline correctness on `chunk/C-066-config-pipeline-correctness`: (1) `apply_env_overrides` now skips env overrides whose path navigates into an existing non-dict leaf value, preventing invalid `KEY__SUBKEY__EXTRA` vars from silently replacing string/int config values with `{}`; (2) `Runner` gains `min_score_threshold` constructor param, and `build_runner` threads `config.ai.min_score` through to it; `run()` overrides the generated `SearchCriteria.min_score_threshold` with the configured value so env overrides like `AI__MIN_SCORE=50` are honoured; (3) `run()` logs a structured warning after `filter_below_threshold` when any jobs remain unscored (score=None), making silent exclusion visible. 3 new tests (+1 config invalid-path, +2 runner orchestrator); 381 pytest passed; ruff clean; gate PASS. Opened PR #95 (`cfa2590`).
 
 - 2026-06-24 - **C-065** Connector hardening on `chunk/C-065-connector-hardening`: (1) Adzuna credentials moved from URL query-string params to HTTP Basic Auth header — keeps `app_id`/`app_key` out of proxy and server access logs; (2) Adzuna `_adzuna_get()` wraps each GET with exponential-backoff retry on 429/500/502/503/504 and `httpx` network errors; new `max_attempts`/`base_delay` constructor params (defaults 3/1 s); (3) Adzuna silent-drop replaced by explicit loop with `log.debug()` for each malformed record; (4) DDG `_score_companies_trust` now returns `dict[str, tuple[int, str | None]]` and the trust map is cached across the filter + enrichment phases, eliminating the duplicate call and correctly populating `trust_summary` on returned jobs (was always `None`); (5) `MockConnector.DEFAULT_FIXTURE_PATH` changed to an absolute path derived from `__file__` so the fixture loads correctly regardless of the caller's CWD. 5 new tests (+3 Adzuna, +1 DDG, +1 Mock); updated existing credential and trust-score tests; 372 pytest passed; ruff clean; gate PASS. Merged `6109679` (PR #93).
 
