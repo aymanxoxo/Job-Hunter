@@ -117,6 +117,22 @@ class Runner:
         logger=None,
         run_id: str | None = None,
     ) -> None:
+        """Initialise a pipeline runner.
+
+        Args:
+            provider: AI provider for criteria generation and job scoring.
+            connectors: Sequence of job-search connectors.
+            profile_input: Profile parser (defaults to text passthrough).
+            output_dir: Directory for exported results.
+            output_format: Export format (csv, json, both).
+            min_score_threshold: When set, overrides the provider-generated
+                ``SearchCriteria.min_score_threshold`` so the config/env
+                remains the source of truth.
+            emitter: Progress event emitter.
+            clock: Injectable time source for deterministic exports.
+            logger: Optional structured logger.
+            run_id: Optional run ID (auto-generated if omitted).
+        """
         self.provider = provider
         self.connectors = tuple(connectors)
         self.profile_input = profile_input or TextProfileInput()
@@ -162,7 +178,7 @@ class Runner:
         unscored_count = sum(1 for job in scored if job.score is None)
         if unscored_count:
             self.log.warning(
-                "unscored jobs filtered below threshold",
+                "unscored jobs excluded from results (score is None)",
                 count=unscored_count,
                 threshold=effective_threshold,
             )
@@ -279,6 +295,9 @@ def build_runner(
     ``connectors/``) are resolved relative to ``plugin_root`` - the current working directory by
     default - so an installed CLI discovers plugins from the project it is run in rather than from
     the package install location. Running from the repo root keeps the old behaviour (cwd == root).
+
+    ``config.ai.min_score`` is threaded to the runner as ``min_score_threshold``, so the config
+    (and env overrides like ``AI__MIN_SCORE``) remain the source of truth for the effective filter.
     """
     drop = Path.cwd() if plugin_root is None else Path(plugin_root)
     providers = _discover_unique(

@@ -17,6 +17,8 @@ from typing import Any, Literal
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from core.logging import get_logger
+
 _ENV_NAME = re.compile(r"^[A-Z][A-Z0-9_]*$")
 _SECTIONS = ("ai", "profile", "connectors", "output", "auth")
 
@@ -26,7 +28,7 @@ class AIConfig(BaseModel):
     provider: str = "gemini"
     model: str = "gemini-3.5-flash"
     batch_size: int = Field(default=15, ge=1)
-    min_score: int = Field(default=40, ge=0, le=100)
+    min_score: int | None = Field(default=None, ge=0, le=100)
 
 
 class ProfileConfig(BaseModel):
@@ -87,13 +89,19 @@ class Config(BaseModel):
     auth: AuthConfig = Field(default_factory=AuthConfig)
 
 
-def apply_env_overrides(data: dict[str, Any], env: dict[str, str]) -> dict[str, Any]:
+def apply_env_overrides(
+    data: dict[str, Any], env: dict[str, str]
+) -> tuple[dict[str, Any], list[str]]:
     """Pure: overlay ``KEY__SUBKEY=value`` env vars onto a config dict (``__`` = nesting).
 
     Only env vars whose first segment is a known config section are applied; values stay as strings
     and are coerced by pydantic on validation. The input ``data`` is not mutated.
+
+    Returns a tuple of ``(merged_data, skipped_keys)`` where ``skipped_keys`` is a list of env var
+    names that could not be applied because their path navigates into an existing non-dict value.
     """
     result = deepcopy(data)
+    skipped: list[str] = []
     for key, value in env.items():
         if "__" not in key:
             continue
@@ -113,11 +121,16 @@ def apply_env_overrides(data: dict[str, Any], env: dict[str, str]) -> dict[str, 
             node = child
         if valid:
             node[parts[-1]] = value
-    return result
+        else:
+            skipped.append(key)
+    return result, skipped
 
 
 def load_config(path: str | Path = "config.yaml", env: dict[str, str] | None = None) -> Config:
     """Read ``path``, apply env overrides, and return a validated ``Config``."""
+    log = get_logger("core.config")
     raw = yaml.safe_load(Path(path).read_text(encoding="utf-8")) or {}
-    merged = apply_env_overrides(raw, dict(os.environ) if env is None else env)
+    merged, skipped = apply_env_overrides(raw, dict(os.environ) if env is None else env)
+    for key in skipped:
+        log.warning("env override skipped", key=key, reason="path navigates into non-dict value")
     return Config.model_validate(merged)
