@@ -10,7 +10,7 @@
 
 <!-- jh:orientation:start -->
 - **Phase:** Phase 3 hardening active (M-03 and M-06 gates cleared). **Next gate:** Phase 3 hardening backlog (C-058-C-068).
-- **Last done:** **C-066** - Config + pipeline correctness — env-override clobber + min_score wiring + unscored-job log (`5dd02e6`). Prior done: **C-065** - Connector hardening — Adzuna retry/creds/silent-drop + DDG trust_summary + Mock fixture path (`6109679`); **C-064** - AI provider reliability — Gemini model name + retry Retry-After + batch-parse resilience (`78074ff`).
+- **Last done:** **C-067** - Session store hardening — UUID instability + static PBKDF2 salt (PR pending). Prior done: **C-066** - Config + pipeline correctness — env-override clobber + min_score wiring + unscored-job log (`5dd02e6`).
 - **Next ready:** **C-067** - Session store hardening — UUID instability + static PBKDF2 salt; **C-068** - Desktop hardening — pipeline store crashes + race conditions + hard-coded threshold.
 - **Blocked:** none.
 - **Notes:** Dev loop runs through short-lived GitHub PR branches; the user reviews and merges. See [ADR-014/015/016](Documents/DECISIONS.md).
@@ -89,12 +89,14 @@
 | C-064 | AI provider reliability — Gemini model name + retry Retry-After + batch-parse resilience | Phase 3 Hardening | C-054, C-059 | done | 78074ff |
 | C-065 | Connector hardening — Adzuna retry/creds/silent-drop + DDG trust_summary + Mock fixture path | Phase 3 Hardening | C-051, C-020 | done | 6109679 |
 | C-066 | Config + pipeline correctness — env-override clobber + min_score wiring + unscored-job log | Phase 3 Hardening | C-003, C-022, C-025 | done | 5dd02e6 |
-| C-067 | Session store hardening — UUID instability + static PBKDF2 salt | Phase 3 Hardening | C-019 | todo | — |
+| C-067 | Session store hardening — UUID instability + static PBKDF2 salt | Phase 3 Hardening | C-019 | done | — |
 | C-068 | Desktop hardening — pipeline store crashes + race conditions + hard-coded threshold | Phase 3 Hardening | C-058, C-059 | todo | — |
 | C-060 | ResultsView real export action | Phase 3 Desktop UX | C-058, C-062, C-063, C-064, C-065, C-066, C-067, C-068 | todo | — |
 | C-061 | Desktop partial failure and empty-state UX | Phase 3 Desktop UX | C-058, C-062, C-063, C-064, C-065, C-066, C-067, C-068 | todo | — |
 
 ## Changelog (newest first)
+
+- 2026-06-24 - **C-067** Session store hardening on `chunk/C-067-session-store-hardening`: (1) Replaces unstable `uuid.getnode()` machine ID with a stable 16-byte hex ID written once to `~/.jobhunter/machine-id` and read on all subsequent calls — fixes permanent `SessionStoreError` on containers, VM restarts, and NIC changes. New `_load_or_create_machine_id(path)` helper generates `secrets.token_hex(16)` when absent, creates parent dirs, and returns the stored value. (2) Replaces static PBKDF2 salt with a per-install random 32-byte salt written once to `~/.jobhunter/salt`, hex-encoded for storage. New `_load_or_create_salt(path)` helper generates `secrets.token_bytes(32)` when absent. `derive_session_key(machine_id, salt)` now accepts the salt as an explicit parameter, removing the module-level `_KEY_SALT` constant and eliminating precomputation attacks against known MAC addresses. `SessionStore` gains an injectable `salt_provider` constructor param (analogous to `machine_id_provider`). 8 new focused tests (machine-id create/stability/regression, salt create/stability, key derivation with param, round-trip with injected providers, key stability across instances); 394 pytest passed (9 existing + 8 new session-store tests, all others unchanged); ruff clean; gate PASS.
 
 - 2026-06-24 - **C-066** Config + pipeline correctness on `chunk/C-066-config-pipeline-correctness`: (1) `apply_env_overrides` now skips env overrides whose path navigates into an existing non-dict leaf value, preventing invalid `KEY__SUBKEY__EXTRA` vars from silently replacing string/int config values with `{}`; (2) `Runner` gains `min_score_threshold` constructor param, and `build_runner` threads `config.ai.min_score` through to it; `run()` overrides the generated `SearchCriteria.min_score_threshold` with the configured value so env overrides like `AI__MIN_SCORE=50` are honoured; (3) `run()` logs a structured warning after `filter_below_threshold` when any jobs remain unscored (score=None), making silent exclusion visible. **Review fixes:** `AIConfig.min_score` default changed from `40` to `None` so provider-generated thresholds are preserved when the user doesn't explicitly override; `apply_env_overrides` returns `(result, skipped)` tuple so `load_config` logs skipped overrides; unscored log message rephrased for accuracy; `Runner`/`build_runner` docstrings updated. 8 new tests (+2 config, +3 runner orchestrator, +1 build_runner); 386 pytest passed; ruff clean; gate PASS. Merged PR #95 (`5dd02e6`).
 
