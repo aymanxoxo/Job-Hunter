@@ -111,16 +111,34 @@ class Runner:
         profile_input: BaseProfileInput | None = None,
         output_dir: str | Path = "output/",
         output_format: str = "both",
+        min_score_threshold: int | None = None,
         emitter: ProgressEmitter | None = None,
         clock: Callable[[], datetime] | None = None,
         logger=None,
         run_id: str | None = None,
     ) -> None:
+        """Initialise a pipeline runner.
+
+        Args:
+            provider: AI provider for criteria generation and job scoring.
+            connectors: Sequence of job-search connectors.
+            profile_input: Profile parser (defaults to text passthrough).
+            output_dir: Directory for exported results.
+            output_format: Export format (csv, json, both).
+            min_score_threshold: When set, overrides the provider-generated
+                ``SearchCriteria.min_score_threshold`` so the config/env
+                remains the source of truth.
+            emitter: Progress event emitter.
+            clock: Injectable time source for deterministic exports.
+            logger: Optional structured logger.
+            run_id: Optional run ID (auto-generated if omitted).
+        """
         self.provider = provider
         self.connectors = tuple(connectors)
         self.profile_input = profile_input or TextProfileInput()
         self.output_dir = output_dir
         self.output_format = output_format
+        self.min_score_threshold = min_score_threshold
         self.emitter = emitter or ProgressEmitter()
         self.clock = clock or datetime.now
         self.log = logger or get_logger("core.runner")
@@ -138,6 +156,8 @@ class Runner:
 
         emit("criteria", "active")
         criteria = await self.provider.generate_criteria(profile_text)
+        if self.min_score_threshold is not None:
+            criteria = criteria.model_copy(update={"min_score_threshold": self.min_score_threshold})
         emit("criteria", "done")
 
         emit("search", "active", total=len(self.connectors))
@@ -151,9 +171,17 @@ class Runner:
         except Exception as exc:
             self.log.warning("score_jobs failed; run continues with unscored jobs", error=str(exc))
             scored = list(merged)
+        effective_threshold = criteria.min_score_threshold
         ranked = filter_below_threshold(
-            sort_by_score(scored), min_score_threshold=criteria.min_score_threshold
+            sort_by_score(scored), min_score_threshold=effective_threshold
         )
+        unscored_count = sum(1 for job in scored if job.score is None)
+        if unscored_count:
+            self.log.warning(
+                "unscored jobs excluded from results (score is None)",
+                count=unscored_count,
+                threshold=effective_threshold,
+            )
         emit("score", "done", current=len(ranked))
 
         emit("export", "active")
@@ -267,6 +295,9 @@ def build_runner(
     ``connectors/``) are resolved relative to ``plugin_root`` - the current working directory by
     default - so an installed CLI discovers plugins from the project it is run in rather than from
     the package install location. Running from the repo root keeps the old behaviour (cwd == root).
+
+    ``config.ai.min_score`` is threaded to the runner as ``min_score_threshold``, so the config
+    (and env overrides like ``AI__MIN_SCORE``) remain the source of truth for the effective filter.
     """
     drop = Path.cwd() if plugin_root is None else Path(plugin_root)
     providers = _discover_unique(
@@ -296,5 +327,6 @@ def build_runner(
         connectors=connector_instances,
         output_dir=config.output.directory,
         output_format=config.output.format,
+        min_score_threshold=getattr(config.ai, "min_score", None),
         **overrides,
     )

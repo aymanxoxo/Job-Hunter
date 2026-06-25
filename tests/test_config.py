@@ -18,7 +18,7 @@ from core.config import (
 def test_defaults():
     c = Config()
     assert c.ai.provider == "gemini" and c.ai.model == "gemini-3.5-flash"
-    assert c.ai.batch_size == 15 and c.ai.min_score == 40
+    assert c.ai.batch_size == 15 and c.ai.min_score is None
     assert c.profile.input == "text"
     assert c.output.format == "both"
     assert c.auth.gemini_api_key_env == "GEMINI_API_KEY"
@@ -51,12 +51,48 @@ def test_env_double_underscore_overrides(tmp_path):
     assert c.connectors["linkedin"].enabled is False
 
 
+def test_env_override_preserves_sibling_config_on_invalid_path():
+    """An env var with a path longer than the config structure must not replace a
+    leaf with a dict."""
+    data = {"ai": {"provider": "gemini", "model": "gemini-3.5-flash"}}
+    env = {"AI__PROVIDER__EXTRA": "foo"}
+    result, skipped = apply_env_overrides(data, env)
+    assert result["ai"]["provider"] == "gemini"
+    assert result["ai"]["model"] == "gemini-3.5-flash"
+    assert skipped == ["AI__PROVIDER__EXTRA"]
+
+
+def test_env_override_skipped_invalid_paths():
+    """Multiple invalid env var paths are all returned in the skipped list."""
+    data = {"ai": {"provider": "gemini", "model": "gemini-3.5-flash"}}
+    env = {"AI__PROVIDER__EXTRA": "foo", "AI__MODEL__EXTRA": "bar"}
+    result, skipped = apply_env_overrides(data, env)
+    assert sorted(skipped) == ["AI__MODEL__EXTRA", "AI__PROVIDER__EXTRA"]
+    assert result["ai"]["provider"] == "gemini"
+    assert result["ai"]["model"] == "gemini-3.5-flash"
+
+
 def test_apply_env_overrides_is_pure():
     data = {"ai": {"provider": "gemini"}}
-    out = apply_env_overrides(data, {"AI__PROVIDER": "ollama"})
+    out, skipped = apply_env_overrides(data, {"AI__PROVIDER": "ollama"})
     assert out["ai"]["provider"] == "ollama"
+    assert skipped == []
     assert data["ai"]["provider"] == "gemini"
-    assert apply_env_overrides({}, {"PATH": "/x", "FOO": "bar"}) == {}
+    assert apply_env_overrides({}, {"PATH": "/x", "FOO": "bar"}) == ({}, [])
+
+
+def test_min_score_validation():
+    """min_score must be 0-100 when set; None is allowed as default."""
+    c = Config(ai={"min_score": None})
+    assert c.ai.min_score is None
+    c = Config(ai={"min_score": 0})
+    assert c.ai.min_score == 0
+    c = Config(ai={"min_score": 100})
+    assert c.ai.min_score == 100
+    with pytest.raises(ValidationError):
+        Config(ai={"min_score": -1})
+    with pytest.raises(ValidationError):
+        Config(ai={"min_score": 101})
 
 
 def test_auth_must_be_env_var_names_not_secrets():

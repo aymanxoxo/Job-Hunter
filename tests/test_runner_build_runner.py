@@ -184,6 +184,15 @@ def test_build_runner_uses_defaults_when_no_config_section():
     assert conn.delay_max == 5.0
 
 
+def test_build_runner_passes_min_score_to_runner():
+    """config.ai.min_score is threaded through to Runner.min_score_threshold."""
+    discover = _discover_factory([ConfigurableConnector])
+    config = _config()
+    config.ai = SimpleNamespace(provider="stub", model="x", batch_size=10, min_score=55)
+    runner = build_runner(config, discover=discover)
+    assert runner.min_score_threshold == 55
+
+
 def test_build_runner_passes_fixture_path_to_mock():
     discover = _discover_factory([FixtureConnector])
     config = _config(fixture={"enabled": True, "fixture_path": "f.json"})

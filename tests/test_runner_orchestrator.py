@@ -126,6 +126,104 @@ async def test_run_is_fail_graceful_when_score_jobs_raises(tmp_path):
     assert result.exported[0].exists()
 
 
+async def test_run_wires_min_score_threshold_from_config(tmp_path):
+    """Runner should override generated criteria's min_score_threshold with the config value."""
+    good = _job("1", "https://good/1")
+    runner, _ = _runner(
+        [FakeConnector([good])],
+        output_dir=tmp_path,
+        output_format="json",
+    )
+    runner.min_score_threshold = 80  # config says 80, provider generates 50
+
+    result = await runner.run("profile")
+
+    # Provider generated criteria with threshold 50, but runner should override to 80.
+    # Since the job scores 90 (above 80), it should be kept.
+    assert result.criteria.min_score_threshold == 80
+    assert [job.id for job in result.jobs] == ["1"]
+
+
+async def test_run_filters_unscored_jobs_and_logs_warning(tmp_path):
+    """Jobs that remain unscored after scoring should be visible in structured logs."""
+    unscored = _job("1", "https://unscored/1")
+    scored = _job("2", "https://scored/2")
+
+    class PartialProvider(BaseAIProvider):
+        name = "partial"
+        auth_methods = ("none",)
+
+        async def generate_criteria(self, profile):
+            return SearchCriteria(raw_profile=profile, min_score_threshold=0)
+
+        async def score_jobs(self, jobs, criteria):
+            # Only score the second job
+            return [job.model_copy(update={"score": 90}) if job.id == "2" else job for job in jobs]
+
+    runner, _ = _runner(
+        [FakeConnector([unscored, scored])],
+        output_dir=tmp_path,
+        output_format="json",
+    )
+    runner.provider = PartialProvider()
+    logs: list[dict] = []
+    original_warning = runner.log.warning
+
+    def capture_warning(msg, **kwargs):
+        logs.append({"msg": msg, **kwargs})
+        original_warning(msg, **kwargs)
+
+    runner.log.warning = capture_warning  # type: ignore[method-assign]
+
+    result = await runner.run("profile")
+
+    assert [job.id for job in result.jobs] == ["2"]
+    # Unscored job should be logged
+    unscored_logs = [log for log in logs if "unscored" in log.get("msg", "").lower()]
+    assert len(unscored_logs) >= 1
+    assert unscored_logs[0].get("count", 0) == 1
+
+
+async def test_run_wires_min_score_threshold_zero(tmp_path):
+    """Runner should override generated criteria with min_score_threshold=0 (falsy but valid)."""
+    good = _job("1", "https://good/1")
+    runner, _ = _runner(
+        [FakeConnector([good])],
+        output_dir=tmp_path,
+        output_format="json",
+    )
+    runner.min_score_threshold = 0  # falsy but valid; must still override
+
+    result = await runner.run("profile")
+
+    assert result.criteria.min_score_threshold == 0
+    assert [job.id for job in result.jobs] == ["1"]
+
+
+async def test_run_no_unscored_jobs_no_warning(tmp_path):
+    """When all jobs are scored, no unscored warning should be logged."""
+    scored = _job("1", "https://good/1")
+    runner, _ = _runner(
+        [FakeConnector([scored])],
+        output_dir=tmp_path,
+        output_format="json",
+    )
+    logs: list[dict] = []
+    original_warning = runner.log.warning
+
+    def capture_warning(msg, **kwargs):
+        logs.append({"msg": msg, **kwargs})
+        original_warning(msg, **kwargs)
+
+    runner.log.warning = capture_warning  # type: ignore[method-assign]
+
+    result = await runner.run("profile")
+
+    assert [job.id for job in result.jobs] == ["1"]
+    unscored_logs = [log for log in logs if "unscored" in log.get("msg", "").lower()]
+    assert len(unscored_logs) == 0
+
+
 async def test_search_all_skips_connectors_with_enabled_false(tmp_path):
     """Connectors that have enabled=False on themselves must be excluded from search."""
     searched: list[str] = []
