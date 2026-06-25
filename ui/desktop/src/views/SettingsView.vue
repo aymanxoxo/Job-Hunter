@@ -15,6 +15,7 @@ interface DesktopSettings {
   };
   maxResults: number;
   delaySeconds: number;
+  minScore: number | null;
   ddg: {
     resultsPerQuery: number;
     trustThreshold: number;
@@ -25,6 +26,7 @@ interface DesktopSettings {
 interface PersistedConfig {
   ai: {
     provider: Provider;
+    min_score?: number | null;
   };
   connectors: {
     mock: {
@@ -118,6 +120,7 @@ function defaultSettings(): DesktopSettings {
     },
     maxResults: 50,
     delaySeconds: 2,
+    minScore: null,
     ddg: {
       resultsPerQuery: 10,
       trustThreshold: 60,
@@ -163,6 +166,10 @@ function loadSettings(): DesktopSettings {
     const ddgEnabled =
       typeof duckduckgo.enabled === "boolean" ? duckduckgo.enabled : defaultSettings().connectors.duckduckgo;
 
+    const rawMinScore = ai.min_score;
+    const minScore =
+      typeof rawMinScore === "number" && Number.isFinite(rawMinScore) ? rawMinScore : null;
+
     return {
       provider: isProvider(ai.provider) ? ai.provider : defaultSettings().provider,
       connectors: {
@@ -172,6 +179,7 @@ function loadSettings(): DesktopSettings {
       },
       maxResults: clampNumber(mock.max_results ?? adzuna.max_results, defaultSettings().maxResults, 1, 100),
       delaySeconds: clampNumber(mock.delay_min ?? adzuna.delay_min, defaultSettings().delaySeconds, 0, 10),
+      minScore,
       ddg: {
         resultsPerQuery: clampNumber(duckduckgo.results_per_query, 10, 1, 50),
         trustThreshold: clampNumber(duckduckgo.trust_threshold, 60, 0, 100),
@@ -188,6 +196,7 @@ function configPayload(): PersistedConfig {
   return {
     ai: {
       provider: settings.value.provider,
+      min_score: settings.value.minScore,
     },
     connectors: {
       mock: {
@@ -319,6 +328,19 @@ async function saveApiKey() {
             data-testid="delay-range"
           />
           <output>{{ settings.delaySeconds }}s</output>
+        </label>
+
+        <label class="slider-field">
+          <span>Min score</span>
+          <input
+            v-model.number="settings.minScore"
+            type="range"
+            min="0"
+            max="100"
+            step="5"
+            data-testid="min-score"
+          />
+          <output>{{ settings.minScore ?? "Default" }}</output>
         </label>
 
         <div class="footer-actions">

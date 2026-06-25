@@ -10,7 +10,7 @@
 
 <!-- jh:orientation:start -->
 - **Phase:** Phase 3 hardening active (M-03 and M-06 gates cleared). **Next gate:** Phase 3 hardening backlog (C-058-C-068).
-- **Last done:** **C-067** - Session store hardening — UUID instability + static PBKDF2 salt (`1917338`). Prior done: **C-066** - Config + pipeline correctness — env-override clobber + min_score wiring + unscored-job log (`5dd02e6`).
+- **Last done:** **C-068** - Desktop hardening — pipeline store crashes + race conditions + hard-coded threshold (PR pending). Prior done: **C-067** - Session store hardening — UUID instability + static PBKDF2 salt (`28a1917`).
 - **Next ready:** **C-068** - Desktop hardening — pipeline store crashes + race conditions + hard-coded threshold.
 - **Blocked:** none.
 - **Notes:** Dev loop runs through short-lived GitHub PR branches; the user reviews and merges. See [ADR-014/015/016](Documents/DECISIONS.md).
@@ -90,11 +90,13 @@
 | C-065 | Connector hardening — Adzuna retry/creds/silent-drop + DDG trust_summary + Mock fixture path | Phase 3 Hardening | C-051, C-020 | done | 6109679 |
 | C-066 | Config + pipeline correctness — env-override clobber + min_score wiring + unscored-job log | Phase 3 Hardening | C-003, C-022, C-025 | done | 5dd02e6 |
 | C-067 | Session store hardening — UUID instability + static PBKDF2 salt | Phase 3 Hardening | C-019 | done | 1917338 |
-| C-068 | Desktop hardening — pipeline store crashes + race conditions + hard-coded threshold | Phase 3 Hardening | C-058, C-059 | todo | — |
+| C-068 | Desktop hardening — pipeline store crashes + race conditions + hard-coded threshold | Phase 3 Hardening | C-058, C-059 | done | — |
 | C-060 | ResultsView real export action | Phase 3 Desktop UX | C-058, C-062, C-063, C-064, C-065, C-066, C-067, C-068 | todo | — |
 | C-061 | Desktop partial failure and empty-state UX | Phase 3 Desktop UX | C-058, C-062, C-063, C-064, C-065, C-066, C-067, C-068 | todo | — |
 
 ## Changelog (newest first)
+
+- 2026-06-25 - **C-068** Desktop hardening on `chunk/C-068-desktop-hardening`: (1) `pipeline.ts` `runPipeline()` wrapped in try/catch/finally — the finally block unregisters the progress listener and ensures `status` is never left at `'running'` when the sidecar IPC import or invoke throws (was permanently stuck on containers/VMs where the Tauri API import fails); on any catch path `results` is explicitly cleared to `[]` so a failed run leaves no partial state. (2) `ResultsView.vue` replaces the hard-coded `40`pt visibility threshold with a reactive `settings.effectiveMinScore` read from the new `useSettingsStore` Pinia store; the store reads `ai.min_score` from `jobhunter.desktopConfig.v1` localStorage and falls back to `40` when `null`/`undefined`; changing the threshold immediately re-filters visible rows. (3) `SettingsView.vue` adds a "Min score" slider (0–100, step 5) in the Search limits card that persists `ai.min_score` into the same localStorage key, completing the reactive config bridge. 7 new frontend tests (+4 pipeline crash-recovery, +3 ResultsView threshold reactive/fallback/config); 51 vitest passed; `npm run build` clean; 400 pytest passed; ruff clean; gate PASS.
 
 - 2026-06-24 - **C-067** Session store hardening on `chunk/C-067-session-store-hardening`: (1) Replaces unstable `uuid.getnode()` machine ID with a stable 16-byte hex ID written once to `~/.jobhunter/machine-id` and read on all subsequent calls — fixes permanent `SessionStoreError` on containers, VM restarts, and NIC changes. New `_load_or_create_machine_id(path)` helper generates `secrets.token_hex(16)` when absent, creates parent dirs, and returns the stored value. (2) Replaces static PBKDF2 salt with a per-install random 32-byte salt written once to `~/.jobhunter/salt`, hex-encoded for storage. New `_load_or_create_salt(path)` helper generates `secrets.token_bytes(32)` when absent. `derive_session_key(machine_id, salt)` now accepts the salt as an explicit parameter, removing the module-level `_KEY_SALT` constant and eliminating precomputation attacks against known MAC addresses. `SessionStore` gains an injectable `salt_provider` constructor param (analogous to `machine_id_provider`). 8 new focused tests (machine-id create/stability/regression, salt create/stability, key derivation with param, round-trip with injected providers, key stability across instances); 394 pytest passed; ruff clean; gate PASS. Merged PR #96 (`1917338`).
 

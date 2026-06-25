@@ -3,6 +3,7 @@ import { Download, ExternalLink, Eye, EyeOff, Play, Search, X } from "@lucide/vu
 import { computed, ref, watch } from "vue";
 
 import { usePipelineStore, type JobResult } from "@/stores/pipeline";
+import { useSettingsStore } from "@/stores/settings";
 
 type SortKey = "score" | "title" | "company" | "location" | "source" | "date";
 type SortDirection = "asc" | "desc";
@@ -23,6 +24,7 @@ interface ResultRow {
 }
 
 const pipeline = usePipelineStore();
+const settings = useSettingsStore();
 const filterText = ref("");
 const sortKey = ref<SortKey>("score");
 const sortDirection = ref<SortDirection>("desc");
@@ -42,7 +44,7 @@ watch(
   { immediate: true, deep: true },
 );
 
-const visibleRows = computed(() => rows.value.filter((row) => row.score === null || row.score >= 40));
+const visibleRows = computed(() => rows.value.filter((row) => row.score === null || row.score >= settings.effectiveMinScore));
 const searchableRows = computed(() => (showHidden.value ? rows.value : visibleRows.value));
 
 const filteredRows = computed(() => {
@@ -237,7 +239,7 @@ async function rerunSearch() {
         <h2 id="results-title" class="section-title">Matches</h2>
         <p class="results-summary">
           {{ sortedRows.length }} shown
-          <span v-if="hiddenCount">/ {{ hiddenCount }} hidden below 40</span>
+          <span v-if="hiddenCount">/ {{ hiddenCount }} hidden below {{ settings.effectiveMinScore }}</span>
         </p>
       </div>
 

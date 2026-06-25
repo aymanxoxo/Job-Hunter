@@ -174,28 +174,36 @@ export const usePipelineStore = defineStore("pipeline", {
       this.status = "running";
       this.lastRun = request;
 
-      const overrides = buildConnectorOverrides();
-      const ipcRequest: RunPipelineRequest = {
-        ...request,
-        ...(overrides ? { connector_overrides: overrides } : {}),
-      };
-
-      const ipc = client ?? (await createTauriPipelineClient());
-      const unlisten = await ipc.listen("pipeline-progress", (event) => {
-        if (isProgressEvent(event.payload)) {
-          this.recordProgress(event.payload);
-        }
-      });
+      let unlisten: (() => void) | undefined;
 
       try {
+        const overrides = buildConnectorOverrides();
+        const ipcRequest: RunPipelineRequest = {
+          ...request,
+          ...(overrides ? { connector_overrides: overrides } : {}),
+        };
+
+        const ipc = client ?? (await createTauriPipelineClient());
+        unlisten = await ipc.listen("pipeline-progress", (event) => {
+          if (isProgressEvent(event.payload)) {
+            this.recordProgress(event.payload);
+          }
+        });
+
         const result = await ipc.invoke("run_pipeline", ipcRequest);
         this.setResult(result);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         this.setError(message);
+        this.results = [];
         throw error;
       } finally {
-        unlisten();
+        if (unlisten) {
+          unlisten();
+        }
+        if (this.status === "running") {
+          this.status = "idle";
+        }
       }
     },
 

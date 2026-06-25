@@ -280,3 +280,92 @@ describe("pipeline store", () => {
     expect(sent.connector_overrides).toEqual(connectors);
   });
 });
+
+describe("C-068 — pipeline store crash recovery", () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    clearLocalStorage();
+  });
+
+  it("store status is not running after ipc invoke throws", async () => {
+    const store = usePipelineStore();
+    await expect(
+      store.runPipeline(
+        { profile: "test", provider: "ollama" },
+        {
+          listen: async () => () => undefined,
+          invoke: async () => {
+            throw new Error("IPC import error");
+          },
+        },
+      ),
+    ).rejects.toThrow("IPC import error");
+    expect(store.status).not.toBe("running");
+    expect(store.status === "idle" || store.status === "failed").toBe(true);
+  });
+
+  it("store status is failed on run failure", async () => {
+    const store = usePipelineStore();
+    await expect(
+      store.runPipeline(
+        { profile: "test", provider: "ollama" },
+        {
+          listen: async () => () => undefined,
+          invoke: async () => {
+            throw new Error("run failed");
+          },
+        },
+      ),
+    ).rejects.toThrow("run failed");
+    expect(store.status).toBe("failed");
+  });
+
+  it("store results are cleared on failure", async () => {
+    const store = usePipelineStore();
+    store.results = [{ id: "old", title: "Old Job" }];
+    await expect(
+      store.runPipeline(
+        { profile: "test", provider: "ollama" },
+        {
+          listen: async () => () => undefined,
+          invoke: async () => {
+            throw new Error("run failed");
+          },
+        },
+      ),
+    ).rejects.toThrow("run failed");
+    expect(store.results).toEqual([]);
+  });
+
+  it("no ghost merge — failed run leaves empty results", async () => {
+    const store = usePipelineStore();
+    const client = {
+      listen: async () => () => undefined,
+      invoke: async (command: string) => {
+        if (command === "run_pipeline") {
+          return [
+            { id: "job-1", title: "First Job", score: 85 },
+            { id: "job-2", title: "Second Job", score: 65 },
+            { id: "job-3", title: "Third Job", score: 55 },
+          ];
+        }
+        throw new Error("unexpected command");
+      },
+    };
+
+    await store.runPipeline({ profile: "test", provider: "ollama" }, client);
+    expect(store.results).toHaveLength(3);
+
+    const failingClient = {
+      listen: async () => () => undefined,
+      invoke: async () => {
+        throw new Error("second run failed");
+      },
+    };
+
+    await expect(
+      store.runPipeline({ profile: "test", provider: "ollama" }, failingClient),
+    ).rejects.toThrow("second run failed");
+    expect(store.results).toEqual([]);
+  });
+});

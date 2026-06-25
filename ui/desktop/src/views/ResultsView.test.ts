@@ -186,4 +186,75 @@ describe("ResultsView", () => {
       provider: "ollama",
     });
   });
+
+  // --- C-068 new tests below ---
+
+  it("reads threshold from settings store config", async () => {
+    setActivePinia(createPinia());
+    const store = usePipelineStore();
+    store.results = [...firstRun];
+    store.lastRun = { profile: "Senior platform engineer", provider: "ollama" };
+
+    const { useSettingsStore } = await import("@/stores/settings");
+    const settings = useSettingsStore();
+    settings.saveMinScore(60);
+
+    const wrapper = mount(ResultsView, { attachTo: document.body });
+    await wrapper.vm.$nextTick();
+
+    // Only scores >= 60 should be visible
+    expect(renderedTitles(wrapper)).toEqual([
+      "Platform Engineer",
+      "Backend Engineer",
+    ]);
+    expect(wrapper.text()).not.toContain("Support Developer");
+    expect(wrapper.text()).not.toContain("Data Integrations Engineer");
+  });
+
+  it("falls back to 40 when settings store min_score is null", async () => {
+    setActivePinia(createPinia());
+    const store = usePipelineStore();
+    store.results = [...firstRun];
+    store.lastRun = { profile: "Senior platform engineer", provider: "ollama" };
+
+    const { useSettingsStore } = await import("@/stores/settings");
+    const settings = useSettingsStore();
+    settings.saveMinScore(null);
+
+    const wrapper = mount(ResultsView, { attachTo: document.body });
+    await wrapper.vm.$nextTick();
+
+    // Default 40pt behavior
+    expect(renderedTitles(wrapper)).toEqual([
+      "Platform Engineer",
+      "Backend Engineer",
+      "Data Integrations Engineer",
+    ]);
+  });
+
+  it("reactively updates visible rows when threshold changes", async () => {
+    setActivePinia(createPinia());
+    const store = usePipelineStore();
+    store.results = [...firstRun];
+    store.lastRun = { profile: "Senior platform engineer", provider: "ollama" };
+
+    const { useSettingsStore } = await import("@/stores/settings");
+    const settings = useSettingsStore();
+    settings.saveMinScore(40);
+
+    const wrapper = mount(ResultsView, { attachTo: document.body });
+    await wrapper.vm.$nextTick();
+
+    // At 40, Data Integrations Engineer (score 47) is visible
+    expect(renderedTitles(wrapper)).toContain("Data Integrations Engineer");
+
+    // Change threshold to 70 — only scores >= 70 visible
+    settings.saveMinScore(70);
+    await wrapper.vm.$nextTick();
+
+    expect(renderedTitles(wrapper)).toEqual(["Platform Engineer"]);
+    expect(wrapper.text()).not.toContain("Backend Engineer");
+    expect(wrapper.text()).not.toContain("Data Integrations Engineer");
+    expect(wrapper.text()).not.toContain("Support Developer");
+  });
 });
