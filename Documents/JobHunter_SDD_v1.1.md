@@ -6,9 +6,18 @@
 |---|---|
 | Prepared by | Abdelrahman — Squad 3 Lead, Dsquares |
 | Date | June 2026 |
-| Version | **1.3 — Amended** (supersedes v1.2) |
+| Version | **1.4 — Amended** (supersedes v1.3) |
 | Companion | JobHunter SOW v1.2 |
 | Classification | Internal / Confidential |
+
+---
+
+## Changelog — what changed in v1.4
+
+1. **C-074 IPC and desktop resilience hardening** — desktop sidecar calls are time-bounded at the
+   Python, Rust, and frontend layers; Rust parses sidecar stdout without echoing malformed raw lines;
+   sidecar process cleanup uses kill-on-drop; `.venv` Python resolution supports both Windows and Unix
+   layouts; the Tauri app CSP is non-null.
 
 ---
 
@@ -671,6 +680,16 @@ Python core portable.
 | Result delivery | Rust reads stdout, deserialises, emits back to Vue |
 | Streaming | Long operations emit progress events every batch; search emits connector sub-row events with optional `connector` and `metric.jobs` fields |
 
+Resilience rules: sidecar operations must be time-bounded end to end. The Python sidecar wraps async
+pipeline/provider commands in `asyncio.wait_for` (default 15 minutes, override with
+`JOBHUNTER_SIDECAR_TIMEOUT_SECONDS` for tests/local diagnostics); the Rust Tauri command wraps the
+child-process future in `tokio::time::timeout` and spawns it with `kill_on_drop`; the Vue store wraps
+Tauri `invoke()` calls in a matching `Promise.race` timeout. Rust parse errors for malformed sidecar
+stdout must not include the raw line, because stdout may contain leaked user or credential material.
+Python discovery checks `JOBHUNTER_PYTHON`, then project `.venv` paths for both Windows
+(`.venv/Scripts/python.exe`) and Unix (`.venv/bin/python3`, `.venv/bin/python`) before PATH fallbacks.
+The Tauri CSP must stay non-null.
+
 ### 11.2 View Specifications
 
 **Criteria View** — Profile text area (one-shot input), **Generate with AI** button, editable keyword
@@ -844,5 +863,5 @@ class PdfProfileInput(BaseProfileInput):
 
 ---
 
-*End of Software Design Document — v1.1*
+*End of Software Design Document — v1.4*
 *Prepared by: Abdelrahman — Squad 3 Lead, Dsquares | June 2026*

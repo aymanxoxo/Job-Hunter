@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import math
 import os
 import sys
 from pathlib import Path
@@ -43,6 +44,7 @@ from core.progress import ProgressEmitter
 from core.runner import build_runner
 
 _CONFIG_PATH = Path("config.yaml")
+_DEFAULT_COMMAND_TIMEOUT_SECONDS = 15 * 60
 _log = get_logger("ui.sidecar")
 
 _RESERVED_CONFIG_KEYS = frozenset({"ai", "profile", "connectors", "output", "auth"})
@@ -88,6 +90,31 @@ def _write_event(event: dict) -> None:
 
 def _error(message: str) -> None:
     _write_event({"type": "error", "message": message})
+
+
+def _command_timeout_seconds() -> float:
+    raw = os.environ.get("JOBHUNTER_SIDECAR_TIMEOUT_SECONDS")
+    if raw is None:
+        return float(_DEFAULT_COMMAND_TIMEOUT_SECONDS)
+    try:
+        value = float(raw)
+    except ValueError as exc:
+        raise ValueError("JOBHUNTER_SIDECAR_TIMEOUT_SECONDS must be numeric") from exc
+    if not math.isfinite(value) or value <= 0:
+        raise ValueError("JOBHUNTER_SIDECAR_TIMEOUT_SECONDS must be finite and greater than zero")
+    return value
+
+
+def _run_with_timeout(coro) -> None:
+    try:
+        timeout = _command_timeout_seconds()
+    except Exception:
+        coro.close()
+        raise
+    try:
+        asyncio.run(asyncio.wait_for(coro, timeout=timeout))
+    except TimeoutError as exc:
+        raise TimeoutError("sidecar command timed out") from exc
 
 
 def _profile_arg(args: dict) -> str:
@@ -222,10 +249,10 @@ def main() -> None:
     try:
         if command == "run_pipeline":
             profile = _profile_arg(args)
-            asyncio.run(_run_pipeline(profile, args))
+            _run_with_timeout(_run_pipeline(profile, args))
         elif command == "generate_criteria":
             profile = _profile_arg(args)
-            asyncio.run(_generate_criteria(profile, args))
+            _run_with_timeout(_generate_criteria(profile, args))
         elif command == "export_results":
             _export_results(args)
         else:

@@ -60,6 +60,11 @@ Then a final line:
 Critical rule: only protocol JSON goes to stdout; all Python logs go to stderr. A stray stdout log
 corrupts the stream.
 
+Resilience rule: IPC calls are bounded at every layer. Python uses `asyncio.wait_for` around async
+sidecar commands, Rust uses `tokio::time::timeout` around the child-process future and spawns the child
+with `kill_on_drop`, and the Pinia store wraps Tauri `invoke()` calls with a matching `Promise.race`
+timeout. Rust parse errors for invalid sidecar stdout must not include the raw stdout line.
+
 ## Python Sidecar
 
 Module: `ui/cli/sidecar.py` (also see [`ui/cli/AGENTS.md`](../../ui/cli/AGENTS.md)).
@@ -82,7 +87,8 @@ The Tauri command spawns this via `python -m ui.cli.sidecar` with:
 
 1. `JOBHUNTER_PYTHON` env var, useful in tests and CI.
 2. `.venv/Scripts/python.exe` relative to `JOBHUNTER_ROOT` or `CWD`.
-3. `py`, `python3`, `python` in PATH.
+3. `.venv/bin/python3` or `.venv/bin/python` relative to `JOBHUNTER_ROOT` or `CWD`.
+4. `py`, `python3`, `python` in PATH.
 
 Set `JOBHUNTER_ROOT` to the project root if running the Tauri app from a different CWD.
 
@@ -110,6 +116,8 @@ on `windows-latest`, which avoids local WDAC restrictions and publishes the MSI 
 - All Tauri commands are `async fn`; `pub` on a command function causes a Tauri 2.x macro name
   collision (`E0255`).
 - Frontend events for streamed progress use the event name `pipeline-progress`.
+- `src-tauri/tauri.conf.json` must keep a non-null CSP; loosen it only for a specific Tauri/webview
+  capability need and document the reason.
 - Connector-scoped search progress (`connector` present) renders as a Search sub-row. A connector
   `failed` event is a partial-result warning and must not mark the whole pipeline failed.
 - Frontend state lives in Pinia stores under `src/stores/`; keep event names aligned with Rust and the
