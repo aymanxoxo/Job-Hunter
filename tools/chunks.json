@@ -1080,13 +1080,11 @@
       "risk_flagged": false,
       "tests": [
         "ui/desktop/src/stores/pipeline.test.ts",
-        "ui/desktop/src/lib/timeline.test.ts",
-        "ui/desktop/src/components/PipelineProgress.test.ts"
+        "ui/desktop/src/views/ResultsView.test.ts"
       ],
       "files": [
         "ui/desktop/src/stores/pipeline.ts",
-        "ui/desktop/src/lib/timeline.ts",
-        "ui/desktop/src/components/PipelineProgress.vue"
+        "ui/desktop/src/views/ResultsView.vue"
       ],
       "sdd_anchor": "\u00a79, \u00a711.2"
     },

@@ -31,10 +31,12 @@ const rows = ref<ResultRow[]>([]);
 const exportMessage = ref("");
 const showHidden = ref(false);
 
+// Replace (not merge) on every results change so a failed/cleared run cannot leave stale rows
+// on screen. Cross-run accumulation is an explicit re-run affordance handled by rerunSearch().
 watch(
   () => pipeline.results,
   (results) => {
-    rows.value = mergeRows(rows.value, normalizeResults(results));
+    rows.value = normalizeResults(results);
     if (selectedId.value && !rows.value.some((row) => row.id === selectedId.value)) {
       selectedId.value = null;
     }
@@ -42,7 +44,24 @@ watch(
   { immediate: true, deep: true },
 );
 
-const visibleRows = computed(() => rows.value.filter((row) => row.score === null || row.score >= 40));
+// The minimum score is set by the user in the Criteria view (0–100); fall back to 40 when unset.
+const DEFAULT_THRESHOLD = 40;
+const scoreThreshold = ref(readConfiguredThreshold());
+
+function readConfiguredThreshold(): number {
+  try {
+    const raw = localStorage.getItem("jobhunter.criteriaDraft.v1");
+    if (!raw) return DEFAULT_THRESHOLD;
+    const value = (JSON.parse(raw) as { min_score_threshold?: unknown }).min_score_threshold;
+    return typeof value === "number" && Number.isFinite(value) ? value : DEFAULT_THRESHOLD;
+  } catch {
+    return DEFAULT_THRESHOLD;
+  }
+}
+
+const visibleRows = computed(() =>
+  rows.value.filter((row) => row.score === null || row.score >= scoreThreshold.value),
+);
 const searchableRows = computed(() => (showHidden.value ? rows.value : visibleRows.value));
 
 const filteredRows = computed(() => {
@@ -237,7 +256,7 @@ async function rerunSearch() {
         <h2 id="results-title" class="section-title">Matches</h2>
         <p class="results-summary">
           {{ sortedRows.length }} shown
-          <span v-if="hiddenCount">/ {{ hiddenCount }} hidden below 40</span>
+          <span v-if="hiddenCount">/ {{ hiddenCount }} hidden below {{ scoreThreshold }}</span>
         </p>
       </div>
 

@@ -72,6 +72,7 @@ function renderedTitles(wrapper: ReturnType<typeof mount>) {
 describe("ResultsView", () => {
   beforeEach(() => {
     document.body.innerHTML = "";
+    localStorage.clear();
     vi.restoreAllMocks();
   });
 
@@ -185,5 +186,26 @@ describe("ResultsView", () => {
       profile: "Senior platform engineer",
       provider: "ollama",
     });
+  });
+
+  it("hides rows below the user-configured threshold from the criteria draft", () => {
+    localStorage.setItem(
+      "jobhunter.criteriaDraft.v1",
+      JSON.stringify({ min_score_threshold: 60 }),
+    );
+    const { wrapper } = mountView();
+
+    expect(renderedTitles(wrapper)).toEqual(["Platform Engineer", "Backend Engineer"]);
+    expect(wrapper.text()).toContain("hidden below 60");
+  });
+
+  it("drops stale rows when the run clears its results", async () => {
+    const { store, wrapper } = mountView();
+    expect(renderedTitles(wrapper).length).toBeGreaterThan(0);
+
+    store.results = [];
+    await wrapper.vm.$nextTick();
+
+    expect(renderedTitles(wrapper)).toEqual([]);
   });
 });
