@@ -43,17 +43,32 @@ _log = get_logger("ui.sidecar")
 _RESERVED_CONFIG_KEYS = frozenset({"ai", "profile", "connectors", "output", "auth"})
 
 
-def _redact_secrets(msg: str) -> str:
-    """Replace known credential values with *** before writing to IPC stdout."""
-    auth = AuthConfig()
-    for name in (
+def _auth_env_names(auth: AuthConfig) -> tuple[str, ...]:
+    return (
         auth.gemini_api_key_env,
         auth.openrouter_api_key_env,
         auth.adzuna_app_id_env,
         auth.adzuna_app_key_env,
-    ):
-        val = os.environ.get(name)
-        if val and val in msg:
+    )
+
+
+def _redact_secrets(msg: str) -> str:
+    """Replace known credential values with *** before writing to IPC stdout.
+
+    Resolves the env-var *names* from the loaded ``config.auth`` (which the
+    user may have renamed) as well as the built-in defaults, so a secret is
+    redacted even when the config points at a custom env var. Values are
+    replaced longest-first so a secret that is a substring of another does not
+    leave a fragment of the longer secret exposed.
+    """
+    names = set(_auth_env_names(AuthConfig()))
+    try:
+        names.update(_auth_env_names(load_config(_CONFIG_PATH).auth))
+    except Exception:
+        pass  # config may be unloadable (it could be the cause of the error)
+    values = {v for name in names if (v := os.environ.get(name))}
+    for val in sorted(values, key=len, reverse=True):
+        if val in msg:
             msg = msg.replace(val, "***")
     return msg
 

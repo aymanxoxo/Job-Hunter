@@ -438,6 +438,51 @@ def test_sidecar_redact_secrets_masks_known_credential_values(monkeypatch):
     assert _redact_secrets("no secret here") == "no secret here"
 
 
+def test_sidecar_redact_secrets_uses_config_custom_env_name(monkeypatch):
+    """C-071: redaction resolves env-var names from the loaded config, not just
+    the AuthConfig() defaults, so a renamed env var is still redacted."""
+    from ui.cli import sidecar
+    from ui.cli.sidecar import _redact_secrets
+
+    custom = _fake_config().model_copy(
+        update={"auth": AuthConfig(gemini_api_key_env="MY_CUSTOM_GEMINI")}
+    )
+    monkeypatch.setattr(sidecar, "load_config", lambda path=sidecar._CONFIG_PATH: custom)
+    monkeypatch.setenv("MY_CUSTOM_GEMINI", "renamed-secret-123")
+
+    assert _redact_secrets("boom key=renamed-secret-123") == "boom key=***"
+
+
+def test_sidecar_redact_secrets_substring_replaced_longest_first(monkeypatch):
+    """C-071: when one secret is a substring of another, the longer value is
+    redacted first so no fragment of it is left exposed."""
+    from ui.cli import sidecar
+    from ui.cli.sidecar import _redact_secrets
+
+    monkeypatch.setattr(sidecar, "load_config", lambda path=sidecar._CONFIG_PATH: _fake_config())
+    monkeypatch.setenv("ADZUNA_APP_ID", "abc")
+    monkeypatch.setenv("ADZUNA_APP_KEY", "abc-def-ghi")
+
+    redacted = _redact_secrets("id=abc key=abc-def-ghi")
+    assert "abc-def-ghi" not in redacted
+    assert "def-ghi" not in redacted
+    assert redacted == "id=*** key=***"
+
+
+def test_sidecar_redact_secrets_survives_unloadable_config(monkeypatch):
+    """C-071: if config can't be loaded, redaction falls back to defaults."""
+    from ui.cli import sidecar
+    from ui.cli.sidecar import _redact_secrets
+
+    def _boom(path=sidecar._CONFIG_PATH):
+        raise RuntimeError("config gone")
+
+    monkeypatch.setattr(sidecar, "load_config", _boom)
+    monkeypatch.setenv("GEMINI_API_KEY", "still-secret")
+
+    assert _redact_secrets("key=still-secret") == "key=***"
+
+
 def test_apply_connector_overrides_reserved_keys_skipped():
     """Reserved config keys (ai, profile, output, auth) are silently skipped."""
     from ui.cli.sidecar import _apply_connector_overrides

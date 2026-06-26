@@ -89,3 +89,16 @@ def test_run_redacts_secret_from_pipeline_exception(monkeypatch):
     assert completed.exit_code != 0
     assert secret not in completed.output
     assert "***" in completed.output
+
+
+def test_redact_secret_values_replaces_longest_first(monkeypatch):
+    """C-071: when one secret value is a substring of another, the longer value
+    is redacted first so no fragment of it survives in the output."""
+    monkeypatch.setenv("ADZUNA_APP_ID", "abc")
+    monkeypatch.setenv("ADZUNA_APP_KEY", "abc-def-ghi")
+
+    redacted = cli_module._redact_secret_values("id=abc key=abc-def-ghi", AuthConfig())
+
+    assert "abc-def-ghi" not in redacted
+    assert "def-ghi" not in redacted
+    assert redacted == "id=*** key=***"
