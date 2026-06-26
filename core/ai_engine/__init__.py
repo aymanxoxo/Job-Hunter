@@ -1,6 +1,7 @@
 """AI engine facade and pure helper exports."""
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 
@@ -18,12 +19,18 @@ class AIEngineError(RuntimeError):
     """Raised when provider output cannot be recovered into an engine result."""
 
 
+# Default ceiling on concurrent scoring batches in flight, so a large job set cannot fan
+# out into an unbounded number of simultaneous provider calls (C-073).
+_DEFAULT_SCORE_CONCURRENCY = 5
+
+
 @dataclass(frozen=True)
 class AIEngine:
     """Async facade that turns provider text responses into JobHunter models."""
 
     call_provider: ProviderCall
     batch_size: int = 15
+    max_concurrency: int = _DEFAULT_SCORE_CONCURRENCY
 
     async def generate_criteria(self, profile: str) -> SearchCriteria:
         """Generate structured search criteria from a plain-text profile."""
@@ -35,14 +42,28 @@ class AIEngine:
         return criteria
 
     async def score_jobs(self, jobs: Sequence[Job], criteria: SearchCriteria) -> list[Job]:
-        """Score jobs in batches without mutating the input jobs."""
-        scored_jobs: list[Job] = []
-        for batch in batch_items(jobs, batch_size=self.batch_size):
-            prompt = build_score_jobs_prompt(criteria, batch)
-            response = await self.call_provider(prompt)
+        """Score jobs in batches concurrently (bounded) without mutating the input jobs.
+
+        Batches run under a ``Semaphore(max_concurrency)`` so throughput improves without an
+        unbounded provider-call fan-out; ``asyncio.gather`` preserves batch order so results
+        come back in the same order as the input jobs.
+        """
+        batches = list(batch_items(jobs, batch_size=self.batch_size))
+        if not batches:
+            return []
+        semaphore = asyncio.Semaphore(max(1, self.max_concurrency))
+
+        async def _score_batch(batch: list[Job]) -> list[Job]:
+            async with semaphore:
+                prompt = build_score_jobs_prompt(criteria, batch)
+                response = await self.call_provider(prompt)
             scored_batch = parse_scored_jobs_response(response, batch)
             if scored_batch is None:
                 raise AIEngineError("Provider returned invalid score JSON.")
+            return scored_batch
+
+        scored_jobs: list[Job] = []
+        for scored_batch in await asyncio.gather(*(_score_batch(b) for b in batches)):
             scored_jobs.extend(scored_batch)
         return scored_jobs
 
@@ -58,9 +79,12 @@ async def score_jobs(
     call_provider: ProviderCall,
     *,
     batch_size: int = 15,
+    max_concurrency: int = _DEFAULT_SCORE_CONCURRENCY,
 ) -> list[Job]:
     """Score jobs with a one-off engine facade."""
-    return await AIEngine(call_provider, batch_size=batch_size).score_jobs(jobs, criteria)
+    return await AIEngine(
+        call_provider, batch_size=batch_size, max_concurrency=max_concurrency
+    ).score_jobs(jobs, criteria)
 
 __all__ = [
     "AIEngine",

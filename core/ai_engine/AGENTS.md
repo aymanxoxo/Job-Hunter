@@ -13,7 +13,8 @@
 - `generate_criteria()` builds the SDD GENERATE_CRITERIA prompt, parses provider JSON, and preserves
   the source profile on `SearchCriteria.raw_profile`.
 - `score_jobs()` splits work with `batch_items()`, sends only scrubbed job payloads through the prompt
-  builder, and returns scored `Job` copies without mutating input jobs.
+  builder, and returns scored `Job` copies without mutating input jobs. Batches run concurrently under
+  a bounded `Semaphore(max_concurrency)` (default 5); `asyncio.gather` preserves input order (C-073).
 - Malformed top-level provider output raises `AIEngineError`; malformed scored-job items are skipped so
   the rest of a batch can still be returned.
 - Prompt builders are pure: no provider calls, config reads, logging, network, or filesystem effects.

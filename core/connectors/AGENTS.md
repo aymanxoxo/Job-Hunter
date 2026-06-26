@@ -19,6 +19,12 @@
   description.
 - `AdzunaConnector` uses the official Adzuna API, reads `ADZUNA_APP_ID`/`ADZUNA_APP_KEY` by default,
   maps Adzuna results to `Job`, and keeps credentials out of source/config values.
+- `DDGConnector` (`duckduckgo_connector.py`, C-020): open-web discovery + AI purification + optional
+  trust scoring. Per-company trust scoring and per-URL page fetches run concurrently under a single
+  `asyncio.Semaphore(max_concurrency)` (default 5) so a wide result set cannot fan out unbounded
+  (C-073). `_is_safe_url` vets the literal URL host; `_real_http_fetch` additionally resolves the host
+  and **pins the connection to a re-validated public IP** (`_resolve_public_ip`), refusing any
+  private/loopback resolution and not following redirects — closing the DNS-rebind/SSRF window (C-073).
 
 ## Pointers
 - Parent: [../AGENTS.md](../AGENTS.md)
