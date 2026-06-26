@@ -10,7 +10,7 @@
 
 <!-- jh:orientation:start -->
 - **Phase:** Phase 3 hardening active (M-03 and M-06 gates cleared). **Next gate:** Phase 3 hardening backlog (C-058-C-068).
-- **Last done:** **C-075** - Code-quality cleanups — plugin-name auth hook + mock keyword word-boundary + OpenRouter env-only (`fed6965`). Prior done: **C-074** - IPC & desktop resilience — end-to-end timeout + stdout-leak guard + cross-platform sidecar spawn + CSP (merge pending); **C-073** - Bounded concurrency + DNS-rebind guard — parallel DDG fetch + parallel score batches (`d6e4085`).
+- **Last done:** **C-075** - Code-quality cleanups — plugin-name auth hook + mock keyword word-boundary + OpenRouter env-only (`fed6965`). Prior done: **C-074** - IPC & desktop resilience — end-to-end timeout + stdout-leak guard + cross-platform sidecar spawn + CSP (`4e7edc7`); **C-073** - Bounded concurrency + DNS-rebind guard — parallel DDG fetch + parallel score batches (`d6e4085`).
 - **Next ready:** none.
 - **Blocked:** none.
 - **Notes:** Dev loop runs through short-lived GitHub PR branches; the user reviews and merges. See [ADR-014/015/016](Documents/DECISIONS.md).
@@ -98,7 +98,7 @@
 | C-071 | Secret-redaction completeness — sidecar loaded-config auth + CLI longest-match ordering | Phase 3 Hardening | C-062 | done | 347ab96 |
 | C-072 | Scoring fallback keeps unscored jobs visible on provider failure | Phase 3 Hardening | C-063, C-066 | done | 1fff23f |
 | C-073 | Bounded concurrency + DNS-rebind guard — parallel DDG fetch + parallel score batches | Phase 3 Hardening | C-020, C-014 | done | d6e4085 |
-| C-074 | IPC & desktop resilience — end-to-end timeout + stdout-leak guard + cross-platform sidecar spawn + CSP | Phase 3 Desktop Hardening | C-058 | done | — |
+| C-074 | IPC & desktop resilience — end-to-end timeout + stdout-leak guard + cross-platform sidecar spawn + CSP | Phase 3 Desktop Hardening | C-058 | done | 4e7edc7 |
 | C-075 | Code-quality cleanups — plugin-name auth hook + mock keyword word-boundary + OpenRouter env-only | Phase 3 Hardening | C-025, C-018, C-030 | done | fed6965 |
 
 ## Changelog (newest first)
