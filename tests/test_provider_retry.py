@@ -93,7 +93,7 @@ def _make_gemini(transport: _SequenceTransport, **kw) -> GeminiProvider:
 
 def _make_openrouter(transport: _SequenceTransport, **kw) -> OpenRouterProvider:
     return OpenRouterProvider(
-        api_key="test-key",
+        env={"OPENROUTER_API_KEY": "test-key"},
         fallback_model=None,
         client_factory=lambda: httpx.AsyncClient(transport=transport),
         **kw,

@@ -73,6 +73,38 @@ async def test_search_filters_by_keyword_in_title_or_description_case_insensitiv
     assert [job.id for job in api_jobs] == ["python-remote"]
 
 
+async def test_search_keyword_matching_uses_word_boundaries(tmp_path: Path):
+    fixture = tmp_path / "jobs.json"
+    fixture.write_text(
+        json.dumps(
+            [
+                {
+                    "id": "java-role",
+                    "title": "Java Developer",
+                    "company": "Acme",
+                    "url": "https://example.invalid/java",
+                    "source": "fixture",
+                    "description": "Build backend services.",
+                },
+                {
+                    "id": "javascript-role",
+                    "title": "JavaScript Developer",
+                    "company": "Beta",
+                    "url": "https://example.invalid/javascript",
+                    "source": "fixture",
+                    "description": "Build web interfaces.",
+                },
+            ]
+        ),
+        encoding="utf-8",
+    )
+    connector = MockConnector(fixture_path=fixture)
+
+    jobs = await connector.search(SearchCriteria(keywords=("java",)))
+
+    assert [job.id for job in jobs] == ["java-role"]
+
+
 async def test_search_returns_all_jobs_when_no_keywords(tmp_path: Path):
     connector = MockConnector(fixture_path=_write_fixture(tmp_path / "jobs.json"))
 

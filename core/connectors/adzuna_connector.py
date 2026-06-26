@@ -74,6 +74,13 @@ class AdzunaConnector(BaseConnector):
         self.max_attempts = max_attempts
         self.base_delay = base_delay
 
+    @classmethod
+    def auth_config_kwargs(cls, auth: Any) -> dict[str, Any]:
+        return {
+            "app_id_env": getattr(auth, "adzuna_app_id_env", None),
+            "app_key_env": getattr(auth, "adzuna_app_key_env", None),
+        }
+
     async def search(self, criteria: SearchCriteria) -> list[Job]:
         """Search Adzuna and return raw unscored jobs, paginating until max_results reached."""
         app_id, app_key = self._credentials()

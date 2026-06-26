@@ -65,6 +65,7 @@ def test_defaults():
     assert provider.name == "dummy-ai"
     assert provider.auth_methods == ("api_key",)
     assert provider.supports_local is False
+    assert provider.auth_config_kwargs(object()) == {}
 
 
 async def test_initialize_defaults_to_none():

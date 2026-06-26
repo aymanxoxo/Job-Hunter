@@ -7,6 +7,7 @@ independent — they never import one another (ADR-001).
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from typing import Any
 
 from core.models.job import Job
 from core.models.search_criteria import SearchCriteria
@@ -31,3 +32,8 @@ class BaseConnector(ABC):
         default is a no-op suitable for ``auth_methods == ("none",)``.
         """
         return True
+
+    @classmethod
+    def auth_config_kwargs(cls, auth: Any) -> dict[str, Any]:
+        """Return constructor kwargs derived from config auth env-var names."""
+        return {}

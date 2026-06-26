@@ -301,12 +301,8 @@ def _instantiate_provider(cls, config) -> BaseAIProvider:
         "model": config.ai.model,
         "batch_size": config.ai.batch_size,
     }
-    name = getattr(cls, "name", None)
-    if auth is not None:
-        if name == "gemini":
-            kwargs["api_key_env"] = getattr(auth, "gemini_api_key_env", None)
-        elif name == "openrouter":
-            kwargs["api_key_env"] = getattr(auth, "openrouter_api_key_env", None)
+    if auth is not None and hasattr(cls, "auth_config_kwargs"):
+        kwargs.update(cls.auth_config_kwargs(auth))
     return cls(**_filter_constructor_kwargs(cls, kwargs))
 
 
@@ -331,9 +327,8 @@ def _instantiate_connector(cls, settings, provider=None, auth=None) -> BaseConne
         and settings.fixture_path is not None
     ):
         config_kwargs["fixture_path"] = settings.fixture_path
-    if auth is not None and getattr(cls, "name", None) == "adzuna":
-        config_kwargs["app_id_env"] = getattr(auth, "adzuna_app_id_env", None)
-        config_kwargs["app_key_env"] = getattr(auth, "adzuna_app_key_env", None)
+    if auth is not None and hasattr(cls, "auth_config_kwargs"):
+        config_kwargs.update(cls.auth_config_kwargs(auth))
     if provider is not None and hasattr(provider, "complete"):
         config_kwargs["ai_complete"] = provider.complete
     return cls(**_filter_constructor_kwargs(cls, config_kwargs))

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -65,4 +66,12 @@ def _job_from_fixture(item: Any) -> Job:
 
 def _matches_keywords(job: Job, keywords: tuple[str, ...]) -> bool:
     haystack = " ".join(value.lower() for value in (job.title, job.description or ""))
-    return any(keyword.lower() in haystack for keyword in keywords)
+    return any(_matches_keyword(haystack, keyword) for keyword in keywords)
+
+
+def _matches_keyword(haystack: str, keyword: str) -> bool:
+    normalized = keyword.strip().lower()
+    if not normalized:
+        return False
+    pattern = rf"(?<!\w){re.escape(normalized)}(?!\w)"
+    return re.search(pattern, haystack) is not None

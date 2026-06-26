@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+from types import SimpleNamespace
 
 import httpx
 import pytest
@@ -51,17 +52,19 @@ def _chat_response(content: str) -> httpx.Response:
     return httpx.Response(200, json={"choices": [{"message": {"content": content}}]})
 
 
-def _provider_for(handler, *, api_key: str | None = "test-key", **overrides) -> OpenRouterProvider:
+def _provider_for(
+    handler, *, env: dict[str, str] | None = None, **overrides
+) -> OpenRouterProvider:
     transport = httpx.MockTransport(handler)
     return OpenRouterProvider(
-        api_key=api_key,
+        env=env if env is not None else {DEFAULT_OPENROUTER_API_KEY_ENV: "test-key"},
         client_factory=lambda: httpx.AsyncClient(transport=transport),
         **overrides,
     )
 
 
 async def test_openrouter_provider_metadata_matches_sdd():
-    provider = OpenRouterProvider(api_key="test-key")
+    provider = OpenRouterProvider(env={DEFAULT_OPENROUTER_API_KEY_ENV: "test-key"})
 
     assert provider.name == "openrouter"
     assert ExportedOpenRouterProvider is OpenRouterProvider
@@ -73,6 +76,9 @@ async def test_openrouter_provider_metadata_matches_sdd():
     assert provider.auth_methods == ("api_key",)
     assert provider.supports_local is False
     assert DEFAULT_OPENROUTER_API_KEY_ENV == "OPENROUTER_API_KEY"
+    assert provider.auth_config_kwargs(
+        SimpleNamespace(openrouter_api_key_env="MY_OPENROUTER_KEY")
+    ) == {"api_key_env": "MY_OPENROUTER_KEY"}
 
 
 async def test_generate_criteria_posts_openai_chat_with_bearer_auth():
@@ -156,7 +162,7 @@ async def test_raises_when_both_models_error():
 
 async def test_raises_for_missing_api_key(monkeypatch):
     monkeypatch.delenv(DEFAULT_OPENROUTER_API_KEY_ENV, raising=False)
-    provider = OpenRouterProvider(api_key=None)
+    provider = OpenRouterProvider(env={})
 
     with pytest.raises(OpenRouterProviderError, match="API key"):
         await provider.generate_criteria("profile")
@@ -171,9 +177,7 @@ async def test_reads_api_key_from_environment(monkeypatch):
         return _chat_response(_CRITERIA_JSON)
 
     transport = httpx.MockTransport(handler)
-    provider = OpenRouterProvider(
-        api_key=None, client_factory=lambda: httpx.AsyncClient(transport=transport)
-    )
+    provider = OpenRouterProvider(client_factory=lambda: httpx.AsyncClient(transport=transport))
 
     await provider.generate_criteria("profile")
 

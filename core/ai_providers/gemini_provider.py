@@ -66,6 +66,10 @@ class GeminiProvider(BaseAIProvider):
         self._oauth_provider = oauth_provider
         self._client_factory = client_factory or self._default_client_factory
 
+    @classmethod
+    def auth_config_kwargs(cls, auth: Any) -> dict[str, Any]:
+        return {"api_key_env": getattr(auth, "gemini_api_key_env", None)}
+
     async def generate_criteria(self, profile: str) -> SearchCriteria:
         """Convert a plain-text profile into search criteria via Gemini."""
         try:

@@ -12,6 +12,8 @@
   instances rather than mutating input jobs.
 - Class attrs: `name` (display), `auth_methods: tuple[str, ...]` (ordered, default `("api_key",)`,
   resolved by the runner per ADR-002), `supports_local`.
+- Optional class hook `auth_config_kwargs(auth) -> dict[str, Any]` returns constructor kwargs for
+  auth-related env-var names; the runner filters these against the provider constructor.
 - Optional `async initialize() -> None` startup hook (default no-op).
 - Providers are independent: never import another provider/connector (ADR-001).
 - Every provider must pass the reusable checks in `tests/contracts/provider_contract.py`.

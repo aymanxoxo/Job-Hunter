@@ -9,7 +9,7 @@ time — never stored in config or logged (ADR-002 / SDD §8).
 from __future__ import annotations
 
 import os
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from contextlib import AbstractAsyncContextManager
 from typing import Any
 
@@ -44,7 +44,6 @@ class OpenRouterProvider(BaseAIProvider):
     def __init__(
         self,
         *,
-        api_key: str | None = None,
         api_key_env: str = DEFAULT_OPENROUTER_API_KEY_ENV,
         model: str = DEFAULT_OPENROUTER_MODEL,
         fallback_model: str | None = DEFAULT_OPENROUTER_FALLBACK_MODEL,
@@ -53,9 +52,9 @@ class OpenRouterProvider(BaseAIProvider):
         batch_size: int = 15,
         max_attempts: int = 3,
         base_delay: float = 1.0,
+        env: Mapping[str, str] | None = None,
         client_factory: ClientFactory | None = None,
     ) -> None:
-        self._api_key = api_key
         self.api_key_env = api_key_env
         self.model = model
         self.fallback_model = fallback_model
@@ -64,7 +63,12 @@ class OpenRouterProvider(BaseAIProvider):
         self.batch_size = batch_size
         self.max_attempts = max_attempts
         self.base_delay = base_delay
+        self._env = env
         self._client_factory = client_factory or self._default_client_factory
+
+    @classmethod
+    def auth_config_kwargs(cls, auth: Any) -> dict[str, Any]:
+        return {"api_key_env": getattr(auth, "openrouter_api_key_env", None)}
 
     async def generate_criteria(self, profile: str) -> SearchCriteria:
         """Convert a plain-text profile into search criteria via OpenRouter."""
@@ -127,7 +131,8 @@ class OpenRouterProvider(BaseAIProvider):
         return _extract_message_content(data)
 
     def _resolve_api_key(self) -> str:
-        api_key = self._api_key if self._api_key is not None else os.environ.get(self.api_key_env)
+        env = self._env if self._env is not None else os.environ
+        api_key = env.get(self.api_key_env)
         if not api_key:
             raise OpenRouterProviderError(
                 f"OpenRouter API key not found; set the {self.api_key_env} environment variable."

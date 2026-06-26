@@ -34,6 +34,7 @@ def test_defaults():
     assert c.name == "dummy"
     assert c.auth_methods == ("none",)
     assert c.enabled is True
+    assert c.auth_config_kwargs(object()) == {}
 
 
 async def test_authenticate_defaults_to_true():
