@@ -279,4 +279,57 @@ describe("pipeline store", () => {
     const sent = invokeArgs[0] as Record<string, unknown>;
     expect(sent.connector_overrides).toEqual(connectors);
   });
+
+  // -------------------------------------------------------------------------
+  // C-068 — desktop hardening
+  // -------------------------------------------------------------------------
+
+  it("ends the run cleanly (status failed) when the IPC client fails to initialise", async () => {
+    const store = usePipelineStore();
+
+    await expect(
+      store.runPipeline(
+        { profile: "Senior Python developer", provider: "ollama" },
+        {
+          listen: async () => {
+            throw new Error("tauri unavailable");
+          },
+          invoke: async () => [],
+        },
+      ),
+    ).rejects.toThrow("tauri unavailable");
+
+    expect(store.status).toBe("failed");
+    expect(store.error).toBe("tauri unavailable");
+  });
+
+  it("clears stale results when a run fails", () => {
+    const store = usePipelineStore();
+    store.results = [{ id: "old" }];
+
+    store.setError("boom");
+
+    expect(store.status).toBe("failed");
+    expect(store.results).toEqual([]);
+  });
+
+  it("ignores an array under connectors instead of forwarding it as overrides", async () => {
+    const store = usePipelineStore();
+    setLocalStorage({ connectors: [{ enabled: false }] });
+
+    const invokeArgs: unknown[] = [];
+    await store.runPipeline(
+      { profile: "Senior Python developer", provider: "gemini" },
+      {
+        listen: async () => () => undefined,
+        invoke: async (command, args) => {
+          invokeArgs.push(args);
+          return [];
+        },
+      },
+    );
+
+    const sent = invokeArgs[0] as Record<string, unknown>;
+    expect(sent.connector_overrides).toBeUndefined();
+  });
 });

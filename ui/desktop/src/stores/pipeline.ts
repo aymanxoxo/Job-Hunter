@@ -73,8 +73,11 @@ function buildConnectorOverrides(): Record<string, ConnectorOverride> | undefine
     const raw = localStorage.getItem("jobhunter.desktopConfig.v1");
     if (!raw) return undefined;
     const parsed = JSON.parse(raw);
-    if (typeof parsed?.connectors !== "object" || parsed.connectors === null) return undefined;
-    return parsed.connectors as Record<string, ConnectorOverride>;
+    const connectors = parsed?.connectors;
+    if (typeof connectors !== "object" || connectors === null || Array.isArray(connectors)) {
+      return undefined;
+    }
+    return connectors as Record<string, ConnectorOverride>;
   } catch {
     return undefined;
   }
@@ -167,6 +170,7 @@ export const usePipelineStore = defineStore("pipeline", {
     setError(message: string) {
       this.status = "failed";
       this.error = message;
+      this.results = [];
     },
 
     async runPipeline(request: RunPipelineRequest, client?: PipelineClient) {
@@ -180,14 +184,14 @@ export const usePipelineStore = defineStore("pipeline", {
         ...(overrides ? { connector_overrides: overrides } : {}),
       };
 
-      const ipc = client ?? (await createTauriPipelineClient());
-      const unlisten = await ipc.listen("pipeline-progress", (event) => {
-        if (isProgressEvent(event.payload)) {
-          this.recordProgress(event.payload);
-        }
-      });
-
+      let unlisten: Unlisten | undefined;
       try {
+        const ipc = client ?? (await createTauriPipelineClient());
+        unlisten = await ipc.listen("pipeline-progress", (event) => {
+          if (isProgressEvent(event.payload)) {
+            this.recordProgress(event.payload);
+          }
+        });
         const result = await ipc.invoke("run_pipeline", ipcRequest);
         this.setResult(result);
       } catch (error) {
@@ -195,7 +199,7 @@ export const usePipelineStore = defineStore("pipeline", {
         this.setError(message);
         throw error;
       } finally {
-        unlisten();
+        unlisten?.();
       }
     },
 
