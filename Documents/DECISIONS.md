@@ -35,6 +35,7 @@
 | 025 | Decouple the generic workflow engine from project business | Accepted | 2026-06-19 |
 | 026 | Generated PROGRESS orientation and merge-hash sync | Accepted | 2026-06-19 |
 | 027 | Gemini default model slug refresh (`gemini-3.5-flash`) | Accepted | 2026-06-24 |
+| 028 | Second hardening review pass — round-2 chunk batch (C-069–C-075) | Accepted | 2026-06-26 |
 
 ---
 
@@ -493,3 +494,34 @@ that fails every run before criteria generation or scoring can start.
 **Consequences.** The out-of-box Gemini path works with the current model catalog again, and future
 model churn remains a config change plus doc update. Cost: docs and tests that referred to the old
 default need to treat ADR-003 as superseded.
+
+
+## ADR-028 - Second hardening review pass — round-2 chunk batch (C-069–C-075)
+
+**Context.** After the first Phase-3 hardening wave (C-062–C-068) landed, an independent full-repo
+review was run and validated line-by-line against the source. It confirmed all 10 high-priority
+findings and the medium set, and showed that several first-wave chunks fixed an adjacent symptom but
+left a residual gap: C-067 added the machine-id/salt files but with default umask and a non-atomic
+`exists()→write` (no `0600`, no `O_EXCL`); C-062 added sidecar `_redact_secrets` but built it from a
+default `AuthConfig()` so custom env-var names are not redacted; C-063 made scoring "fail-graceful" by
+keeping unscored jobs, but the threshold filter still drops every `score is None` row, yielding an
+empty result. New issues were also found — CSV formula injection in `jobs_to_csv`, prompt injection via
+unescaped job descriptions, no end-to-end IPC timeout, and a DNS-rebind window in the DDG fetch path.
+
+**Decision.** Register the validated remediation as seven new chunks under the existing Phase-3
+protocol, ordered security-first, rather than as ad-hoc fixes: **C-069** untrusted-input neutralization
+(CSV + prompt injection), **C-070** session-store hardening II (perms + atomic create + PBKDF2),
+**C-071** secret-redaction completeness, **C-072** fail-visible scoring fallback, **C-073** bounded
+concurrency + DNS-rebind guard, **C-074** (`external`) IPC/desktop resilience (timeout, stdout-leak
+guard, cross-platform spawn, CSP), and **C-075** low-priority cleanups. Validated frontend items that
+fall inside the already-planned **C-068** scope (ResultsView hard-coded `40` threshold,
+`buildConnectorOverrides` array guard, SettingsView dead-auth persist) are noted on C-068, not
+duplicated. The `gemini-3.5-flash` slug (ADR-027) is treated as an open verification item — confirmed
+present in code but to be checked against Google's live API via the C-059 smoke command before any
+change, not altered blind.
+
+**Consequences.** Each finding becomes an independently testable, TDD-gated chunk traceable through the
+registry ↔ ledger ↔ dev-plan, consistent with how round-1 hardening was tracked. The `external` chunk
+(C-074) is left for a local agent with the Rust/Tauri/Node toolchain per the standing in-sandbox vs
+external rule. Cost: seven more chunks before the final desktop UX chunks (C-060/C-061), which should
+land after this batch even though their dependency rows were left unchanged to avoid over-coupling.
