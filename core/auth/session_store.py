@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 import re
 import secrets
 from collections.abc import Callable
@@ -20,7 +21,31 @@ DEFAULT_SESSION_DIR = Path.home() / ".jobhunter" / "sessions"
 MACHINE_ID_PATH = Path.home() / ".jobhunter" / "machine-id"
 SALT_PATH = Path.home() / ".jobhunter" / "salt"
 _SESSION_NAME_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
-_KEY_ITERATIONS = 390_000
+# OWASP/NIST guidance for PBKDF2-HMAC-SHA256 is >= 600k iterations (raised from 390k in C-070).
+_KEY_ITERATIONS = 600_000
+_OWNER_ONLY_FILE = 0o600
+_OWNER_ONLY_DIR = 0o700
+
+
+def _restrict(path: Path, mode: int) -> None:
+    """Best-effort restrict a path to owner-only access (no-op where chmod is unsupported)."""
+    try:
+        path.chmod(mode)
+    except OSError:
+        pass
+
+
+def _write_secret_atomic(path: Path, text: str) -> None:
+    """Create ``path`` exclusively with owner-only perms and write ``text``.
+
+    Uses ``O_CREAT | O_EXCL`` so two concurrent processes cannot both create the file and clobber
+    each other's key material (closes the TOCTOU window). Raises ``FileExistsError`` if it exists.
+    """
+    fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, _OWNER_ONLY_FILE)
+    try:
+        os.write(fd, text.encode("utf-8"))
+    finally:
+        os.close(fd)
 
 
 class KeyringBackend(Protocol):
@@ -55,8 +80,10 @@ class SessionStore:
         """Encrypt and persist a Playwright storage-state dictionary."""
         path = self._path_for(name)
         path.parent.mkdir(parents=True, exist_ok=True)
+        _restrict(path.parent, _OWNER_ONLY_DIR)
         payload = json.dumps(state_dict, sort_keys=True, separators=(",", ":")).encode("utf-8")
         path.write_bytes(self._fernet().encrypt(payload))
+        _restrict(path, _OWNER_ONLY_FILE)
 
     def load(self, name: str) -> dict[str, Any]:
         """Decrypt and return a Playwright storage-state dictionary."""
@@ -125,40 +152,74 @@ def derive_session_key(machine_id: str, salt: bytes) -> bytes:
     return base64.urlsafe_b64encode(kdf.derive(machine_id.encode("utf-8")))
 
 
+def _read_valid_machine_id(path: Path) -> str | None:
+    """Return the stored machine ID if present and well-formed, else None."""
+    if not path.exists():
+        return None
+    content = path.read_text(encoding="utf-8").strip()
+    if content and len(content) == 32:
+        try:
+            int(content, 16)
+            return content
+        except ValueError:
+            return None
+    return None
+
+
 def _load_or_create_machine_id(path: Path) -> str:
-    """Return a stable hex machine ID, creating one on first call."""
-    if path.exists():
-        content = path.read_text(encoding="utf-8").strip()
-        if content and len(content) == 32:
-            try:
-                int(content, 16)
-                return content
-            except ValueError:
-                pass
-    machine_id = secrets.token_hex(16)
+    """Return a stable hex machine ID, creating one atomically on first call."""
+    existing = _read_valid_machine_id(path)
+    if existing is not None:
+        return existing
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(machine_id, encoding="utf-8")
-    # Re-read from disk to return the canonical value (handles races
-    # where another process may have written concurrently).
-    return path.read_text(encoding="utf-8").strip()
+    _restrict(path.parent, _OWNER_ONLY_DIR)
+    machine_id = secrets.token_hex(16)
+    try:
+        _write_secret_atomic(path, machine_id)
+        return machine_id
+    except FileExistsError:
+        # Another process created it first, or the file holds stale/invalid content.
+        winner = _read_valid_machine_id(path)
+        if winner is not None:
+            return winner
+        path.write_text(machine_id, encoding="utf-8")
+        _restrict(path, _OWNER_ONLY_FILE)
+        return machine_id
+
+
+def _read_valid_salt(path: Path) -> bytes | None:
+    """Return the stored salt if present and well-formed (32 bytes), else None."""
+    if not path.exists():
+        return None
+    content = path.read_text(encoding="utf-8").strip()
+    if content and len(content) == 64:
+        try:
+            salt = bytes.fromhex(content)
+        except ValueError:
+            return None
+        if len(salt) == 32:
+            return salt
+    return None
 
 
 def _load_or_create_salt(path: Path) -> bytes:
-    """Return a stable 32-byte salt, creating one on first call."""
-    if path.exists():
-        content = path.read_text(encoding="utf-8").strip()
-        if content and len(content) == 64:
-            try:
-                salt = bytes.fromhex(content)
-                if len(salt) == 32:
-                    return salt
-            except ValueError:
-                pass
-    salt = secrets.token_bytes(32)
+    """Return a stable 32-byte salt, creating one atomically on first call."""
+    existing = _read_valid_salt(path)
+    if existing is not None:
+        return existing
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(salt.hex(), encoding="utf-8")
-    # Re-read from disk to return the canonical value (handles races).
-    return bytes.fromhex(path.read_text(encoding="utf-8").strip())
+    _restrict(path.parent, _OWNER_ONLY_DIR)
+    salt = secrets.token_bytes(32)
+    try:
+        _write_secret_atomic(path, salt.hex())
+        return salt
+    except FileExistsError:
+        winner = _read_valid_salt(path)
+        if winner is not None:
+            return winner
+        path.write_text(salt.hex(), encoding="utf-8")
+        _restrict(path, _OWNER_ONLY_FILE)
+        return salt
 
 
 def _default_machine_id() -> str:

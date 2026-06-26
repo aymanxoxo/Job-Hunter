@@ -531,8 +531,12 @@ Manages Playwright `storage_state` files for session-based connectors, encrypted
 | delete(name) | Removes the file (`jobhunter auth logout linkedin`) |
 | _get_key() | Derives a key from machine ID via PBKDF2HMAC, stored in OS keyring |
 
-> **SECURITY** — The encryption key is derived from the machine's hardware UUID using PBKDF2HMAC/SHA-256
-> and stored in the OS keyring. Session files are intentionally not portable between machines.
+> **SECURITY** — The encryption key is derived from a stable per-install machine identifier and a
+> per-install random salt using PBKDF2HMAC/SHA-256 at ≥600k iterations (C-067, C-070), and stored in the
+> OS keyring. The machine-id, salt, and `.enc` session files are created atomically (`O_CREAT|O_EXCL`)
+> with owner-only `0600` permissions in an owner-only (`0700`) directory, so key material is not readable
+> by other local users and concurrent runs cannot clobber each other. Session files are intentionally not
+> portable between machines.
 
 > **RULE** — `config.yaml` never contains credentials directly. The `auth.*` fields point to environment
 > variable NAMES; actual values are read at runtime. Enforced by a pydantic validator.
