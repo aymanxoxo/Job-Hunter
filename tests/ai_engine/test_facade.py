@@ -1,6 +1,7 @@
 """C-014 - AI engine facade."""
 from __future__ import annotations
 
+import asyncio
 import json
 from collections.abc import Callable
 
@@ -101,6 +102,29 @@ async def test_score_jobs_batches_and_applies_scores_without_mutating_inputs():
     assert all("https://example.invalid" not in prompt for prompt in provider.prompts)
     assert all("<secret>" not in prompt for prompt in provider.prompts)
     assert all('"source"' not in prompt for prompt in provider.prompts)
+
+
+@pytest.mark.asyncio
+async def test_score_jobs_runs_batches_concurrently_under_bound_and_preserves_order():
+    """Batches score concurrently (bounded), and results stay in input order (C-073)."""
+    live = {"now": 0, "peak": 0}
+
+    async def provider(prompt: str) -> str:
+        live["now"] += 1
+        live["peak"] = max(live["peak"], live["now"])
+        await asyncio.sleep(0.01)  # force batch overlap
+        live["now"] -= 1
+        return _score_response_for_prompt(prompt)
+
+    engine = AIEngine(provider, batch_size=1, max_concurrency=2)
+    criteria = SearchCriteria(keywords=("python",))
+    jobs = [_job(id=f"job-{i}", url=f"https://example.invalid/job-{i}") for i in range(1, 7)]
+
+    scored = await engine.score_jobs(jobs, criteria)
+
+    assert [job.id for job in scored] == [f"job-{i}" for i in range(1, 7)]
+    assert [job.score for job in scored] == [80 + i for i in range(1, 7)]
+    assert live["peak"] == 2  # saturated the bound, never exceeded it
 
 
 @pytest.mark.asyncio

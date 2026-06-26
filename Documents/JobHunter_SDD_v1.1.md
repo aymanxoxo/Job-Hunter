@@ -306,7 +306,7 @@ def discover_plugins(directory: Path, base_class: type) -> list[type]:
 | 6. Authenticate connectors | Resolve `auth_methods` for each enabled connector that needs auth |
 | 7. Search (parallel) | `asyncio.gather()` all enabled `connector.search(criteria)` calls |
 | 8. Merge results | Flatten, deduplicate by URL, tag source connector |
-| 9. Score jobs | `ai_engine.score_jobs()` in batches of `config.ai.batch_size` (default 15) |
+| 9. Score jobs | `ai_engine.score_jobs()` in batches of `config.ai.batch_size` (default 15); batches run concurrently under a bounded semaphore (C-073), with `asyncio.gather` preserving input order |
 | 10. Sort and filter | Sort by score desc, filter out jobs below `min_score_threshold` |
 | 11. Export | `core/output.py` writes CSV and/or JSON per `config.output.format` |
 
@@ -392,7 +392,7 @@ that filters noise and synthesises a company trust score before handing results 
 | Queries | AI generates open-web queries from `SearchCriteria` (no `site:` restrictions) |
 | Results per query | `config.connectors.duckduckgo.results_per_query` (default 10; stop before noisy results) |
 | Max results | `config.connectors.duckduckgo.max_results` (default 50) |
-| HTTP fetch | httpx fetches surviving URLs to extract page text |
+| HTTP fetch | httpx fetches surviving URLs to extract page text; each fetch resolves the host and **pins the connection to a re-validated public IP** (DNS-rebind guard, C-073) — any private/loopback resolution is refused and redirects are not followed |
 | Purification pass | Single AI call per batch: (1) filter to actual job postings, (2) extract company name, (3) run DDG trust searches, (4) AI synthesises trust score, (5) exclude by threshold |
 | Trust sources | DDG searches: `[company] reviews`, `[company] glassdoor`, `[company] site:reddit.com`, `[company] site:trustpilot.com` — no extra API keys |
 | Trust threshold | `config.connectors.duckduckgo.trust_threshold` int 0–100 (default 60; 0 = no filtering) |
@@ -407,9 +407,9 @@ that filters noise and synthesises a company trust score before handing results 
 | 2. DDG search | Execute queries, collect up to `results_per_query` raw results each |
 | 3. Purification | AI batch: keep only real job postings, extract company names |
 | 4. Trust lookup | For each unique company, run 4 DDG trust searches, collect top snippets |
-| 5. Trust scoring | AI synthesises snippet evidence into `trust_score` 0–100 + `trust_summary` |
+| 5. Trust scoring | AI synthesises snippet evidence into `trust_score` 0–100 + `trust_summary`; per-company scoring runs concurrently under a bounded semaphore (C-073) |
 | 6. Threshold filter | Drop jobs whose company `trust_score` < `trust_threshold` (when enabled) |
-| 7. Page fetch | httpx fetches job page URLs; AI extracts structured `Job` fields from page text |
+| 7. Page fetch | httpx fetches job page URLs concurrently under the same bounded semaphore (C-073); AI extracts structured `Job` fields from page text |
 | 8. Return | `list[Job]` with all standard fields + `trust_score` + `trust_summary` |
 
 **Config block**

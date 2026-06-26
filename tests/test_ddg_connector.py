@@ -5,16 +5,23 @@ so no real network traffic occurs.
 """
 from __future__ import annotations
 
+import asyncio
 import json
+
+import pytest
 
 from core.connectors.duckduckgo_connector import (
     DDGConnector,
+    DDGConnectorError,
     _extract_job,
     _gather_trust_snippets,
     _generate_queries,
+    _is_public_ip,
     _is_safe_url,
     _loads,
     _purify_results,
+    _real_http_fetch,
+    _resolve_public_ip,
     _score_companies_trust,
 )
 from core.models.search_criteria import SearchCriteria
@@ -445,3 +452,160 @@ async def test_search_trust_summary_populated_from_ai():
     assert len(jobs) == 1
     assert jobs[0].trust_score == 85
     assert jobs[0].trust_summary == "Excellent employer"
+
+
+# ---------------------------------------------------------------------------
+# C-073 — DNS-rebind guard (_is_public_ip / _resolve_public_ip / _real_http_fetch)
+# ---------------------------------------------------------------------------
+
+def _addrinfo(*ips: str) -> callable:
+    """Return a getaddrinfo-shaped resolver stub yielding the given IPs."""
+    def _resolve(host, *args, **kwargs):
+        return [(2, 1, 6, "", (ip, 0)) for ip in ips]
+    return _resolve
+
+
+def test_is_public_ip_distinguishes_public_from_private():
+    assert _is_public_ip("93.184.216.34")
+    assert not _is_public_ip("192.168.0.1")
+    assert not _is_public_ip("127.0.0.1")
+    assert not _is_public_ip("169.254.169.254")  # cloud metadata link-local
+    assert not _is_public_ip("0.0.0.0")
+    assert not _is_public_ip("not-an-ip")
+
+
+def test_resolve_public_ip_returns_public_resolution():
+    ip = _resolve_public_ip("example.com", resolver=_addrinfo("93.184.216.34"))
+    assert ip == "93.184.216.34"
+
+
+def test_resolve_public_ip_rejects_rebind_to_private_address():
+    """A hostname that resolves to an RFC1918 address must be refused (DNS rebind)."""
+    with pytest.raises(DDGConnectorError, match="non-public"):
+        _resolve_public_ip("evil.example.com", resolver=_addrinfo("10.0.0.5"))
+
+
+def test_resolve_public_ip_rejects_when_any_address_is_private():
+    """If round-robin DNS mixes a public and a private answer, refuse the lot."""
+    with pytest.raises(DDGConnectorError, match="non-public"):
+        _resolve_public_ip(
+            "mixed.example.com", resolver=_addrinfo("93.184.216.34", "169.254.169.254")
+        )
+
+
+def test_resolve_public_ip_validates_ip_literals_directly():
+    assert _resolve_public_ip("93.184.216.34", resolver=_addrinfo()) == "93.184.216.34"
+    with pytest.raises(DDGConnectorError, match="non-public"):
+        _resolve_public_ip("127.0.0.1", resolver=_addrinfo())
+
+
+def test_resolve_public_ip_raises_on_resolution_failure():
+    def _boom(host, *args, **kwargs):
+        raise OSError("name or service not known")
+
+    with pytest.raises(DDGConnectorError, match="could not resolve"):
+        _resolve_public_ip("nope.invalid", resolver=_boom)
+
+
+async def test_real_http_fetch_rejects_rebind_before_any_network(monkeypatch):
+    """_real_http_fetch must raise (no HTTP) when the host resolves to a private address."""
+    monkeypatch.setattr(
+        "core.connectors.duckduckgo_connector.socket.getaddrinfo",
+        _addrinfo("192.168.1.50"),
+    )
+
+    async def _boom_client(*args, **kwargs):  # pragma: no cover - must never be reached
+        raise AssertionError("HTTP request attempted despite private rebind")
+
+    monkeypatch.setattr(
+        "core.connectors.duckduckgo_connector.httpx.AsyncClient", _boom_client
+    )
+
+    with pytest.raises(DDGConnectorError, match="non-public"):
+        await _real_http_fetch("https://evil.example.com/job")
+
+
+# ---------------------------------------------------------------------------
+# C-073 — bounded concurrency
+# ---------------------------------------------------------------------------
+
+async def test_score_companies_trust_returns_empty_for_no_companies():
+    assert await _score_companies_trust([], _ddg_empty, _ai_returns({})) == {}
+
+
+async def test_search_bounds_page_fetch_concurrency():
+    """No more than max_concurrency page fetches run at once; all still complete."""
+    items = [
+        {"url": f"https://co.com/job/{i}", "title": f"Dev {i}", "company": "Co"}
+        for i in range(12)
+    ]
+    live = {"now": 0, "peak": 0}
+
+    async def _http(url: str) -> str:
+        live["now"] += 1
+        live["peak"] = max(live["peak"], live["now"])
+        await asyncio.sleep(0.01)  # force overlap
+        live["now"] -= 1
+        return "<html>job</html>"
+
+    async def _ai(prompt: str) -> str:
+        if "DuckDuckGo" in prompt or "queries" in prompt.lower():
+            return json.dumps(["python jobs"])
+        if "genuine" in prompt.lower() or "filter" in prompt.lower():
+            return json.dumps(items)
+        return json.dumps({"title": "Dev", "company": "Co", "location": None,
+                           "description": "code", "salary_range": None})
+
+    async def _ddg(query: str, n: int) -> list[dict]:
+        return [{"href": it["url"], "title": it["title"], "body": ""} for it in items]
+
+    connector = DDGConnector(
+        max_concurrency=3,
+        trust_check_enabled=False,
+        ai_complete=_ai,
+        ddg_search_fn=_ddg,
+        http_fetch_fn=_http,
+    )
+    jobs = await connector.search(_CRITERIA)
+    assert len(jobs) == 12
+    assert live["peak"] == 3  # saturated the bound but never exceeded it
+
+
+async def test_search_bounds_trust_scoring_concurrency():
+    """Per-company trust scoring also respects the shared concurrency bound."""
+    companies = [f"Company{i}" for i in range(10)]
+    items = [
+        {"url": f"https://co{i}.com/job", "title": "Dev", "company": companies[i]}
+        for i in range(10)
+    ]
+    live = {"now": 0, "peak": 0}
+
+    async def _ddg(query: str, n: int) -> list[dict]:
+        if any(kw in query for kw in ("glassdoor", "reddit", "trustpilot")):
+            live["now"] += 1
+            live["peak"] = max(live["peak"], live["now"])
+            await asyncio.sleep(0.01)
+            live["now"] -= 1
+            return [{"body": "reviews"}]
+        return [{"href": it["url"], "title": "Dev", "body": ""} for it in items]
+
+    async def _ai(prompt: str) -> str:
+        if "DuckDuckGo" in prompt or "queries" in prompt.lower():
+            return json.dumps(["python jobs"])
+        if "genuine" in prompt.lower() or "filter" in prompt.lower():
+            return json.dumps(items)
+        if "trustworthy" in prompt.lower() or "trust score" in prompt.lower():
+            return json.dumps({"trust_score": 90, "trust_summary": "ok"})
+        return json.dumps({"title": "Dev", "company": "Co", "location": None,
+                           "description": "code", "salary_range": None})
+
+    connector = DDGConnector(
+        max_concurrency=2,
+        trust_threshold=0,  # keep all, isolate the concurrency assertion
+        trust_check_enabled=True,
+        ai_complete=_ai,
+        ddg_search_fn=_ddg,
+        http_fetch_fn=_http_hello,
+    )
+    await connector.search(_CRITERIA)
+    assert live["peak"] <= 2 and live["peak"] >= 1
