@@ -15,9 +15,12 @@
   `~/.jobhunter/sessions/{name}.enc` by default.
 - `SessionStore.load(name)` decrypts and returns a storage-state dict; invalid encrypted payloads raise
   `SessionStoreError`.
-- Session keys are derived with PBKDF2HMAC/SHA-256 from a machine identifier and stored through the OS
-  keyring API; tests inject a fake keyring.
+- Session keys are derived with PBKDF2HMAC/SHA-256 (≥600k iterations) from a stable per-install machine
+  identifier + per-install random salt, and stored through the OS keyring API; tests inject a fake keyring.
 - Session names are restricted to safe filename characters so callers cannot escape the session folder.
+- Key material (machine-id, salt) and `.enc` session files are created atomically (`O_CREAT|O_EXCL`,
+  C-070) with owner-only `0600` perms in a `0700` directory; `_write_secret_atomic` raises on an existing
+  file so concurrent runs cannot clobber each other's key material.
 
 ## Pointers
 - Parent: [../AGENTS.md](../AGENTS.md)

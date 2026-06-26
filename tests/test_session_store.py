@@ -3,11 +3,14 @@ from __future__ import annotations
 
 import base64
 import json
+import os
+import stat
 from pathlib import Path
 
 import pytest
 
 from core.auth import SessionStore
+from core.auth import session_store as session_store_module
 from core.auth.session_store import (
     KEYRING_SERVICE,
     KEYRING_USERNAME,
@@ -15,8 +18,17 @@ from core.auth.session_store import (
     SessionStoreError,
     _load_or_create_machine_id,
     _load_or_create_salt,
+    _write_secret_atomic,
     derive_session_key,
 )
+
+skip_on_windows = pytest.mark.skipif(
+    os.name == "nt", reason="POSIX file-permission bits are not enforced on Windows"
+)
+
+
+def _mode(path: Path) -> int:
+    return stat.S_IMODE(path.stat().st_mode)
 
 
 class FakeKeyring:
@@ -290,3 +302,61 @@ def test_session_store_key_stable_when_providers_stable(tmp_path: Path):
     )
     first.save("linkedin", _state())
     assert second.load("linkedin") == _state()
+
+
+# --- C-070 hardening tests below ---
+
+
+def test_pbkdf2_iterations_meet_owasp_guidance():
+    assert session_store_module._KEY_ITERATIONS >= 600_000
+
+
+@skip_on_windows
+def test_machine_id_file_is_owner_readable_only(tmp_path: Path):
+    path = tmp_path / "machine-id"
+    _load_or_create_machine_id(path)
+    assert _mode(path) == 0o600
+
+
+@skip_on_windows
+def test_salt_file_is_owner_readable_only(tmp_path: Path):
+    path = tmp_path / "salt"
+    _load_or_create_salt(path)
+    assert _mode(path) == 0o600
+
+
+@skip_on_windows
+def test_regenerated_invalid_machine_id_file_is_owner_readable_only(tmp_path: Path):
+    path = tmp_path / "machine-id"
+    path.write_text("garbage", encoding="utf-8")
+    _load_or_create_machine_id(path)
+    assert _mode(path) == 0o600
+
+
+@skip_on_windows
+def test_session_file_is_owner_readable_only(tmp_path: Path):
+    store = SessionStore(
+        root_dir=tmp_path,
+        keyring_backend=FakeKeyring(),
+        machine_id_provider=lambda: "machine-a",
+        salt_provider=lambda: b"salt-a" * 4,
+    )
+    store.save("linkedin", _state())
+    assert _mode(tmp_path / f"linkedin{SESSION_FILE_SUFFIX}") == 0o600
+
+
+def test_write_secret_atomic_refuses_to_clobber_existing_file(tmp_path: Path):
+    path = tmp_path / "machine-id"
+    _write_secret_atomic(path, "first")
+    with pytest.raises(FileExistsError):
+        _write_secret_atomic(path, "second")
+    assert path.read_text(encoding="utf-8") == "first"
+
+
+def test_machine_id_does_not_overwrite_valid_existing_value(tmp_path: Path):
+    path = tmp_path / "machine-id"
+    original = _load_or_create_machine_id(path)
+    raw_before = path.read_text(encoding="utf-8")
+    again = _load_or_create_machine_id(path)
+    assert again == original
+    assert path.read_text(encoding="utf-8") == raw_before
