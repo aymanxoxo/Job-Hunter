@@ -124,6 +124,60 @@ async def test_run_is_fail_graceful_when_score_jobs_raises(tmp_path):
     # Run must complete (not raise) and export a file even though scoring failed.
     assert isinstance(result, RunResult)
     assert result.exported[0].exists()
+    # C-072: the scraped job must stay visible (unscored) rather than being filtered to empty.
+    assert [job.id for job in result.jobs] == ["1"]
+    assert result.jobs[0].score is None
+
+
+async def test_run_keeps_unscored_jobs_visible_on_provider_failure(tmp_path):
+    """C-072: when scoring fails wholesale, all scraped jobs stay visible despite the threshold.
+
+    Without the fallback, ``filter_below_threshold`` drops every ``score is None`` job, so a
+    provider outage would silently empty the results even though connectors found listings.
+    """
+    a = _job("1", "https://example.com/1")
+    b = _job("2", "https://example.com/2")
+    c = _job("3", "https://example.com/3")
+
+    class DownProvider(BaseAIProvider):
+        name = "down"
+        auth_methods = ("none",)
+
+        async def generate_criteria(self, profile):
+            # Non-zero threshold: would filter out every unscored job if applied.
+            return SearchCriteria(raw_profile=profile, min_score_threshold=50)
+
+        async def score_jobs(self, jobs, criteria):
+            raise RuntimeError("AI service down")
+
+    runner, _ = _runner(
+        [FakeConnector([a, b, c])],
+        output_dir=tmp_path,
+        output_format="json",
+    )
+    runner.provider = DownProvider()
+    logs: list[dict] = []
+    original_warning = runner.log.warning
+
+    def capture_warning(msg, **kwargs):
+        logs.append({"msg": msg, **kwargs})
+        original_warning(msg, **kwargs)
+
+    runner.log.warning = capture_warning  # type: ignore[method-assign]
+
+    result = await runner.run("profile")
+
+    # All three scraped jobs survive, in input order, unscored.
+    assert [job.id for job in result.jobs] == ["1", "2", "3"]
+    assert all(job.score is None for job in result.jobs)
+    # The failure path warns about both the provider error and the unfiltered fallback.
+    assert any("score_jobs failed" in log.get("msg", "") for log in logs)
+    fallback = [log for log in logs if "unscored" in log.get("msg", "").lower()
+                and "unavailable" in log.get("msg", "").lower()]
+    assert len(fallback) == 1
+    assert fallback[0].get("count") == 3
+    # The misleading "excluded" warning from the success path must NOT fire on provider failure.
+    assert not any("excluded" in log.get("msg", "").lower() for log in logs)
 
 
 async def test_run_wires_min_score_threshold_from_config(tmp_path):

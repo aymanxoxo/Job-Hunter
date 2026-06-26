@@ -166,22 +166,36 @@ class Runner:
         emit("search", "done", current=len(merged))
 
         emit("score", "active", total=len(merged))
+        scoring_failed = False
         try:
             scored = await self.provider.score_jobs(list(merged), criteria) if merged else []
         except Exception as exc:
             self.log.warning("score_jobs failed; run continues with unscored jobs", error=str(exc))
             scored = list(merged)
+            scoring_failed = True
         effective_threshold = criteria.min_score_threshold
-        ranked = filter_below_threshold(
-            sort_by_score(scored), min_score_threshold=effective_threshold
-        )
-        unscored_count = sum(1 for job in scored if job.score is None)
-        if unscored_count:
-            self.log.warning(
-                "unscored jobs excluded from results (score is None)",
-                count=unscored_count,
-                threshold=effective_threshold,
-            )
+        ordered = sort_by_score(scored)
+        if scoring_failed:
+            # Scoring failed wholesale, so every job is unscored. Applying the threshold filter
+            # would drop them all and leave an empty result that silently hides the listings the
+            # connectors did find. Keep the jobs visible (unscored) instead so the run degrades
+            # gracefully rather than looking like "no matches" on a provider outage (C-072).
+            ranked = ordered
+            if ordered:
+                self.log.warning(
+                    "scoring unavailable; returning unscored jobs unfiltered",
+                    count=len(ordered),
+                    threshold=effective_threshold,
+                )
+        else:
+            ranked = filter_below_threshold(ordered, min_score_threshold=effective_threshold)
+            unscored_count = sum(1 for job in scored if job.score is None)
+            if unscored_count:
+                self.log.warning(
+                    "unscored jobs excluded from results (score is None)",
+                    count=unscored_count,
+                    threshold=effective_threshold,
+                )
         emit("score", "done", current=len(ranked))
 
         emit("export", "active")
