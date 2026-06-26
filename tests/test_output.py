@@ -64,3 +64,31 @@ def test_export_json_only(tmp_path):
 def test_export_rejects_unknown_format(tmp_path):
     with pytest.raises(ValueError):
         export_results([], directory=tmp_path, fmt="xml")
+
+
+def test_jobs_to_csv_escapes_formula_injection():
+    job = _job(
+        title="=cmd|'/c calc'!A1",
+        company="@SUM(1+1)",
+        match_reason="-2+3",
+        red_flags=("+danger", "ok"),
+    )
+    text = jobs_to_csv([job])
+    rows = list(csv.reader(io.StringIO(text)))
+    row = rows[1]
+    by_field = dict(zip(rows[0], row, strict=True))
+
+    assert by_field["title"] == "'=cmd|'/c calc'!A1"
+    assert by_field["company"] == "'@SUM(1+1)"
+    assert by_field["match_reason"] == "'-2+3"
+    assert by_field["red_flags"] == "'+danger; ok"
+
+
+def test_jobs_to_csv_leaves_benign_cells_untouched():
+    text = jobs_to_csv([_job(title="Senior Dev", company="Acme", score=80)])
+    header, row = list(csv.reader(io.StringIO(text)))
+    by_field = dict(zip(header, row, strict=True))
+
+    assert by_field["title"] == "Senior Dev"
+    assert by_field["company"] == "Acme"
+    assert by_field["score"] == "80"

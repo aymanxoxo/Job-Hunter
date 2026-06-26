@@ -49,8 +49,9 @@ pipeline runner, and shared infra. Pure logic stays side-effect-free; I/O lives 
 - **AI response parsing (`ai_engine/parsing.py`, C-011/C-064).** Parsers convert provider JSON into
   `SearchCriteria` or scored `Job` copies, return `None` for malformed top-level provider output, and
   skip malformed scored-job items so one bad row does not discard the rest of a batch.
-- **AI job scrubbing (`ai_engine/scrub.py`, C-012).** Scrub helpers keep only job `id`, `title`,
-  `company`, and `description` before provider calls.
+- **AI job scrubbing (`ai_engine/scrub.py`, C-012/C-069).** Scrub helpers keep only job `id`, `title`,
+  `company`, and `description` before provider calls, and neutralise prompt-injection in the untrusted
+  description (`neutralize_prompt_text()` strips control chars + defangs role markers).
 - **AI batching (`ai_engine/batching.py`, C-013).** `batch_items()` splits sequences into
   order-preserving batches for later scoring calls.
 - **AI facade (`ai_engine/__init__.py`, C-014).** `AIEngine` wraps an injected async prompt provider,

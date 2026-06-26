@@ -28,6 +28,16 @@ CSV_FIELDS: tuple[str, ...] = (
     "red_flags",
 )
 _VALID_FORMATS = frozenset({"csv", "json", "both"})
+# Cells starting with these trigger formula evaluation in Excel/LibreOffice; prefix them so a
+# malicious job title/description from an external source cannot execute when the CSV is opened.
+_CSV_INJECTION_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _escape_csv_field(value: object) -> object:
+    """Neutralize spreadsheet formula injection by prefixing risky string cells with a quote."""
+    if isinstance(value, str) and value.startswith(_CSV_INJECTION_PREFIXES):
+        return "'" + value
+    return value
 
 
 def timestamp_slug(moment: datetime) -> str:
@@ -49,7 +59,7 @@ def jobs_to_csv(jobs: Sequence[Job]) -> str:
     for job in jobs:
         data = job.model_dump(mode="json")
         data["red_flags"] = "; ".join(job.red_flags)
-        writer.writerow({field: data.get(field, "") for field in CSV_FIELDS})
+        writer.writerow({field: _escape_csv_field(data.get(field, "")) for field in CSV_FIELDS})
     return buffer.getvalue()
 
 
