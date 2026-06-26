@@ -1129,15 +1129,19 @@
       ],
       "risk_flagged": false,
       "tests": [
+        "tests/test_progress.py",
         "tests/test_runner_orchestrator.py",
         "ui/desktop/src/lib/timeline.test.ts",
-        "ui/desktop/src/components/PipelineProgress.test.ts"
+        "ui/desktop/src/components/PipelineProgress.test.ts",
+        "ui/desktop/src/stores/pipeline.test.ts",
+        "ui/desktop/src/views/ResultsView.test.ts"
       ],
       "files": [
         "core/runner.py",
         "core/progress.py",
         "ui/desktop/src/lib/timeline.ts",
         "ui/desktop/src/components/PipelineProgress.vue",
+        "ui/desktop/src/stores/pipeline.ts",
         "ui/desktop/src/views/ResultsView.vue"
       ],
       "sdd_anchor": "\u00a79"

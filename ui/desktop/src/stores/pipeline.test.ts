@@ -38,6 +38,24 @@ describe("pipeline store", () => {
     expect(store.status).toBe("running");
   });
 
+  it("keeps connector-level failed progress non-fatal", () => {
+    const store = usePipelineStore();
+    const event: ProgressEvent = {
+      type: "progress",
+      run_id: "run-1",
+      stage: "search",
+      state: "failed",
+      connector: "adzuna",
+      message: "connector failed",
+    };
+
+    store.recordProgress(event);
+
+    expect(store.events).toEqual([event]);
+    expect(store.status).toBe("running");
+    expect(store.error).toBeNull();
+  });
+
   it("listens for Tauri progress events while invoking the sidecar", async () => {
     const store = usePipelineStore();
     const streamed: ProgressEvent = {

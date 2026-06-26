@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from core.logging import Logger, get_logger, redact
 
 ProgressStage = Literal["profile", "criteria", "search", "score", "export"]
-ProgressState = Literal["pending", "active", "done", "failed"]
+ProgressState = Literal["pending", "active", "done", "failed", "skipped"]
 
 
 class ProgressEvent(BaseModel):
@@ -22,6 +22,7 @@ class ProgressEvent(BaseModel):
     run_id: str
     stage: ProgressStage
     state: ProgressState
+    connector: str | None = None
     message: str | None = None
     current: int | None = Field(default=None, ge=0)
     total: int | None = Field(default=None, ge=0)
@@ -31,6 +32,8 @@ class ProgressEvent(BaseModel):
     def _validate_progress_bounds(self) -> ProgressEvent:
         if self.current is not None and self.total is not None and self.current > self.total:
             raise ValueError("current must be <= total")
+        if self.connector is not None and self.stage != "search":
+            raise ValueError("connector progress is only valid for the search stage")
         return self
 
 
@@ -52,6 +55,7 @@ class ProgressEmitter:
         run_id: str,
         stage: ProgressStage,
         state: ProgressState,
+        connector: str | None = None,
         message: str | None = None,
         current: int | None = None,
         total: int | None = None,
@@ -62,6 +66,7 @@ class ProgressEmitter:
             run_id=run_id,
             stage=stage,
             state=state,
+            connector=connector,
             message=message,
             current=current,
             total=total,

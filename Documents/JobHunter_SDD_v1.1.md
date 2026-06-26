@@ -655,7 +655,8 @@ Python core portable.
 { "command": "run_pipeline", "args": { "profile": "...", "provider": "gemini" } }
 { "command": "export_results", "args": { "jobs": [ { /* Job fields */ } ] } }
 // Progress event (Python stdout, streaming)
-{ "type": "progress", "step": "scoring", "current": 3, "total": 6 }
+{ "type": "progress", "run_id": "...", "stage": "score", "state": "active", "current": 3, "total": 6 }
+{ "type": "progress", "run_id": "...", "stage": "search", "state": "failed", "connector": "adzuna", "metric": { "jobs": 0 } }
 // Final result (Python stdout)
 { "type": "result", "data": [ { /* Job fields including score */ } ] }
 { "type": "export", "data": [ "C:/.../output/results_2026-06-26_120000.csv" ] }
@@ -668,7 +669,7 @@ Python core portable.
 | IPC call | Rust writes JSON to Python sidecar stdin |
 | Python response | Python writes protocol JSON (`progress`, `result`, `criteria`, `export`, or `error`) to stdout |
 | Result delivery | Rust reads stdout, deserialises, emits back to Vue |
-| Streaming | Long operations emit progress events every batch |
+| Streaming | Long operations emit progress events every batch; search emits connector sub-row events with optional `connector` and `metric.jobs` fields |
 
 ### 11.2 View Specifications
 
@@ -679,7 +680,9 @@ running. File upload (PDF/Word/image) is shown as a future-enabled control backe
 
 **Results View** — Sortable table (Score, Title, Company, Location, Source, Date), color-coded score
 badges (green 80-100, amber 60-79, orange 40-59, gray <40 hidden), row-click detail panel
-(description, match_reason, red_flags, link), filter bar, export, re-run (merges new results).
+(description, match_reason, red_flags, link), filter bar, export, re-run (merges new results), plus
+explicit partial-success and empty-state messaging when connectors fail, return zero jobs, or all rows
+are hidden by the threshold/filter.
 
 **Settings View** — AI provider selector, API key field (clipboard-copy helper with env-var setup
 guidance, not stored in config), connector toggles (Adzuna, DuckDuckGo, Mock), Adzuna max-results

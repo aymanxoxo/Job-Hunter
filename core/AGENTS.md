@@ -32,8 +32,10 @@ pipeline runner, and shared infra. Pure logic stays side-effect-free; I/O lives 
   `redact`.
 - **Runner (`runner.py`, C-009/C-025).** Discovery is importlib-based and direct-directory only: skip
   `_*.py` and `base_*.py`, return plugin classes rather than instances. The `Runner` orchestrator wires
-  profile → criteria → search → score → filter → export; search is fail-graceful per connector. **Scoring
-  is fail-graceful too (C-072):** if `score_jobs` raises, the run continues with the *unscored* jobs and
+  profile → criteria → search → score → filter → export; search is fail-graceful per connector and emits
+  connector-level progress sub-events (`done` with job counts, `failed`, `skipped`, and zero-result
+  `done`) so the desktop can show partial success without marking the whole run failed. **Scoring is
+  fail-graceful too (C-072):** if `score_jobs` raises, the run continues with the *unscored* jobs and
   skips the threshold filter so the listings stay visible instead of collapsing to an empty result;
   partial unscored jobs from a *successful* call are still filtered out (and logged).
 - **Mock connector (`connectors/mock_connector.py`, C-018).** `MockConnector` loads deterministic jobs
@@ -74,9 +76,10 @@ pipeline runner, and shared infra. Pure logic stays side-effect-free; I/O lives 
 - **Pipeline transforms (`pipeline.py`, C-022).** `merge_results()`, `dedup_by_url()`,
   `sort_by_score()`, and `filter_below_threshold()` are pure helpers for runner steps 8-10; they do no
   config reads, logging, filesystem, or network work.
-- **Progress events (`progress.py`, C-023).** `ProgressEmitter` writes validated progress protocol
+- **Progress events (`progress.py`, C-023/C-061).** `ProgressEmitter` writes validated progress protocol
   events to stdout and emits a matching INFO log to stderr; metric payloads are redacted before both
-  writes.
+  writes. Search events may include a `connector` sub-row name; connector-scoped `failed` events are
+  warnings, not whole-run failures.
 
 ## Pointers
 - Parent: [../AGENTS.md](../AGENTS.md) · Spec: `../Documents/JobHunter_SDD_v1.1.md` · Logging std: dev plan §6.

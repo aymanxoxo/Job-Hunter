@@ -241,4 +241,56 @@ describe("ResultsView", () => {
 
     expect(renderedTitles(wrapper)).toEqual([]);
   });
+
+  it("shows a partial-results warning when a connector failed but results remain", async () => {
+    const { store, wrapper } = mountView();
+    store.events = [
+      {
+        type: "progress",
+        run_id: "run-1",
+        stage: "search",
+        state: "failed",
+        connector: "adzuna",
+        message: "connector failed",
+      },
+    ];
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.get("[data-testid='partial-results-warning']").text()).toContain(
+      "Partial results: adzuna failed.",
+    );
+    expect(renderedTitles(wrapper)).toContain("Platform Engineer");
+  });
+
+  it("explains a completed empty result set with connector failures", async () => {
+    const { store, wrapper } = mountView([]);
+    store.status = "succeeded";
+    store.events = [
+      {
+        type: "progress",
+        run_id: "run-1",
+        stage: "search",
+        state: "failed",
+        connector: "mock",
+        message: "connector failed",
+      },
+    ];
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.text()).toContain("No results from completed connectors");
+    expect(wrapper.text()).toContain("Partial results: mock failed.");
+  });
+
+  it("explains when all rows are hidden below the configured threshold", () => {
+    localStorage.setItem(
+      "jobhunter.criteriaDraft.v1",
+      JSON.stringify({ min_score_threshold: 95 }),
+    );
+
+    const { wrapper } = mountView();
+
+    expect(renderedTitles(wrapper)).toEqual([]);
+    expect(wrapper.text()).toContain("All results are hidden");
+    expect(wrapper.text()).toContain("below the 95 threshold");
+  });
 });

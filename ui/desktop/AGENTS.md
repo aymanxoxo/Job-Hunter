@@ -45,6 +45,8 @@ Python stdout is newline-delimited JSON, streaming:
 
 ```json
 {"type":"progress","run_id":"...","stage":"search","state":"active","current":3,"total":6}
+{"type":"progress","run_id":"...","stage":"search","state":"done","connector":"mock","metric":{"jobs":0}}
+{"type":"progress","run_id":"...","stage":"search","state":"failed","connector":"adzuna","metric":{"jobs":0}}
 ```
 
 Then a final line:
@@ -108,14 +110,17 @@ on `windows-latest`, which avoids local WDAC restrictions and publishes the MSI 
 - All Tauri commands are `async fn`; `pub` on a command function causes a Tauri 2.x macro name
   collision (`E0255`).
 - Frontend events for streamed progress use the event name `pipeline-progress`.
+- Connector-scoped search progress (`connector` present) renders as a Search sub-row. A connector
+  `failed` event is a partial-result warning and must not mark the whole pipeline failed.
 - Frontend state lives in Pinia stores under `src/stores/`; keep event names aligned with Rust and the
   Python sidecar stdout contract.
 - C-034/C-052: Criteria draft generation calls the Python provider through the `generate_criteria`
   sidecar command; editing/refine remains local UI state.
-- C-035/C-052/C-060: Results rendering derives from `pipeline.results`; re-run uses `pipeline.lastRun`
+- C-035/C-052/C-060/C-061: Results rendering derives from `pipeline.results`; re-run uses `pipeline.lastRun`
   and merges fresh rows locally by result identity. Rows below the configured score threshold are hidden
   by default with an explicit reveal toggle. Export sends visible sorted rows through the Python sidecar
-  and displays the configured output paths returned by `core.output.export_results`.
+  and displays the configured output paths returned by `core.output.export_results`. Partial connector
+  failures and completed empty/filtered/hidden result sets get explicit state messages.
 - C-036/C-056 is frontend-only until a Tauri settings command lands: non-secret settings persist to a
   local config-shaped payload. API keys are never stored; the UI only copies a typed key to the
   clipboard with env-var setup guidance, then clears the field.

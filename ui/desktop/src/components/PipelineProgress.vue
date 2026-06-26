@@ -56,6 +56,26 @@ function scoreWidth(stage: StageModel): string {
   return `${Math.round(((stage.current ?? 0) / stage.total) * 100)}%`;
 }
 
+function connectorJobsLabel(connector: StageModel["connectors"][number]): string {
+  if (connector.state === "failed") {
+    return "failed";
+  }
+  if (connector.state === "skipped") {
+    return "skipped";
+  }
+  if (connector.jobs === 0) {
+    return "0 jobs";
+  }
+  if (connector.jobs !== null) {
+    return `${connector.jobs} jobs`;
+  }
+  return "-";
+}
+
+function connectorTitle(connector: StageModel["connectors"][number]): string {
+  return connector.message ?? `${connector.name}: ${connector.state}`;
+}
+
 const elapsedLabel = computed(() => {
   const total = elapsed.value;
   const m = Math.floor(total / 60);
@@ -105,9 +125,10 @@ const elapsedLabel = computed(() => {
             :key="connector.name"
             class="pp-connector"
             :class="`is-${connector.state}`"
+            :title="connectorTitle(connector)"
           >
             <span class="pp-connector-name">{{ connector.name }}</span>
-            <span class="pp-connector-jobs">{{ connector.jobs ?? "—" }}</span>
+            <span class="pp-connector-jobs">{{ connectorJobsLabel(connector) }}</span>
           </li>
         </ul>
       </li>
@@ -121,7 +142,10 @@ const elapsedLabel = computed(() => {
       <span v-if="timeline.summary.found !== null">Found {{ timeline.summary.found }}</span>
       <span>Kept {{ timeline.summary.kept }}</span>
       <span v-if="timeline.summary.failedConnectors.length" class="pp-warn">
-        {{ timeline.summary.failedConnectors.join(", ") }} failed
+        Partial: {{ timeline.summary.failedConnectors.join(", ") }} failed
+      </span>
+      <span v-if="timeline.summary.zeroResultConnectors.length">
+        0 from {{ timeline.summary.zeroResultConnectors.join(", ") }}
       </span>
       <span class="pp-elapsed">{{ elapsedLabel }}</span>
     </div>

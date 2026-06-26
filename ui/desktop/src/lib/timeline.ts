@@ -23,6 +23,7 @@ export interface ConnectorRow {
   name: string;
   state: StageState;
   jobs: number | null;
+  message: string | null;
 }
 
 export interface StageModel {
@@ -39,6 +40,7 @@ export interface TimelineSummary {
   found: number | null;
   kept: number;
   failedConnectors: string[];
+  zeroResultConnectors: string[];
   done: boolean;
   failed: boolean;
 }
@@ -89,6 +91,7 @@ export function buildTimeline(
 ): TimelineModel {
   const stages = emptyStages();
   const failedConnectors: string[] = [];
+  const zeroResultConnectors: string[] = [];
 
   for (const event of events) {
     const key = asStageKey(event.stage);
@@ -102,7 +105,7 @@ export function buildTimeline(
     if (event.connector) {
       let row = stage.connectors.find((connector) => connector.name === event.connector);
       if (!row) {
-        row = { name: event.connector, state: "pending", jobs: null };
+        row = { name: event.connector, state: "pending", jobs: null, message: null };
         stage.connectors.push(row);
       }
       if (state) {
@@ -111,8 +114,14 @@ export function buildTimeline(
       if (jobs !== null) {
         row.jobs = jobs;
       }
+      if (typeof event.message === "string" && event.message.trim()) {
+        row.message = event.message;
+      }
       if (state === "failed" && !failedConnectors.includes(event.connector)) {
         failedConnectors.push(event.connector);
+      }
+      if (state === "done" && jobs === 0 && !zeroResultConnectors.includes(event.connector)) {
+        zeroResultConnectors.push(event.connector);
       }
       continue;
     }
@@ -155,6 +164,7 @@ export function buildTimeline(
       found,
       kept: opts.results?.length ?? 0,
       failedConnectors,
+      zeroResultConnectors,
       done,
       failed,
     },
