@@ -1143,6 +1143,134 @@
         "ui/desktop/src/views/ResultsView.vue"
       ],
       "sdd_anchor": "\u00a79"
+    },
+    "C-069": {
+      "title": "Untrusted-input neutralization \u2014 CSV formula injection + AI prompt-injection delimiters",
+      "stage": "Phase 3 Hardening",
+      "depends_on": [
+        "C-024",
+        "C-010",
+        "C-012"
+      ],
+      "risk_flagged": true,
+      "tests": [
+        "tests/test_output.py",
+        "tests/ai_engine/test_prompts.py",
+        "tests/ai_engine/test_scrub.py"
+      ],
+      "files": [
+        "core/output.py",
+        "core/ai_engine/prompts.py",
+        "core/ai_engine/scrub.py"
+      ],
+      "sdd_anchor": "\u00a75.2, \u00a75.4"
+    },
+    "C-070": {
+      "title": "Session store hardening II \u2014 0600 perms + atomic O_EXCL create + PBKDF2 iteration bump",
+      "stage": "Phase 3 Hardening",
+      "depends_on": [
+        "C-067"
+      ],
+      "risk_flagged": true,
+      "tests": [
+        "tests/test_session_store.py"
+      ],
+      "files": [
+        "core/auth/session_store.py"
+      ],
+      "sdd_anchor": "\u00a78.3"
+    },
+    "C-071": {
+      "title": "Secret-redaction completeness \u2014 sidecar loaded-config auth + CLI longest-match ordering",
+      "stage": "Phase 3 Hardening",
+      "depends_on": [
+        "C-062"
+      ],
+      "risk_flagged": false,
+      "tests": [
+        "tests/test_sidecar.py",
+        "tests/test_cli_run.py"
+      ],
+      "files": [
+        "ui/cli/sidecar.py",
+        "ui/cli/cli.py"
+      ],
+      "sdd_anchor": "\u00a710, \u00a711.1"
+    },
+    "C-072": {
+      "title": "Scoring fallback keeps unscored jobs visible on provider failure",
+      "stage": "Phase 3 Hardening",
+      "depends_on": [
+        "C-063",
+        "C-066"
+      ],
+      "risk_flagged": false,
+      "tests": [
+        "tests/test_runner_orchestrator.py"
+      ],
+      "files": [
+        "core/runner.py"
+      ],
+      "sdd_anchor": "\u00a75.1"
+    },
+    "C-073": {
+      "title": "Bounded concurrency + DNS-rebind guard \u2014 parallel DDG fetch + parallel score batches",
+      "stage": "Phase 3 Hardening",
+      "depends_on": [
+        "C-020",
+        "C-014"
+      ],
+      "risk_flagged": false,
+      "tests": [
+        "tests/test_ddg_connector.py",
+        "tests/ai_engine/test_facade.py"
+      ],
+      "files": [
+        "core/connectors/duckduckgo_connector.py",
+        "core/ai_engine/__init__.py"
+      ],
+      "sdd_anchor": "\u00a75.1, \u00a76.1"
+    },
+    "C-074": {
+      "title": "IPC & desktop resilience \u2014 end-to-end timeout + stdout-leak guard + cross-platform sidecar spawn + CSP",
+      "stage": "Phase 3 Desktop Hardening",
+      "depends_on": [
+        "C-058"
+      ],
+      "risk_flagged": true,
+      "tests": [
+        "tests/test_sidecar.py",
+        "ui/desktop/src/stores/pipeline.test.ts",
+        "ui/desktop/src-tauri/tests/ipc_integration.rs"
+      ],
+      "files": [
+        "ui/cli/sidecar.py",
+        "ui/desktop/src-tauri/src/lib.rs",
+        "ui/desktop/src-tauri/tauri.conf.json",
+        "ui/desktop/src/stores/pipeline.ts"
+      ],
+      "sdd_anchor": "\u00a711.1"
+    },
+    "C-075": {
+      "title": "Code-quality cleanups \u2014 plugin-name auth hook + mock keyword word-boundary + OpenRouter env-only",
+      "stage": "Phase 3 Hardening",
+      "depends_on": [
+        "C-025",
+        "C-018",
+        "C-030"
+      ],
+      "risk_flagged": false,
+      "tests": [
+        "tests/test_runner_build_runner.py",
+        "tests/test_mock_connector.py",
+        "tests/test_openrouter_provider.py"
+      ],
+      "files": [
+        "core/runner.py",
+        "core/connectors/mock_connector.py",
+        "core/ai_providers/openrouter_provider.py"
+      ],
+      "sdd_anchor": "\u00a74.1, \u00a74.2, \u00a75.1"
     }
   }
 }

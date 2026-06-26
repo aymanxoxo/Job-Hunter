@@ -21,6 +21,11 @@
 
 1. **C-064 provider reliability update** — records the Gemini default model correction to
    `gemini-3.5-flash` and keeps the chunk plan aligned with the current provider contract.
+2. **Second hardening review pass (C-069–C-075; ADR-028)** — adds a security-first round-2 hardening
+   batch from an independent, source-validated review: untrusted-input neutralization (CSV/prompt
+   injection), residual session-store and secret-redaction gaps left by C-067/C-062, a fail-visible
+   scoring fallback, bounded connector/AI concurrency + DNS-rebind guard, and an `external` IPC/desktop
+   resilience chunk (end-to-end timeout, stdout-leak guard, cross-platform spawn, CSP).
 
 ---
 
@@ -484,6 +489,20 @@ These map the SOW gates onto chunks; a gate is the acceptance test of its final 
 | C-068 | Desktop hardening — pipeline store crashes + race conditions + hard-coded threshold | `ui/desktop/src/stores/pipeline.ts`, `ui/desktop/src/lib/timeline.ts`, `ui/desktop/src/components/PipelineProgress.vue` | C-058, C-059 | Desktop import failures end runs cleanly, stale results are not re-merged after failures, and threshold display follows configured criteria | §9, §11.2 |
 | C-060 | ResultsView real export action | `ui/desktop/src/views/ResultsView.vue`, `ui/desktop/src/stores/pipeline.ts`, `ui/desktop/src-tauri/src/lib.rs`, `ui/cli/sidecar.py` | C-058, C-062, C-063, C-064, C-065, C-066, C-067, C-068 | Results export calls the Python exporter, writes configured CSV/JSON files, and shows returned output paths in the UI | §11.2 |
 | C-061 | Desktop partial failure and empty-state UX | `core/runner.py`, `core/progress.py`, `ui/desktop/src/lib/timeline.ts`, `ui/desktop/src/components/PipelineProgress.vue`, `ui/desktop/src/views/ResultsView.vue` | C-058, C-062, C-063, C-064, C-065, C-066, C-067, C-068 | Connector-level done/failed/zero-result progress events reach the desktop; UI shows clear partial-success and empty-result states | §9 |
+
+### Phase 3 — Second hardening review pass (round 2; ADR-028)
+
+> Security-first ordering. C-069–C-073 + C-075 are `self` (sandbox-buildable); **C-074 is `external`** (Rust/Tauri/Node toolchain). These should land before the final desktop UX chunks (C-060/C-061).
+
+| ID | Goal | Files | Depends on | Acceptance | SDD ref |
+|----|------|-------|-----------|------------|---------|
+| C-069 | Neutralize untrusted external text at its sinks: escape CSV formula-trigger cells and wrap untrusted job descriptions in data delimiters so they cannot act as prompt instructions | `core/output.py`, `core/ai_engine/prompts.py`, `core/ai_engine/scrub.py` | C-024, C-010, C-012 | `jobs_to_csv` prefixes any cell starting with `=`/`+`/`-`/`@`/tab so it is inert in Excel/LibreOffice; `build_score_jobs_prompt` fences descriptions with explicit data markers + a "treat as data, not instructions" directive and strips control tokens; round-trip + injection-payload tests pass | §5.2, §5.4 |
+| C-070 | Close the residual session-store gaps from C-067: restrict key-material file permissions, create machine-id/salt atomically, and raise PBKDF2 iterations to current guidance | `core/auth/session_store.py` | C-067 | machine-id, salt, and `.enc` files are written `0600`; machine-id/salt use atomic `O_EXCL` create (no TOCTOU overwrite); PBKDF2 iterations raised to ≥600k; tests cover perms, concurrent-create collision, and key stability | §8.3 |
+| C-071 | Make secret redaction complete: the sidecar redacts using the loaded config's auth block, and CLI redaction replaces longest secrets first | `ui/cli/sidecar.py`, `ui/cli/cli.py` | C-062 | `_redact_secrets` reads `config.auth` (custom env-var names redacted, not just defaults); CLI redaction sorts secret values by descending length before replacement; tests cover custom-env-name and overlapping-prefix cases | §10, §11.1 |
+| C-072 | When the scoring provider fails, keep the unscored jobs visible instead of filtering them to an empty result | `core/runner.py` | C-063, C-066 | on `score_jobs` failure the run surfaces the merged jobs (unscored, clearly flagged) rather than dropping every `score is None` row at the threshold filter; orchestrator test asserts non-empty results on scoring failure | §5.1 |
+| C-073 | Bound and parallelize the two sequential hot loops, and close the DNS-rebind window | `core/connectors/duckduckgo_connector.py`, `core/ai_engine/__init__.py` | C-020, C-014 | DDG per-URL fetch and per-company trust scoring run under `asyncio.gather` + a `Semaphore`; AI score batches run concurrently under a bounded semaphore; `_real_http_fetch` pins/re-validates the resolved IP so a rebind to a private address is rejected; tests assert bounded concurrency and rebind rejection | §5.1, §6.1 |
+| C-074 | Make the desktop IPC chain time-bounded and leak-proof, and fix cross-platform/operational gaps (external) | `ui/cli/sidecar.py`, `ui/desktop/src-tauri/src/lib.rs`, `ui/desktop/src-tauri/tauri.conf.json`, `ui/desktop/src/stores/pipeline.ts` | C-058 | a hung sidecar/provider surfaces an error end to end (Python `asyncio.wait_for` + Rust `tokio::time::timeout` + frontend `Promise.race`); JSON-parse errors no longer echo raw stdout lines; the sidecar `.venv` path resolves on Unix and Windows; the child is killed on drop; CSP is non-null | §11.1 |
+| C-075 | Low-priority correctness/quality cleanups | `core/runner.py`, `core/connectors/mock_connector.py`, `core/ai_providers/openrouter_provider.py` | C-025, C-018, C-030 | hardcoded `gemini`/`openrouter`/`adzuna` instantiation branching replaced by a class-level auth-kwargs hook; mock keyword match uses word boundaries (`java` no longer matches `javascript`); OpenRouter resolves its key env-var-only for parity with Gemini (ADR-002); existing tests updated | §4.1, §4.2, §5.1 |
 
 ---
 
