@@ -4,6 +4,7 @@ from __future__ import annotations
 import base64
 import logging
 from collections.abc import Iterator
+from types import SimpleNamespace
 
 import httpx
 import pytest
@@ -66,6 +67,12 @@ async def test_adzuna_connector_metadata_matches_backlog():
     assert connector.auth_methods == ("api_key",)
     assert connector.country == DEFAULT_ADZUNA_COUNTRY == "us"
     assert connector.endpoint_template == ADZUNA_ENDPOINT_TEMPLATE
+    assert connector.auth_config_kwargs(
+        SimpleNamespace(
+            adzuna_app_id_env="MY_ADZUNA_ID",
+            adzuna_app_key_env="MY_ADZUNA_KEY",
+        )
+    ) == {"app_id_env": "MY_ADZUNA_ID", "app_key_env": "MY_ADZUNA_KEY"}
 
 
 async def test_search_builds_adzuna_request_from_criteria_and_maps_jobs():

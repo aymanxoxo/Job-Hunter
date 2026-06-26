@@ -37,10 +37,12 @@ pipeline runner, and shared infra. Pure logic stays side-effect-free; I/O lives 
   `done`) so the desktop can show partial success without marking the whole run failed. **Scoring is
   fail-graceful too (C-072):** if `score_jobs` raises, the run continues with the *unscored* jobs and
   skips the threshold filter so the listings stay visible instead of collapsing to an empty result;
-  partial unscored jobs from a *successful* call are still filtered out (and logged).
+  partial unscored jobs from a *successful* call are still filtered out (and logged). Auth-related
+  constructor env-var names are supplied via each plugin class's `auth_config_kwargs(auth)` hook rather
+  than runner-side plugin-name branching (C-075).
 - **Mock connector (`connectors/mock_connector.py`, C-018).** `MockConnector` loads deterministic jobs
   from `fixtures/jobs.json` or an injected fixture path, forces `source = "mock"`, and filters by a
-  case-insensitive keyword match against title/description.
+  case-insensitive whole-keyword match against title/description.
 - **Adzuna connector (`connectors/adzuna_connector.py`, C-051).** `AdzunaConnector` calls the official
   jobs API with `ADZUNA_APP_ID`/`ADZUNA_APP_KEY`, maps response records to raw unscored `Job` objects,
   and raises clear connector errors for missing credentials, HTTP failures, or malformed JSON.

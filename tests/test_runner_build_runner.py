@@ -25,7 +25,7 @@ class StubProvider(BaseAIProvider):
 
 
 class AuthAwareProvider(BaseAIProvider):
-    name = "gemini"
+    name = "hooked-provider"
     auth_methods = ("api_key",)
 
     def __init__(
@@ -44,6 +44,10 @@ class AuthAwareProvider(BaseAIProvider):
 
     async def score_jobs(self, jobs, criteria):
         return jobs
+
+    @classmethod
+    def auth_config_kwargs(cls, auth):
+        return {"api_key_env": getattr(auth, "custom_provider_api_key_env", None)}
 
 
 class ConfigurableConnector(BaseConnector):
@@ -95,7 +99,7 @@ class FixtureConnector(BaseConnector):
 
 
 class AuthAwareAdzunaConnector(BaseConnector):
-    name = "adzuna"
+    name = "hooked_connector"
     auth_methods = ("api_key",)
 
     def __init__(
@@ -111,6 +115,13 @@ class AuthAwareAdzunaConnector(BaseConnector):
 
     async def search(self, criteria):
         return []
+
+    @classmethod
+    def auth_config_kwargs(cls, auth):
+        return {
+            "app_id_env": getattr(auth, "custom_connector_app_id_env", None),
+            "app_key_env": getattr(auth, "custom_connector_app_key_env", None),
+        }
 
 
 def _config(**connector_settings):
@@ -201,27 +212,26 @@ def test_build_runner_passes_fixture_path_to_mock():
     assert runner.connectors[0].fixture_path == Path("f.json")
 
 
-def test_build_runner_passes_auth_env_names_to_provider_and_connector():
+def test_build_runner_uses_class_auth_hooks_for_provider_and_connector():
     discover = _discover_factory([AuthAwareAdzunaConnector], provider_classes=[AuthAwareProvider])
     config = _config(
-        provider="gemini",
+        provider="hooked-provider",
         auth=SimpleNamespace(
-            gemini_api_key_env="MY_GEMINI_KEY",
-            openrouter_api_key_env="MY_OPENROUTER_KEY",
-            adzuna_app_id_env="MY_ADZUNA_ID",
-            adzuna_app_key_env="MY_ADZUNA_KEY",
+            custom_provider_api_key_env="MY_PROVIDER_KEY",
+            custom_connector_app_id_env="MY_CONNECTOR_ID",
+            custom_connector_app_key_env="MY_CONNECTOR_KEY",
         ),
-        adzuna={"max_results": 3},
+        hooked_connector={"max_results": 3},
     )
 
     runner = build_runner(config, discover=discover)
 
-    assert runner.provider.api_key_env == "MY_GEMINI_KEY"
+    assert runner.provider.api_key_env == "MY_PROVIDER_KEY"
     assert runner.provider.model == "stub-model"
     assert runner.provider.batch_size == 10
     assert len(runner.connectors) == 1
-    assert runner.connectors[0].app_id_env == "MY_ADZUNA_ID"
-    assert runner.connectors[0].app_key_env == "MY_ADZUNA_KEY"
+    assert runner.connectors[0].app_id_env == "MY_CONNECTOR_ID"
+    assert runner.connectors[0].app_key_env == "MY_CONNECTOR_KEY"
     assert runner.connectors[0].max_results == 3
 
 

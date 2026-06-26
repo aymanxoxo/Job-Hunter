@@ -7,6 +7,7 @@ themselves as local-only with ``supports_local``.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from typing import Any
 
 from core.models.job import Job
 from core.models.search_criteria import SearchCriteria
@@ -37,3 +38,8 @@ class BaseAIProvider(ABC):
         """Raw text completion — used by connectors that need AI internally (e.g. DDGConnector).
         Not abstract; providers that don't expose this raise NotImplementedError."""
         raise NotImplementedError(f"{type(self).__name__} does not implement complete()")
+
+    @classmethod
+    def auth_config_kwargs(cls, auth: Any) -> dict[str, Any]:
+        """Return constructor kwargs derived from config auth env-var names."""
+        return {}

@@ -10,8 +10,8 @@
 
 <!-- jh:orientation:start -->
 - **Phase:** Phase 3 hardening active (M-03 and M-06 gates cleared). **Next gate:** Phase 3 hardening backlog (C-058-C-068).
-- **Last done:** **C-073** - Bounded concurrency + DNS-rebind guard — parallel DDG fetch + parallel score batches (`d6e4085`). Prior done: **C-072** - Scoring fallback keeps unscored jobs visible on provider failure (`1fff23f`); **C-071** - Secret-redaction completeness — sidecar loaded-config auth + CLI longest-match ordering (`347ab96`).
-- **Next ready:** **C-074** - IPC & desktop resilience — end-to-end timeout + stdout-leak guard + cross-platform sidecar spawn + CSP (risk-flagged; design sign-off required); **C-075** - Code-quality cleanups — plugin-name auth hook + mock keyword word-boundary + OpenRouter env-only.
+- **Last done:** **C-075** - Code-quality cleanups — plugin-name auth hook + mock keyword word-boundary + OpenRouter env-only (merge pending). Prior done: **C-073** - Bounded concurrency + DNS-rebind guard — parallel DDG fetch + parallel score batches (`d6e4085`); **C-072** - Scoring fallback keeps unscored jobs visible on provider failure (`1fff23f`).
+- **Next ready:** **C-074** - IPC & desktop resilience — end-to-end timeout + stdout-leak guard + cross-platform sidecar spawn + CSP (risk-flagged; design sign-off required).
 - **Blocked:** none.
 - **Notes:** Dev loop runs through short-lived GitHub PR branches; the user reviews and merges. See [ADR-014/015/016](Documents/DECISIONS.md).
 - **Protocol:** each chunk runs design -> test -> impl -> gate -> verify -> land (plan section 3.3); risky chunks pause for Design sign-off.
@@ -99,9 +99,11 @@
 | C-072 | Scoring fallback keeps unscored jobs visible on provider failure | Phase 3 Hardening | C-063, C-066 | done | 1fff23f |
 | C-073 | Bounded concurrency + DNS-rebind guard — parallel DDG fetch + parallel score batches | Phase 3 Hardening | C-020, C-014 | done | d6e4085 |
 | C-074 | IPC & desktop resilience — end-to-end timeout + stdout-leak guard + cross-platform sidecar spawn + CSP | Phase 3 Desktop Hardening | C-058 | todo | — |
-| C-075 | Code-quality cleanups — plugin-name auth hook + mock keyword word-boundary + OpenRouter env-only | Phase 3 Hardening | C-025, C-018, C-030 | todo | — |
+| C-075 | Code-quality cleanups — plugin-name auth hook + mock keyword word-boundary + OpenRouter env-only | Phase 3 Hardening | C-025, C-018, C-030 | done | — |
 
 ## Changelog (newest first)
+
+- 2026-06-26 - **C-075** Code-quality cleanups on `codex/c-075-code-quality-cleanups`: replaces runner-side hardcoded auth branching for Gemini/OpenRouter/Adzuna with plugin class `auth_config_kwargs(auth)` hooks, keeps constructor kwarg filtering intact for user plugins, makes `MockConnector` keyword filtering whole-keyword/case-insensitive so `java` no longer matches `javascript`, and removes OpenRouter's direct `api_key` constructor path so it resolves keys env-var-only at call time. Added hook coverage for base contracts and built-ins plus the mock boundary regression. Gate green: focused C-075 tests, 433 pytest + 5 skipped, Ruff, doctor, and import smoke.
 
 - 2026-06-26 - **C-061** Desktop partial failure and empty-state UX on `chunk/C-061-partial-empty-ux`: extends the progress protocol with connector-scoped search sub-events (`connector`, `skipped`, generic failed messages, and `metric.jobs`) and has `Runner` emit per-connector active/done/failed/skipped events while keeping connector failures fail-graceful and non-fatal. The desktop timeline now preserves connector messages, shows zero-result rows as `0 jobs`, summarizes partial connector failures, and keeps connector-level failures from flipping the whole pipeline store to `failed`. ResultsView now shows explicit partial-results warnings plus distinct empty states for running, completed-empty, all-hidden-below-threshold, and filter-empty views. Docs and chunk registry synced. Gate green: 24 focused Python tests, 37 focused frontend tests, `npm run build`, 432 pytest + 5 skipped, 59 Vitest tests, Ruff, doctor, and `jh.py gate C-061` PASS.
 

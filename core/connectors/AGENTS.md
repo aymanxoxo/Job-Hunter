@@ -12,10 +12,12 @@
   resolved by the runner per ADR-002), `enabled`.
 - Optional `async authenticate() -> bool` defaults to `True`; return `False` to skip a connector
   fail-gracefully.
+- Optional class hook `auth_config_kwargs(auth) -> dict[str, Any]` returns constructor kwargs for
+  auth-related env-var names; the runner filters these against the connector constructor.
 - Connectors are independent: never import another connector/provider (ADR-001).
 - Every connector must pass the reusable check in `tests/contracts/connector_contract.py`.
 - `MockConnector` reads `fixtures/jobs.json` by default, accepts a `fixture_path` override, enforces
-  `source = "mock"`, and filters with a simple case-insensitive keyword match against title and
+  `source = "mock"`, and filters with a case-insensitive whole-keyword match against title and
   description.
 - `AdzunaConnector` uses the official Adzuna API, reads `ADZUNA_APP_ID`/`ADZUNA_APP_KEY` by default,
   maps Adzuna results to `Job`, and keeps credentials out of source/config values.

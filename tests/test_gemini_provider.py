@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+from types import SimpleNamespace
 
 import httpx
 import pytest
@@ -70,6 +71,9 @@ async def test_gemini_provider_metadata_matches_sdd():
     assert provider.auth_methods == ("oauth", "api_key")
     assert provider.supports_local is False
     assert DEFAULT_GEMINI_API_KEY_ENV == "GEMINI_API_KEY"
+    assert provider.auth_config_kwargs(
+        SimpleNamespace(gemini_api_key_env="MY_GEMINI_KEY")
+    ) == {"api_key_env": "MY_GEMINI_KEY"}
 
 
 async def test_generate_criteria_posts_generatecontent_with_api_key_header():
