@@ -11,7 +11,7 @@
 <!-- jh:orientation:start -->
 - **Phase:** Phase 3 hardening active (M-03 and M-06 gates cleared). **Next gate:** Phase 3 hardening backlog (C-058-C-068).
 - **Last done:** **C-073** - Bounded concurrency + DNS-rebind guard — parallel DDG fetch + parallel score batches (`d6e4085`). Prior done: **C-072** - Scoring fallback keeps unscored jobs visible on provider failure (`1fff23f`); **C-071** - Secret-redaction completeness — sidecar loaded-config auth + CLI longest-match ordering (`347ab96`).
-- **Next ready:** **C-061** - Desktop partial failure and empty-state UX; **C-074** - IPC & desktop resilience — end-to-end timeout + stdout-leak guard + cross-platform sidecar spawn + CSP (risk-flagged; design sign-off required); **C-075** - Code-quality cleanups — plugin-name auth hook + mock keyword word-boundary + OpenRouter env-only.
+- **Next ready:** **C-074** - IPC & desktop resilience — end-to-end timeout + stdout-leak guard + cross-platform sidecar spawn + CSP (risk-flagged; design sign-off required); **C-075** - Code-quality cleanups — plugin-name auth hook + mock keyword word-boundary + OpenRouter env-only.
 - **Blocked:** none.
 - **Notes:** Dev loop runs through short-lived GitHub PR branches; the user reviews and merges. See [ADR-014/015/016](Documents/DECISIONS.md).
 - **Protocol:** each chunk runs design -> test -> impl -> gate -> verify -> land (plan section 3.3); risky chunks pause for Design sign-off.
@@ -92,7 +92,7 @@
 | C-067 | Session store hardening — UUID instability + static PBKDF2 salt | Phase 3 Hardening | C-019 | done | — |
 | C-068 | Desktop hardening — pipeline store crashes + race conditions + hard-coded threshold | Phase 3 Hardening | C-058, C-059 | done | — |
 | C-060 | ResultsView real export action | Phase 3 Desktop UX | C-058, C-062, C-063, C-064, C-065, C-066, C-067, C-068 | done | 481f4c6 |
-| C-061 | Desktop partial failure and empty-state UX | Phase 3 Desktop UX | C-058, C-062, C-063, C-064, C-065, C-066, C-067, C-068 | todo | — |
+| C-061 | Desktop partial failure and empty-state UX | Phase 3 Desktop UX | C-058, C-062, C-063, C-064, C-065, C-066, C-067, C-068 | done | — |
 | C-069 | Untrusted-input neutralization — CSV formula injection + AI prompt-injection hardening | Phase 3 Hardening | C-024, C-010, C-012 | done | — |
 | C-070 | Session store hardening II — 0600 perms + atomic O_EXCL create + PBKDF2 iteration bump | Phase 3 Hardening | C-067 | done | — |
 | C-071 | Secret-redaction completeness — sidecar loaded-config auth + CLI longest-match ordering | Phase 3 Hardening | C-062 | done | 347ab96 |
@@ -102,6 +102,8 @@
 | C-075 | Code-quality cleanups — plugin-name auth hook + mock keyword word-boundary + OpenRouter env-only | Phase 3 Hardening | C-025, C-018, C-030 | todo | — |
 
 ## Changelog (newest first)
+
+- 2026-06-26 - **C-061** Desktop partial failure and empty-state UX on `chunk/C-061-partial-empty-ux`: extends the progress protocol with connector-scoped search sub-events (`connector`, `skipped`, generic failed messages, and `metric.jobs`) and has `Runner` emit per-connector active/done/failed/skipped events while keeping connector failures fail-graceful and non-fatal. The desktop timeline now preserves connector messages, shows zero-result rows as `0 jobs`, summarizes partial connector failures, and keeps connector-level failures from flipping the whole pipeline store to `failed`. ResultsView now shows explicit partial-results warnings plus distinct empty states for running, completed-empty, all-hidden-below-threshold, and filter-empty views. Docs and chunk registry synced. Gate green: 24 focused Python tests, 37 focused frontend tests, `npm run build`, 432 pytest + 5 skipped, 59 Vitest tests, Ruff, doctor, and `jh.py gate C-061` PASS.
 
 - 2026-06-26 - **C-060** ResultsView real export action on `chunk/C-060-results-export`: replaces the browser-only ResultsView JSON download with the real configured exporter path. `ui/cli/sidecar.py` now accepts `export_results` IPC requests, validates incoming rows as `Job` models, writes through `core.output.export_results()` using `config.output.format`/`directory`, and returns absolute output paths as a final `{type:"export"}` event. `ui/desktop/src-tauri/src/lib.rs` exposes the matching Tauri command; `ui/desktop/src/stores/pipeline.ts` adds `exportResults()` with output-path validation; `ResultsView.vue` sends the currently visible sorted rows and shows returned paths or exporter errors without clearing results. Added sidecar subprocess coverage for configured CSV writes and invalid job payloads, store coverage for export IPC/invalid responses, and ResultsView coverage for visible-row export + error display. Docs synced: SDD §11.1 IPC examples plus `ui/cli` and `ui/desktop` AGENTS contracts. Gate green: focused sidecar + ResultsView tests, 53 frontend tests, `npm run build`, 429 pytest + 5 skipped, Ruff, Rust `cargo test`, and `jh.py gate C-060` PASS.
 

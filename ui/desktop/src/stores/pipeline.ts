@@ -170,7 +170,11 @@ export const usePipelineStore = defineStore("pipeline", {
     recordProgress(event: ProgressEvent) {
       this.events.push(event);
       this.latestProgress = event;
-      this.status = event.state === "failed" ? "failed" : "running";
+      if (event.state === "failed" && !event.connector) {
+        this.status = "failed";
+      } else if (this.status !== "failed") {
+        this.status = "running";
+      }
     },
 
     setResult(data: unknown) {

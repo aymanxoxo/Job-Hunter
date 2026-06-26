@@ -47,6 +47,16 @@ class BoomConnector(BaseConnector):
         raise RuntimeError("connector down")
 
 
+class AuthFailConnector(BaseConnector):
+    name = "authfail"
+
+    async def authenticate(self):
+        return False
+
+    async def search(self, criteria):
+        raise AssertionError("search must not run after failed auth")
+
+
 def _runner(connectors, **kw):
     stream = io.StringIO()
     runner = Runner(
@@ -89,6 +99,40 @@ async def test_run_is_fail_graceful_per_connector(tmp_path):
     result = await runner.run("good profile")
 
     assert [job.id for job in result.jobs] == ["1"]   # boom isolated; good still flows
+
+
+async def test_run_emits_connector_level_search_progress(tmp_path):
+    runner, stream = _runner(
+        [FakeConnector([]), BoomConnector(), AuthFailConnector()],
+        output_dir=tmp_path,
+        output_format="json",
+    )
+
+    result = await runner.run("profile")
+
+    assert result.jobs == ()
+    events = [json.loads(line) for line in stream.getvalue().splitlines()]
+    connector_events = [
+        event
+        for event in events
+        if event["stage"] == "search" and event.get("connector") is not None
+    ]
+
+    assert {
+        (event["connector"], event["state"], event.get("message"), event["metric"]["jobs"])
+        for event in connector_events
+        if event["state"] != "active"
+    } == {
+        ("fake", "done", "0 results", 0),
+        ("boom", "failed", "connector failed", 0),
+        ("authfail", "failed", "authentication failed", 0),
+    }
+    search_done = [
+        event for event in events if event["stage"] == "search" and event["state"] == "done"
+    ][-1]
+    assert search_done["metric"] == {"jobs": 0}
+    assert search_done["current"] == 3
+    assert search_done["total"] == 3
 
 
 async def test_run_with_no_results_exports_empty(tmp_path):

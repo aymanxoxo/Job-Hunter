@@ -147,25 +147,31 @@ class Runner:
     async def run(self, profile_source) -> RunResult:
         rid = self.run_id
 
-        def emit(stage, state, **fields):
-            self.emitter.emit(run_id=rid, stage=stage, state=state, **fields)
-
-        emit("profile", "active")
+        self._emit("profile", "active")
         profile_text = await self.profile_input.to_text(profile_source)
-        emit("profile", "done")
+        self._emit("profile", "done")
 
-        emit("criteria", "active")
+        self._emit("criteria", "active")
         criteria = await self.provider.generate_criteria(profile_text)
         if self.min_score_threshold is not None:
             criteria = criteria.model_copy(update={"min_score_threshold": self.min_score_threshold})
-        emit("criteria", "done")
+        self._emit("criteria", "done")
 
-        emit("search", "active", total=len(self.connectors))
+        enabled_total = sum(
+            1 for connector in self.connectors if getattr(connector, "enabled", True)
+        )
+        self._emit("search", "active", total=enabled_total)
         raw = await self._search_all(criteria)
         merged = dedup_by_url(merge_results(raw))
-        emit("search", "done", current=len(merged))
+        self._emit(
+            "search",
+            "done",
+            current=len(raw),
+            total=enabled_total,
+            metric={"jobs": len(merged)},
+        )
 
-        emit("score", "active", total=len(merged))
+        self._emit("score", "active", total=len(merged))
         scoring_failed = False
         try:
             scored = await self.provider.score_jobs(list(merged), criteria) if merged else []
@@ -196,33 +202,71 @@ class Runner:
                     count=unscored_count,
                     threshold=effective_threshold,
                 )
-        emit("score", "done", current=len(ranked))
+        self._emit("score", "done", current=len(ranked), metric={"jobs": len(ranked)})
 
-        emit("export", "active")
+        self._emit("export", "active")
         exported = export_results(
             ranked, directory=self.output_dir, fmt=self.output_format, moment=self.clock()
         )
-        emit("export", "done", current=len(exported))
+        self._emit("export", "done", current=len(exported))
 
         return RunResult(
             run_id=rid, criteria=criteria, jobs=tuple(ranked), exported=tuple(exported)
         )
 
+    def _emit(self, stage, state, **fields) -> None:
+        self.emitter.emit(run_id=self.run_id, stage=stage, state=state, **fields)
+
     async def _search_all(self, criteria: SearchCriteria) -> list[list[Job]]:
-        enabled = [c for c in self.connectors if getattr(c, "enabled", True)]
+        enabled = []
+        for connector in self.connectors:
+            if getattr(connector, "enabled", True):
+                enabled.append(connector)
+                continue
+            name = getattr(connector, "name", "connector")
+            self._emit(
+                "search",
+                "skipped",
+                connector=name,
+                message="disabled",
+                metric={"jobs": 0},
+            )
         if not enabled:
             return []
         return list(await asyncio.gather(*(self._search_one(c, criteria) for c in enabled)))
 
     async def _search_one(self, connector: BaseConnector, criteria: SearchCriteria) -> list[Job]:
         name = getattr(connector, "name", "connector")
+        self._emit("search", "active", connector=name, message=f"Searching {name}")
         try:
             if not await connector.authenticate():
                 self.log.warning("connector auth failed; skipped", connector=name)
+                self._emit(
+                    "search",
+                    "failed",
+                    connector=name,
+                    message="authentication failed",
+                    metric={"jobs": 0},
+                )
                 return []
-            return list(await connector.search(criteria))
+            jobs = list(await connector.search(criteria))
+            self._emit(
+                "search",
+                "done",
+                connector=name,
+                message="0 results" if not jobs else f"{len(jobs)} jobs",
+                metric={"jobs": len(jobs)},
+            )
+            return jobs
         except Exception as exc:
             self.log.warning("connector failed; skipped", connector=name, error=str(exc))
+            self._emit(
+                "search",
+                "failed",
+                connector=name,
+                message="connector failed",
+                metric={"jobs": 0},
+            )
             return []
 
 

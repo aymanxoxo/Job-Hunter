@@ -37,13 +37,31 @@ describe("buildTimeline", () => {
     ]);
     const search = model.stages[2];
     expect(search.connectors).toEqual([
-      { name: "adzuna", state: "done", jobs: 47 },
-      { name: "linkedin", state: "failed", jobs: null },
+      { name: "adzuna", state: "done", jobs: 47, message: null },
+      { name: "linkedin", state: "failed", jobs: null, message: null },
     ]);
     expect(model.summary.failedConnectors).toEqual(["linkedin"]);
     expect(model.summary.found).toBe(47);
     // a failed connector must NOT fail the whole pipeline by itself
     expect(model.summary.failed).toBe(false);
+  });
+
+  it("tracks zero-result connector rows and connector messages", () => {
+    const model = buildTimeline([
+      ev({
+        stage: "search",
+        connector: "mock",
+        state: "done",
+        message: "0 results",
+        metric: { jobs: 0 },
+      }),
+    ]);
+
+    expect(model.stages[2].connectors).toEqual([
+      { name: "mock", state: "done", jobs: 0, message: "0 results" },
+    ]);
+    expect(model.summary.zeroResultConnectors).toEqual(["mock"]);
+    expect(model.summary.found).toBe(0);
   });
 
   it("tracks the score stage determinate progress", () => {

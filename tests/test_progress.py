@@ -29,9 +29,10 @@ def _logger() -> tuple[Logger, io.StringIO]:
 def test_progress_event_schema_matches_runtime_contract():
     event = ProgressEvent(
         run_id="run-1",
-        stage="score",
+        stage="search",
         state="active",
-        message="Scoring batch",
+        connector="adzuna",
+        message="Searching Adzuna",
         current=3,
         total=6,
         metric={"jobs": 47},
@@ -40,9 +41,10 @@ def test_progress_event_schema_matches_runtime_contract():
     assert event.model_dump(exclude_none=True) == {
         "type": "progress",
         "run_id": "run-1",
-        "stage": "score",
+        "stage": "search",
         "state": "active",
-        "message": "Scoring batch",
+        "connector": "adzuna",
+        "message": "Searching Adzuna",
         "current": 3,
         "total": 6,
         "metric": {"jobs": 47},
@@ -109,6 +111,25 @@ def test_progress_event_rejects_unknown_stage(stage: str):
 def test_progress_event_rejects_unknown_state(state: str):
     with pytest.raises(ValidationError):
         ProgressEvent(run_id="run-1", stage="score", state=state)
+
+
+def test_progress_event_accepts_search_connector_sub_row():
+    event = ProgressEvent(
+        run_id="run-1",
+        stage="search",
+        state="skipped",
+        connector="mock",
+        message="disabled",
+        metric={"jobs": 0},
+    )
+
+    assert event.connector == "mock"
+    assert event.state == "skipped"
+
+
+def test_progress_event_rejects_connector_on_non_search_stage():
+    with pytest.raises(ValidationError, match="connector progress"):
+        ProgressEvent(run_id="run-1", stage="score", state="active", connector="mock")
 
 
 def test_progress_event_rejects_current_greater_than_total():

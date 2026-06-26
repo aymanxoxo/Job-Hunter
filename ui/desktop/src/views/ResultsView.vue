@@ -102,6 +102,56 @@ const hiddenCount = computed(() => rows.value.length - visibleRows.value.length)
 const selectedRow = computed(() => rows.value.find((row) => row.id === selectedId.value) ?? null);
 const canRerun = computed(() => pipeline.status !== "running" && pipeline.lastRun !== null);
 const canExport = computed(() => sortedRows.value.length > 0 && !exporting.value);
+const failedConnectorNames = computed(() =>
+  Array.from(
+    new Set(
+      pipeline.events
+        .filter((event) => event.stage === "search" && event.state === "failed" && event.connector)
+        .map((event) => String(event.connector)),
+    ),
+  ),
+);
+const partialFailureText = computed(() => {
+  if (failedConnectorNames.value.length === 0) {
+    return "";
+  }
+  return `Partial results: ${failedConnectorNames.value.join(", ")} failed.`;
+});
+
+const emptyStateTitle = computed(() => {
+  if (pipeline.status === "running") {
+    return "Search running";
+  }
+  if (rows.value.length > 0 && filterText.value.trim()) {
+    return "No results match the filter";
+  }
+  if (rows.value.length > 0 && hiddenCount.value > 0) {
+    return "All results are hidden";
+  }
+  if (pipeline.status === "succeeded") {
+    return failedConnectorNames.value.length ? "No results from completed connectors" : "No results found";
+  }
+  return "No visible results yet";
+});
+
+const emptyStateMessage = computed(() => {
+  if (pipeline.status === "running") {
+    return "Results will appear here as soon as the run finishes.";
+  }
+  if (rows.value.length > 0 && filterText.value.trim()) {
+    return "Clear or change the filter to see the current result set.";
+  }
+  if (rows.value.length > 0 && hiddenCount.value > 0) {
+    return `All ${rows.value.length} results are below the ${scoreThreshold.value} threshold.`;
+  }
+  if (pipeline.status === "succeeded" && failedConnectorNames.value.length > 0) {
+    return "The run completed, but one or more connectors failed before returning jobs.";
+  }
+  if (pipeline.status === "succeeded") {
+    return "The run completed without any jobs matching the current criteria.";
+  }
+  return "Run a search to populate this table.";
+});
 
 function stringValue(value: unknown, fallback: string): string {
   return typeof value === "string" && value.trim() ? value : fallback;
@@ -317,8 +367,19 @@ async function rerunSearch() {
 
     <p v-if="exportMessage" class="export-message" aria-live="polite">{{ exportMessage }}</p>
 
+    <p
+      v-if="partialFailureText && sortedRows.length > 0"
+      class="partial-warning"
+      data-testid="partial-results-warning"
+      role="status"
+    >
+      {{ partialFailureText }}
+    </p>
+
     <div v-if="sortedRows.length === 0" class="empty-state">
-      No visible results yet.
+      <h3>{{ emptyStateTitle }}</h3>
+      <p>{{ emptyStateMessage }}</p>
+      <p v-if="partialFailureText" class="partial-warning-inline">{{ partialFailureText }}</p>
     </div>
 
     <div v-else class="results-table-wrap">
@@ -549,6 +610,30 @@ async function rerunSearch() {
 .empty-state {
   padding: var(--sp-5);
   color: var(--text-muted);
+}
+
+.empty-state h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--fs-lg);
+  line-height: var(--lh-lg);
+}
+
+.empty-state p {
+  margin: var(--sp-2) 0 0;
+}
+
+.partial-warning,
+.partial-warning-inline {
+  color: var(--warning);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+}
+
+.partial-warning {
+  margin: 0;
+  padding: 0 var(--sp-2);
+  font-weight: var(--fw-medium);
 }
 
 .results-table {
