@@ -1145,7 +1145,7 @@
       "sdd_anchor": "\u00a79"
     },
     "C-069": {
-      "title": "Untrusted-input neutralization \u2014 CSV formula injection + AI prompt-injection delimiters",
+      "title": "Untrusted-input neutralization \u2014 CSV formula injection + AI prompt-injection hardening",
       "stage": "Phase 3 Hardening",
       "depends_on": [
         "C-024",
