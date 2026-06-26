@@ -210,7 +210,10 @@ class DDGConnector(BaseConnector):
                 ]
 
         # 5. Fetch pages + extract Job fields, concurrently under the shared semaphore.
+        #    Cap candidate fetches at max_results so a large pool can't blow the per-session
+        #    request budget (connectors are deliberately gentle — see root AGENTS.md).
         safe_items = [item for item in purified if _is_safe_url(item.get("url", ""))]
+        safe_items = safe_items[: self.max_results]
 
         async def _fetch_and_extract(item: dict[str, str]) -> Job | None:
             url = item.get("url", "")
