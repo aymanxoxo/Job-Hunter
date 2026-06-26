@@ -307,7 +307,7 @@ def discover_plugins(directory: Path, base_class: type) -> list[type]:
 | 7. Search (parallel) | `asyncio.gather()` all enabled `connector.search(criteria)` calls |
 | 8. Merge results | Flatten, deduplicate by URL, tag source connector |
 | 9. Score jobs | `ai_engine.score_jobs()` in batches of `config.ai.batch_size` (default 15); batches run concurrently under a bounded semaphore (C-073), with `asyncio.gather` preserving input order |
-| 10. Sort and filter | Sort by score desc, filter out jobs below `min_score_threshold` |
+| 10. Sort and filter | Sort by score desc, filter out jobs below `min_score_threshold`. **If scoring fails wholesale** (provider outage), the run keeps the scraped jobs visible *unscored and unfiltered* instead of letting the threshold drop every `score is None` job to an empty result (C-072) |
 | 11. Export | `core/output.py` writes CSV and/or JSON per `config.output.format` |
 
 ### 5.2 ai_engine.py — AI Facade
