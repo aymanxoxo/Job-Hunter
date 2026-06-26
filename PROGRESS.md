@@ -91,7 +91,7 @@
 | C-066 | Config + pipeline correctness — env-override clobber + min_score wiring + unscored-job log | Phase 3 Hardening | C-003, C-022, C-025 | done | 5dd02e6 |
 | C-067 | Session store hardening — UUID instability + static PBKDF2 salt | Phase 3 Hardening | C-019 | done | — |
 | C-068 | Desktop hardening — pipeline store crashes + race conditions + hard-coded threshold | Phase 3 Hardening | C-058, C-059 | done | — |
-| C-060 | ResultsView real export action | Phase 3 Desktop UX | C-058, C-062, C-063, C-064, C-065, C-066, C-067, C-068 | done | — |
+| C-060 | ResultsView real export action | Phase 3 Desktop UX | C-058, C-062, C-063, C-064, C-065, C-066, C-067, C-068 | done | 481f4c6 |
 | C-061 | Desktop partial failure and empty-state UX | Phase 3 Desktop UX | C-058, C-062, C-063, C-064, C-065, C-066, C-067, C-068 | todo | — |
 | C-069 | Untrusted-input neutralization — CSV formula injection + AI prompt-injection hardening | Phase 3 Hardening | C-024, C-010, C-012 | done | — |
 | C-070 | Session store hardening II — 0600 perms + atomic O_EXCL create + PBKDF2 iteration bump | Phase 3 Hardening | C-067 | done | — |
