@@ -653,10 +653,12 @@ Python core portable.
 ```jsonc
 // Request (Rust → Python stdin)
 { "command": "run_pipeline", "args": { "profile": "...", "provider": "gemini" } }
+{ "command": "export_results", "args": { "jobs": [ { /* Job fields */ } ] } }
 // Progress event (Python stdout, streaming)
 { "type": "progress", "step": "scoring", "current": 3, "total": 6 }
 // Final result (Python stdout)
 { "type": "result", "data": [ { /* Job fields including score */ } ] }
+{ "type": "export", "data": [ "C:/.../output/results_2026-06-26_120000.csv" ] }
 ```
 
 | Layer | Responsibility |
@@ -664,7 +666,7 @@ Python core portable.
 | UI Event | Vue component emits IPC event via Tauri `invoke()` |
 | Tauri command | Rust handler receives the command, serialises args to JSON |
 | IPC call | Rust writes JSON to Python sidecar stdin |
-| Python response | Python writes `{ status, data }` or `{ status, error }` to stdout |
+| Python response | Python writes protocol JSON (`progress`, `result`, `criteria`, `export`, or `error`) to stdout |
 | Result delivery | Rust reads stdout, deserialises, emits back to Vue |
 | Streaming | Long operations emit progress events every batch |
 

@@ -1,4 +1,4 @@
-import { mount } from "@vue/test-utils";
+import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -157,6 +157,39 @@ describe("ResultsView", () => {
     await wrapper.get("[data-testid='result-row-job-evil']").trigger("click");
 
     expect(wrapper.find("[data-testid='result-detail-link']").exists()).toBe(false);
+  });
+
+  it("exports currently visible sorted rows through the pipeline store", async () => {
+    const { store, wrapper } = mountView();
+    const exportSpy = vi.spyOn(store, "exportResults").mockResolvedValue([
+      "C:\\Users\\ayman\\JobHunter\\output\\results_2026-06-26_120000.csv",
+    ]);
+
+    await wrapper.get("[data-testid='export-results']").trigger("click");
+    await flushPromises();
+
+    expect(exportSpy).toHaveBeenCalledTimes(1);
+    expect(exportSpy).toHaveBeenCalledWith([
+      firstRun[0],
+      firstRun[1],
+      firstRun[3],
+    ]);
+    expect(wrapper.text()).toContain("Exported to C:\\Users\\ayman\\JobHunter\\output\\results_2026-06-26_120000.csv");
+  });
+
+  it("shows exporter errors without clearing results", async () => {
+    const { store, wrapper } = mountView();
+    vi.spyOn(store, "exportResults").mockRejectedValue(new Error("export failed"));
+
+    await wrapper.get("[data-testid='export-results']").trigger("click");
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("export failed");
+    expect(renderedTitles(wrapper)).toEqual([
+      "Platform Engineer",
+      "Backend Engineer",
+      "Data Integrations Engineer",
+    ]);
   });
 
   it("merges newly run results with existing rows", async () => {

@@ -47,6 +47,10 @@ export interface CriteriaResult {
 
 export type JobResult = Record<string, unknown>;
 
+export interface ExportResultsRequest {
+  jobs: JobResult[];
+}
+
 type ProgressHandler = (event: { payload: unknown }) => void;
 type Unlisten = () => void;
 
@@ -54,6 +58,7 @@ export interface PipelineClient {
   listen(eventName: "pipeline-progress", handler: ProgressHandler): Promise<Unlisten>;
   invoke(command: "run_pipeline", args: RunPipelineRequest): Promise<unknown>;
   invoke(command: "generate_criteria", args: GenerateCriteriaRequest): Promise<unknown>;
+  invoke(command: "export_results", args: ExportResultsRequest): Promise<unknown>;
 }
 
 async function createTauriPipelineClient(): Promise<PipelineClient> {
@@ -119,6 +124,13 @@ function normalizeCriteria(value: unknown): CriteriaResult {
         : undefined,
     raw_profile: typeof value.raw_profile === "string" ? value.raw_profile : null,
   };
+}
+
+function normalizeExportPaths(value: unknown): string[] {
+  if (!Array.isArray(value) || !value.every((item) => typeof item === "string")) {
+    throw new Error("Exporter returned invalid output paths.");
+  }
+  return value;
 }
 
 export const usePipelineStore = defineStore("pipeline", {
@@ -212,6 +224,19 @@ export const usePipelineStore = defineStore("pipeline", {
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         this.setError(message);
+        throw error;
+      }
+    },
+
+    async exportResults(jobs: JobResult[], client?: PipelineClient) {
+      this.error = null;
+      const ipc = client ?? (await createTauriPipelineClient());
+      try {
+        const result = await ipc.invoke("export_results", { jobs });
+        return normalizeExportPaths(result);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        this.error = message;
         throw error;
       }
     },

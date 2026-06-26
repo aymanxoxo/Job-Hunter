@@ -111,6 +111,45 @@ describe("pipeline store", () => {
     expect(store.error).toBeNull();
   });
 
+  it("invokes the sidecar export command and returns output paths", async () => {
+    const store = usePipelineStore();
+    const jobs = [
+      {
+        id: "job-1",
+        title: "Python Engineer",
+        company: "Northstar",
+        url: "https://example.test/job-1",
+        source: "mock",
+        score: 91,
+      },
+    ];
+
+    const paths = await store.exportResults(jobs, {
+      listen: async () => () => undefined,
+      invoke: async (command, args) => {
+        expect(command).toBe("export_results");
+        expect(args).toEqual({ jobs });
+        return ["C:\\Users\\ayman\\JobHunter\\output\\results_2026-06-26_120000.csv"];
+      },
+    });
+
+    expect(paths).toEqual(["C:\\Users\\ayman\\JobHunter\\output\\results_2026-06-26_120000.csv"]);
+    expect(store.error).toBeNull();
+  });
+
+  it("rejects invalid exporter path responses", async () => {
+    const store = usePipelineStore();
+
+    await expect(
+      store.exportResults([], {
+        listen: async () => () => undefined,
+        invoke: async () => [42],
+      }),
+    ).rejects.toThrow("Exporter returned invalid output paths.");
+
+    expect(store.error).toBe("Exporter returned invalid output paths.");
+  });
+
   // -------------------------------------------------------------------------
   // C-058 — connector overrides via localStorage
   // -------------------------------------------------------------------------

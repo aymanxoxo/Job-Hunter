@@ -29,6 +29,7 @@ const sortDirection = ref<SortDirection>("desc");
 const selectedId = ref<string | null>(null);
 const rows = ref<ResultRow[]>([]);
 const exportMessage = ref("");
+const exporting = ref(false);
 const showHidden = ref(false);
 
 // Replace (not merge) on every results change so a failed/cleared run cannot leave stale rows
@@ -100,6 +101,7 @@ const sortedRows = computed(() => {
 const hiddenCount = computed(() => rows.value.length - visibleRows.value.length);
 const selectedRow = computed(() => rows.value.find((row) => row.id === selectedId.value) ?? null);
 const canRerun = computed(() => pipeline.status !== "running" && pipeline.lastRun !== null);
+const canExport = computed(() => sortedRows.value.length > 0 && !exporting.value);
 
 function stringValue(value: unknown, fallback: string): string {
   return typeof value === "string" && value.trim() ? value : fallback;
@@ -210,16 +212,20 @@ function closeDetail() {
   selectedId.value = null;
 }
 
-function exportResults() {
-  const payload = JSON.stringify(sortedRows.value.map((row) => row.raw), null, 2);
-  const blob = new Blob([payload], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = "jobhunter-results.json";
-  anchor.click();
-  URL.revokeObjectURL(url);
-  exportMessage.value = `${sortedRows.value.length} exported`;
+async function exportResults() {
+  if (!canExport.value) {
+    return;
+  }
+  exporting.value = true;
+  exportMessage.value = "";
+  try {
+    const paths = await pipeline.exportResults(sortedRows.value.map((row) => row.raw));
+    exportMessage.value = `Exported to ${paths.join(", ")}`;
+  } catch (error) {
+    exportMessage.value = error instanceof Error ? error.message : String(error);
+  } finally {
+    exporting.value = false;
+  }
 }
 
 function toggleHiddenRows() {
@@ -289,11 +295,11 @@ async function rerunSearch() {
           class="secondary-action"
           type="button"
           data-testid="export-results"
-          :disabled="sortedRows.length === 0"
+          :disabled="!canExport"
           @click="exportResults"
         >
           <Download aria-hidden="true" />
-          <span>Export</span>
+          <span>{{ exporting ? "Exporting" : "Export" }}</span>
         </button>
 
         <button

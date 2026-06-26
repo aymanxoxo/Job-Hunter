@@ -4,6 +4,7 @@
 // its stdin and reads newline-delimited JSON events from its stdout:
 //   - {"type":"progress", ...}  forwarded as Tauri events to the frontend
 //   - {"type":"result",  ...}  returned as the command's Ok value
+//   - {"type":"export",  ...}  returned as configured export output paths
 //   - {"type":"error",  ...}  turned into an Err return
 //
 // All Python logs go to the child's stderr and are NOT read here, so they
@@ -93,21 +94,12 @@ fn which_exists(cmd: &str) -> bool {
 async fn call_sidecar(
     app: tauri::AppHandle,
     command: &str,
-    profile: String,
-    provider: Option<String>,
-    connector_overrides: Option<serde_json::Value>,
+    args: serde_json::Value,
     result_type: &str,
 ) -> Result<serde_json::Value, String> {
     let python = find_python();
     let project_root = project_root_from_env();
 
-    let mut args = serde_json::json!({
-        "profile": profile,
-        "provider": provider,
-    });
-    if let Some(overrides) = connector_overrides {
-        args["connector_overrides"] = overrides;
-    }
     let request = serde_json::json!({ "command": command, "args": args });
     let request_line = format!("{}\n", request);
 
@@ -169,6 +161,24 @@ async fn call_sidecar(
     result_value.ok_or_else(|| format!("sidecar produced no {result_type} event"))
 }
 
+async fn call_profile_sidecar(
+    app: tauri::AppHandle,
+    command: &str,
+    profile: String,
+    provider: Option<String>,
+    connector_overrides: Option<serde_json::Value>,
+    result_type: &str,
+) -> Result<serde_json::Value, String> {
+    let mut args = serde_json::json!({
+        "profile": profile,
+        "provider": provider,
+    });
+    if let Some(overrides) = connector_overrides {
+        args["connector_overrides"] = overrides;
+    }
+    call_sidecar(app, command, args, result_type).await
+}
+
 /// Spawn the Python sidecar, stream progress events back to the frontend, and
 /// return the final scored-job list as JSON.
 ///
@@ -182,7 +192,7 @@ async fn run_pipeline(
     provider: Option<String>,
     connector_overrides: Option<serde_json::Value>,
 ) -> Result<serde_json::Value, String> {
-    call_sidecar(app, "run_pipeline", profile, provider, connector_overrides, "result").await
+    call_profile_sidecar(app, "run_pipeline", profile, provider, connector_overrides, "result").await
 }
 
 /// Invoke provider-backed criteria generation through the same Python sidecar
@@ -193,7 +203,17 @@ async fn generate_criteria(
     profile: String,
     provider: Option<String>,
 ) -> Result<serde_json::Value, String> {
-    call_sidecar(app, "generate_criteria", profile, provider, None, "criteria").await
+    call_profile_sidecar(app, "generate_criteria", profile, provider, None, "criteria").await
+}
+
+/// Write the provided result rows through the Python exporter and return the
+/// configured output paths.
+#[tauri::command]
+async fn export_results(
+    app: tauri::AppHandle,
+    jobs: serde_json::Value,
+) -> Result<serde_json::Value, String> {
+    call_sidecar(app, "export_results", serde_json::json!({ "jobs": jobs }), "export").await
 }
 
 // ---------------------------------------------------------------------------
@@ -203,7 +223,11 @@ async fn generate_criteria(
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![run_pipeline, generate_criteria])
+        .invoke_handler(tauri::generate_handler![
+            run_pipeline,
+            generate_criteria,
+            export_results
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
