@@ -283,6 +283,55 @@ def test_sidecar_generate_criteria_returns_structured_criteria(tmp_path):
 # ---------------------------------------------------------------------------
 
 
+def test_sidecar_export_results_writes_configured_files(tmp_path):
+    _make_project(tmp_path)
+    proc = _spawn_sidecar(
+        tmp_path,
+        {
+            "command": "export_results",
+            "args": {
+                "jobs": [
+                    {
+                        "id": "export-job-1",
+                        "title": "=Formula Safe Engineer",
+                        "company": "ExportCo",
+                        "url": "https://example.test/export-job-1",
+                        "source": "mock",
+                        "location": "Remote",
+                        "score": 88,
+                        "match_reason": "Strong match",
+                        "red_flags": ["none"],
+                    }
+                ]
+            },
+        },
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    events = _parse_lines(proc.stdout)
+    assert len(events) == 1
+    assert events[0]["type"] == "export"
+    paths = [Path(path) for path in events[0]["data"]]
+    assert len(paths) == 1
+    assert paths[0].suffix == ".csv"
+    assert paths[0].exists()
+    assert paths[0].parent == (tmp_path / "output").resolve()
+    assert "'=Formula Safe Engineer" in paths[0].read_text(encoding="utf-8")
+
+
+def test_sidecar_export_results_rejects_invalid_jobs(tmp_path):
+    _make_project(tmp_path)
+    proc = _spawn_sidecar(
+        tmp_path,
+        {"command": "export_results", "args": {"jobs": [{"id": "missing-required"}]}},
+    )
+
+    assert proc.returncode != 0
+    events = _parse_lines(proc.stdout)
+    assert events[0]["type"] == "error"
+    assert "invalid args.jobs" in events[0]["message"]
+
+
 def test_apply_connector_overrides_absent():
     """connector_overrides absent in args → config is unchanged."""
     from ui.cli.sidecar import _load_request_config

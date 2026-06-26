@@ -7,18 +7,19 @@
 - `src/App.vue` - Desktop app shell with left navigation, header state, theme toggle, and global
   pipeline progress surface.
 - `src/router/index.ts` - Hash-router routes for Criteria, Results, and Settings views.
-- `src/stores/pipeline.ts` - Pinia pipeline store; invokes `run_pipeline` / `generate_criteria` and
-  records `pipeline-progress` IPC events.
+- `src/stores/pipeline.ts` - Pinia pipeline store; invokes `run_pipeline`, `generate_criteria`, and
+  `export_results`; records `pipeline-progress` IPC events.
 - `src/views/CriteriaView.vue` - Criteria workspace: profile input, provider-backed criteria
   generation/editing, refine, localStorage save/load, and Run Search through the pipeline IPC.
-- `src/views/ResultsView.vue` - Results workspace: score-band table, sorting/filtering, below-40 hide
-  rule, row detail drawer, JSON export, and re-run merge over the pipeline store results.
+- `src/views/ResultsView.vue` - Results workspace: score-band table, sorting/filtering, below-threshold
+  hide rule, row detail drawer, configured CSV/JSON export, and re-run merge over the pipeline store
+  results.
 - `src/views/SettingsView.vue` - Settings workspace: provider selection, connector toggles, search
   limits, clipboard-only API-key helper, auth status, and disabled deferred auth actions.
 - `src/styles/app.css` - Token-backed shell/component styling.
 - `src-tauri/src/main.rs` - Tauri entry point (thin wrapper calling `lib::run()`).
-- `src-tauri/src/lib.rs` - `run_pipeline` Tauri command + `find_python` / `project_root_from_env`
-  helpers; `run()` wires the Tauri builder.
+- `src-tauri/src/lib.rs` - `run_pipeline`, `generate_criteria`, and `export_results` Tauri commands +
+  `find_python` / `project_root_from_env` helpers; `run()` wires the Tauri builder.
 - `src-tauri/tests/ipc_integration.rs` - Rust integration test that spawns the Python sidecar
   and asserts the full stdin/stdout IPC round-trip works (progress events + result).
 - `src-tauri/Cargo.toml` - Tauri v2 + serde_json + tempfile (dev).
@@ -37,6 +38,7 @@ Rust -> Python stdin, one JSON line:
 ```json
 {"command": "run_pipeline", "args": {"profile": "...", "provider": "ollama"}}
 {"command": "generate_criteria", "args": {"profile": "...", "provider": "ollama"}}
+{"command": "export_results", "args": {"jobs": [{...job fields...}]}}
 ```
 
 Python stdout is newline-delimited JSON, streaming:
@@ -50,6 +52,7 @@ Then a final line:
 ```json
 {"type":"result","data":[{...job fields including score...}]}
 {"type":"criteria","data":{...SearchCriteria fields...}}
+{"type":"export","data":["C:/.../output/results_2026-06-26_120000.csv"]}
 ```
 
 Critical rule: only protocol JSON goes to stdout; all Python logs go to stderr. A stray stdout log
@@ -67,7 +70,7 @@ The Tauri command spawns this via `python -m ui.cli.sidecar` with:
 
 - CWD = project root, where `config.yaml` lives.
 - `PYTHONPATH` = project root, so `core` and `ui` are importable.
-- stdin = the `run_pipeline` or `generate_criteria` JSON request.
+- stdin = the `run_pipeline`, `generate_criteria`, or `export_results` JSON request.
 - stdout = progress events + final result, or a criteria event, parsed by Rust.
 - stderr = Python logs, inherited by the Tauri process and safe to ignore.
 
@@ -109,9 +112,10 @@ on `windows-latest`, which avoids local WDAC restrictions and publishes the MSI 
   Python sidecar stdout contract.
 - C-034/C-052: Criteria draft generation calls the Python provider through the `generate_criteria`
   sidecar command; editing/refine remains local UI state.
-- C-035/C-052: Results rendering derives from `pipeline.results`; re-run uses `pipeline.lastRun` and
-  merges fresh rows locally by result identity. Rows below score 40 are hidden by default with an
-  explicit reveal toggle.
+- C-035/C-052/C-060: Results rendering derives from `pipeline.results`; re-run uses `pipeline.lastRun`
+  and merges fresh rows locally by result identity. Rows below the configured score threshold are hidden
+  by default with an explicit reveal toggle. Export sends visible sorted rows through the Python sidecar
+  and displays the configured output paths returned by `core.output.export_results`.
 - C-036/C-056 is frontend-only until a Tauri settings command lands: non-secret settings persist to a
   local config-shaped payload. API keys are never stored; the UI only copies a typed key to the
   clipboard with env-var setup guidance, then clears the field.

@@ -4,7 +4,9 @@ Reads one JSON request from stdin. ``run_pipeline`` runs the pipeline with
 progress events emitted to STDOUT (the IPC channel), then writes the final
 ``{"type": "result", ...}`` line. ``generate_criteria`` invokes the configured
 provider's criteria generation and writes a ``{"type": "criteria", ...}``
-line. All Python logs go to STDERR so they never corrupt the JSON stream.
+line. ``export_results`` writes the provided jobs through the configured
+exporter and returns output paths. All Python logs go to STDERR so they never
+corrupt the JSON stream.
 
 Usage (from the project root, with CWD = project root or a dir that has
 config.yaml + user drop-zone folders):
@@ -14,11 +16,13 @@ config.yaml + user drop-zone folders):
 Request format (one JSON line on stdin):
     {"command": "run_pipeline", "args": {"profile": "...", "provider": "ollama"}}
     {"command": "generate_criteria", "args": {"profile": "...", "provider": "ollama"}}
+    {"command": "export_results", "args": {"jobs": [{...job fields...}]}}
 
 Response (newline-delimited JSON on stdout):
     {"type": "progress", "stage": "...", "state": "...", ...}  # zero or more
     {"type": "result", "data": [{...job fields...}]}           # final line
     {"type": "criteria", "data": {...SearchCriteria fields...}} # criteria generation
+    {"type": "export", "data": ["output/results_...csv"]}       # export paths
     {"type": "error",  "message": "..."}                       # on fatal error
 """
 from __future__ import annotations
@@ -34,6 +38,7 @@ from pydantic import ValidationError
 from core.config import AuthConfig, Config, ConnectorSettings, load_config
 from core.logging import get_logger
 from core.models.job import Job
+from core.output import export_results
 from core.progress import ProgressEmitter
 from core.runner import build_runner
 
@@ -179,6 +184,26 @@ async def _run_pipeline(profile: str, args: dict) -> None:
     _write_event({"type": "result", "data": data})
 
 
+def _jobs_arg(args: dict) -> list[Job]:
+    jobs = args.get("jobs")
+    if not isinstance(jobs, list):
+        raise ValueError("args.jobs must be a list")
+    try:
+        return [Job.model_validate(job) for job in jobs]
+    except ValidationError as exc:
+        raise ValueError(f"invalid args.jobs: {exc}") from exc
+
+
+def _export_results(args: dict) -> None:
+    config = _load_request_config(args)
+    paths = export_results(
+        _jobs_arg(args),
+        directory=config.output.directory,
+        fmt=config.output.format,
+    )
+    _write_event({"type": "export", "data": [str(path.resolve()) for path in paths]})
+
+
 def main() -> None:
     raw = sys.stdin.readline()
     if not raw:
@@ -193,17 +218,16 @@ def main() -> None:
 
     args = request.get("args") or {}
     command = request.get("command")
-    try:
-        profile = _profile_arg(args)
-    except ValueError as exc:
-        _error(str(exc))
-        sys.exit(1)
 
     try:
         if command == "run_pipeline":
+            profile = _profile_arg(args)
             asyncio.run(_run_pipeline(profile, args))
         elif command == "generate_criteria":
+            profile = _profile_arg(args)
             asyncio.run(_generate_criteria(profile, args))
+        elif command == "export_results":
+            _export_results(args)
         else:
             _error(f"unknown command: {command!r}")
             sys.exit(1)
