@@ -103,7 +103,9 @@ def _collect_secret_values(auth) -> list[str]:
 
 
 def _redact_secret_values(msg: str, auth: AuthConfig) -> str:
-    for val in _collect_secret_values(auth):
+    # Replace longest-first so a secret that is a substring of another does not
+    # leave a fragment of the longer secret exposed.
+    for val in sorted(_collect_secret_values(auth), key=len, reverse=True):
         if val and val in msg:
             msg = msg.replace(val, "***")
     return msg

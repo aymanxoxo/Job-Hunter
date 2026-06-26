@@ -16,6 +16,10 @@
   stderr only. **Stdout is the IPC channel — no stray log lines.**
 - `auth status` reports env-var/session presence without printing credential values; OAuth/browser login
   commands stay deferred to their provider/connector chunks.
+- Error paths in both `cli.py` and `sidecar.py` redact credential values before surfacing them (stdout
+  table / IPC). Redaction resolves env-var *names* from the loaded `config.auth` (so a renamed env var is
+  still caught) plus the built-in `AuthConfig()` defaults, and replaces values **longest-first** so a
+  secret that is a substring of another leaves no fragment exposed (C-071).
 - `export --format` re-exports the newest `results_*.json` file from the configured output directory.
 
 ## Pointers
