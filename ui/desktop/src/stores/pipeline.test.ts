@@ -18,6 +18,7 @@ describe("pipeline store", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     clearLocalStorage();
+    vi.useRealTimers();
   });
 
   it("records streamed progress events in order", () => {
@@ -358,6 +359,31 @@ describe("pipeline store", () => {
 
     expect(store.status).toBe("failed");
     expect(store.error).toBe("tauri unavailable");
+  });
+
+  it("fails a run that exceeds the frontend IPC timeout", async () => {
+    vi.useFakeTimers();
+    const store = usePipelineStore();
+
+    const pendingRun = store.runPipeline(
+      { profile: "Senior Python developer", provider: "ollama" },
+      {
+        listen: async () => () => undefined,
+        invoke: async () =>
+          new Promise(() => {
+            // Intentionally never resolves.
+          }),
+      },
+    );
+
+    const expectedFailure = expect(pendingRun).rejects.toThrow(
+      "Pipeline run timed out after 900 seconds.",
+    );
+
+    await vi.advanceTimersByTimeAsync(15 * 60 * 1000);
+    await expectedFailure;
+    expect(store.status).toBe("failed");
+    expect(store.error).toBe("Pipeline run timed out after 900 seconds.");
   });
 
   it("clears stale results when a run fails", () => {

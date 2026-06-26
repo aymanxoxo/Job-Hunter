@@ -10,11 +10,16 @@
 // All Python logs go to the child's stderr and are NOT read here, so they
 // never corrupt the JSON stream (SDD §11.1 rule: stdout is the IPC channel).
 
-use std::io::{BufRead, BufReader, Write};
 use std::process::{Command, Stdio};
+use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use tauri::Emitter;
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tokio::process::Command as TokioCommand;
+use tokio::time::timeout;
+
+const SIDECAR_TIMEOUT_SECONDS: u64 = 15 * 60;
 
 // ---------------------------------------------------------------------------
 // IPC types
@@ -41,9 +46,10 @@ pub struct ProgressPayload {
 /// Resolution order:
 /// 1. `JOBHUNTER_PYTHON` environment variable (useful in tests and CI).
 /// 2. `.venv/Scripts/python.exe` relative to `JOBHUNTER_ROOT` (or CWD).
-/// 3. `py` (Windows Python Launcher).
-/// 4. `python3`.
-/// 5. `python`.
+/// 3. `.venv/bin/python3` or `.venv/bin/python` relative to the same root.
+/// 4. `py` (Windows Python Launcher).
+/// 5. `python3`.
+/// 6. `python`.
 pub fn find_python() -> String {
     if let Ok(val) = std::env::var("JOBHUNTER_PYTHON") {
         return val;
@@ -51,9 +57,15 @@ pub fn find_python() -> String {
 
     // Try the venv relative to the project root.
     let root = project_root_from_env();
-    let venv_python = root.join(".venv").join("Scripts").join("python.exe");
-    if venv_python.exists() {
-        return venv_python.to_string_lossy().into_owned();
+    let venv_candidates = [
+        root.join(".venv").join("Scripts").join("python.exe"),
+        root.join(".venv").join("bin").join("python3"),
+        root.join(".venv").join("bin").join("python"),
+    ];
+    for candidate in venv_candidates {
+        if candidate.exists() {
+            return candidate.to_string_lossy().into_owned();
+        }
     }
 
     // Fallback candidates.
@@ -97,19 +109,39 @@ async fn call_sidecar(
     args: serde_json::Value,
     result_type: &str,
 ) -> Result<serde_json::Value, String> {
+    timeout(
+        Duration::from_secs(SIDECAR_TIMEOUT_SECONDS),
+        call_sidecar_inner(app, command, args, result_type),
+    )
+    .await
+    .map_err(|_| format!("sidecar timed out after {SIDECAR_TIMEOUT_SECONDS} seconds"))?
+}
+
+pub fn parse_sidecar_event(trimmed: &str) -> Result<serde_json::Value, String> {
+    serde_json::from_str(trimmed)
+        .map_err(|e| format!("invalid JSON from sidecar: {e}; stdout line was not protocol JSON"))
+}
+
+async fn call_sidecar_inner(
+    app: tauri::AppHandle,
+    command: &str,
+    args: serde_json::Value,
+    result_type: &str,
+) -> Result<serde_json::Value, String> {
     let python = find_python();
     let project_root = project_root_from_env();
 
     let request = serde_json::json!({ "command": command, "args": args });
     let request_line = format!("{}\n", request);
 
-    let mut child = Command::new(&python)
+    let mut child = TokioCommand::new(&python)
         .args(["-m", "ui.cli.sidecar"])
         .current_dir(&project_root)
         .env("PYTHONPATH", project_root.to_string_lossy().as_ref())
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::inherit()) // Python logs pass through to the Tauri process stderr
+        .kill_on_drop(true)
         .spawn()
         .map_err(|e| format!("failed to spawn sidecar ({python}): {e}"))?;
 
@@ -117,26 +149,31 @@ async fn call_sidecar(
     if let Some(mut stdin) = child.stdin.take() {
         stdin
             .write_all(request_line.as_bytes())
+            .await
             .map_err(|e| format!("stdin write error: {e}"))?;
+        stdin
+            .shutdown()
+            .await
+            .map_err(|e| format!("stdin close error: {e}"))?;
     }
 
-    let stdout = child
-        .stdout
-        .take()
-        .ok_or("sidecar stdout unavailable")?;
+    let stdout = child.stdout.take().ok_or("sidecar stdout unavailable")?;
     let reader = BufReader::new(stdout);
+    let mut lines = reader.lines();
 
     let mut result_value: Option<serde_json::Value> = None;
 
-    for line in reader.lines() {
-        let line = line.map_err(|e| format!("stdout read error: {e}"))?;
+    while let Some(line) = lines
+        .next_line()
+        .await
+        .map_err(|e| format!("stdout read error: {e}"))?
+    {
         let trimmed = line.trim();
         if trimmed.is_empty() {
             continue;
         }
 
-        let event: serde_json::Value = serde_json::from_str(trimmed)
-            .map_err(|e| format!("invalid JSON from sidecar: {e} | line: {trimmed}"))?;
+        let event = parse_sidecar_event(trimmed)?;
 
         match event["type"].as_str() {
             Some("progress") => {
@@ -156,6 +193,7 @@ async fn call_sidecar(
 
     child
         .wait()
+        .await
         .map_err(|e| format!("sidecar wait error: {e}"))?;
 
     result_value.ok_or_else(|| format!("sidecar produced no {result_type} event"))
@@ -192,7 +230,15 @@ async fn run_pipeline(
     provider: Option<String>,
     connector_overrides: Option<serde_json::Value>,
 ) -> Result<serde_json::Value, String> {
-    call_profile_sidecar(app, "run_pipeline", profile, provider, connector_overrides, "result").await
+    call_profile_sidecar(
+        app,
+        "run_pipeline",
+        profile,
+        provider,
+        connector_overrides,
+        "result",
+    )
+    .await
 }
 
 /// Invoke provider-backed criteria generation through the same Python sidecar
@@ -203,7 +249,15 @@ async fn generate_criteria(
     profile: String,
     provider: Option<String>,
 ) -> Result<serde_json::Value, String> {
-    call_profile_sidecar(app, "generate_criteria", profile, provider, None, "criteria").await
+    call_profile_sidecar(
+        app,
+        "generate_criteria",
+        profile,
+        provider,
+        None,
+        "criteria",
+    )
+    .await
 }
 
 /// Write the provided result rows through the Python exporter and return the
@@ -213,7 +267,13 @@ async fn export_results(
     app: tauri::AppHandle,
     jobs: serde_json::Value,
 ) -> Result<serde_json::Value, String> {
-    call_sidecar(app, "export_results", serde_json::json!({ "jobs": jobs }), "export").await
+    call_sidecar(
+        app,
+        "export_results",
+        serde_json::json!({ "jobs": jobs }),
+        "export",
+    )
+    .await
 }
 
 // ---------------------------------------------------------------------------

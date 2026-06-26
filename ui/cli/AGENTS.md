@@ -14,6 +14,9 @@
 - `sidecar` is the IPC entrypoint for the Tauri desktop shell: reads one JSON request from stdin
   (`run_pipeline`, `generate_criteria`, or `export_results`), emits protocol JSON to stdout, and logs
   to stderr only. **Stdout is the IPC channel - no stray log lines.**
+- Async sidecar commands are wrapped in `asyncio.wait_for` with a 15-minute default timeout. Tests and
+  local diagnostics may override this with `JOBHUNTER_SIDECAR_TIMEOUT_SECONDS`; production config should
+  leave the default unless a provider has a documented longer bound.
 - `auth status` reports env-var/session presence without printing credential values; OAuth/browser login
   commands stay deferred to their provider/connector chunks.
 - Error paths in both `cli.py` and `sidecar.py` redact credential values before surfacing them (stdout

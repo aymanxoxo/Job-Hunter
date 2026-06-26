@@ -7,6 +7,9 @@
 /// the IPC protocol directly so it runs on any machine with Python installed.
 use std::io::{BufRead, BufReader, Write};
 use std::process::{Command, Stdio};
+use std::sync::Mutex;
+
+static ENV_LOCK: Mutex<()> = Mutex::new(());
 
 const STUB_PROVIDER: &str = r#"
 from core.ai_providers.base_provider import BaseAIProvider
@@ -66,7 +69,10 @@ fn find_python() -> String {
         return val;
     }
     // Try the project venv.
-    let venv = project_root().join(".venv").join("Scripts").join("python.exe");
+    let venv = project_root()
+        .join(".venv")
+        .join("Scripts")
+        .join("python.exe");
     if venv.exists() {
         return venv.to_string_lossy().into_owned();
     }
@@ -98,12 +104,27 @@ fn setup_project(dir: &std::path::Path) {
     std::fs::write(dir.join("config.yaml"), CONFIG).unwrap();
 }
 
+fn with_env_var<T>(key: &str, value: Option<&std::path::Path>, f: impl FnOnce() -> T) -> T {
+    let previous = std::env::var_os(key);
+    match value {
+        Some(path) => std::env::set_var(key, path),
+        None => std::env::remove_var(key),
+    }
+    let result = f();
+    match previous {
+        Some(old) => std::env::set_var(key, old),
+        None => std::env::remove_var(key),
+    }
+    result
+}
+
 // ---------------------------------------------------------------------------
 // Test
 // ---------------------------------------------------------------------------
 
 #[test]
 fn test_sidecar_run_pipeline_round_trip() {
+    let _guard = ENV_LOCK.lock().unwrap();
     let tmp = tempfile::tempdir().expect("failed to create temp dir");
     let root = tmp.path();
     setup_project(root);
@@ -145,10 +166,8 @@ fn test_sidecar_run_pipeline_round_trip() {
         if trimmed.is_empty() {
             continue;
         }
-        let event: serde_json::Value =
-            serde_json::from_str(trimmed).unwrap_or_else(|e| {
-                panic!("invalid JSON from sidecar: {e}\nline: {trimmed}")
-            });
+        let event: serde_json::Value = serde_json::from_str(trimmed)
+            .unwrap_or_else(|e| panic!("invalid JSON from sidecar: {e}\nline: {trimmed}"));
 
         match event["type"].as_str() {
             Some("progress") => progress_events.push(event),
@@ -172,19 +191,56 @@ fn test_sidecar_run_pipeline_round_trip() {
     );
 
     for ev in &progress_events {
-        assert!(ev["stage"].is_string(), "progress event missing 'stage': {ev}");
-        assert!(ev["state"].is_string(), "progress event missing 'state': {ev}");
-        assert!(ev["run_id"].is_string(), "progress event missing 'run_id': {ev}");
+        assert!(
+            ev["stage"].is_string(),
+            "progress event missing 'stage': {ev}"
+        );
+        assert!(
+            ev["state"].is_string(),
+            "progress event missing 'state': {ev}"
+        );
+        assert!(
+            ev["run_id"].is_string(),
+            "progress event missing 'run_id': {ev}"
+        );
     }
 
     let result = result_event.expect("no result event received");
-    let data = result["data"].as_array().expect("result.data is not an array");
+    let data = result["data"]
+        .as_array()
+        .expect("result.data is not an array");
     assert!(!data.is_empty(), "result.data is empty");
 
     let job = &data[0];
     assert_eq!(job["score"], 91, "unexpected score: {job}");
-    assert_eq!(
-        job["match_reason"].as_str().unwrap_or(""),
-        "rust test pass"
-    );
+    assert_eq!(job["match_reason"].as_str().unwrap_or(""), "rust test pass");
+}
+
+#[test]
+fn test_parse_sidecar_event_does_not_echo_raw_stdout_on_error() {
+    let raw = "secret stdout line api_key=abc123";
+    let err = jobhunter_desktop_lib::parse_sidecar_event(raw).expect_err("line should fail");
+
+    assert!(err.contains("invalid JSON from sidecar"));
+    assert!(err.contains("stdout line was not protocol JSON"));
+    assert!(!err.contains(raw));
+    assert!(!err.contains("abc123"));
+}
+
+#[test]
+fn test_find_python_checks_unix_venv_layout() {
+    let _guard = ENV_LOCK.lock().unwrap();
+    let tmp = tempfile::tempdir().expect("failed to create temp dir");
+    let python = tmp.path().join(".venv").join("bin").join("python3");
+    std::fs::create_dir_all(python.parent().unwrap()).unwrap();
+    std::fs::write(&python, "").unwrap();
+
+    with_env_var("JOBHUNTER_PYTHON", None, || {
+        with_env_var("JOBHUNTER_ROOT", Some(tmp.path()), || {
+            assert_eq!(
+                jobhunter_desktop_lib::find_python(),
+                python.to_string_lossy()
+            );
+        });
+    });
 }

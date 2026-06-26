@@ -53,6 +53,7 @@ export interface ExportResultsRequest {
 
 type ProgressHandler = (event: { payload: unknown }) => void;
 type Unlisten = () => void;
+const IPC_TIMEOUT_MS = 15 * 60 * 1000;
 
 export interface PipelineClient {
   listen(eventName: "pipeline-progress", handler: ProgressHandler): Promise<Unlisten>;
@@ -133,6 +134,20 @@ function normalizeExportPaths(value: unknown): string[] {
   return value;
 }
 
+function withIpcTimeout<T>(operation: Promise<T>, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error(`${label} timed out after ${IPC_TIMEOUT_MS / 1000} seconds.`));
+    }, IPC_TIMEOUT_MS);
+  });
+  return Promise.race([operation, timeoutPromise]).finally(() => {
+    if (timer !== undefined) {
+      clearTimeout(timer);
+    }
+  });
+}
+
 export const usePipelineStore = defineStore("pipeline", {
   state: () => ({
     status: "idle" as PipelineStatus,
@@ -208,7 +223,10 @@ export const usePipelineStore = defineStore("pipeline", {
             this.recordProgress(event.payload);
           }
         });
-        const result = await ipc.invoke("run_pipeline", ipcRequest);
+        const result = await withIpcTimeout(
+          ipc.invoke("run_pipeline", ipcRequest),
+          "Pipeline run",
+        );
         this.setResult(result);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -223,7 +241,10 @@ export const usePipelineStore = defineStore("pipeline", {
       this.error = null;
       const ipc = client ?? (await createTauriPipelineClient());
       try {
-        const result = await ipc.invoke("generate_criteria", request);
+        const result = await withIpcTimeout(
+          ipc.invoke("generate_criteria", request),
+          "Criteria generation",
+        );
         return normalizeCriteria(result);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -236,7 +257,10 @@ export const usePipelineStore = defineStore("pipeline", {
       this.error = null;
       const ipc = client ?? (await createTauriPipelineClient());
       try {
-        const result = await ipc.invoke("export_results", { jobs });
+        const result = await withIpcTimeout(
+          ipc.invoke("export_results", { jobs }),
+          "Results export",
+        );
         return normalizeExportPaths(result);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

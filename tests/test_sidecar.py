@@ -223,6 +223,32 @@ def test_sidecar_unknown_command_returns_error(tmp_path):
     assert any(e.get("type") == "error" for e in events)
 
 
+def test_sidecar_async_commands_are_time_bounded(monkeypatch):
+    from ui.cli.sidecar import _run_with_timeout
+
+    async def _slow_command():
+        import asyncio
+
+        await asyncio.sleep(1)
+
+    monkeypatch.setenv("JOBHUNTER_SIDECAR_TIMEOUT_SECONDS", "0.001")
+
+    with pytest.raises(TimeoutError, match="sidecar command timed out"):
+        _run_with_timeout(_slow_command())
+
+
+def test_sidecar_timeout_rejects_non_finite_values(monkeypatch):
+    from ui.cli.sidecar import _run_with_timeout
+
+    async def _command():
+        return None
+
+    monkeypatch.setenv("JOBHUNTER_SIDECAR_TIMEOUT_SECONDS", "nan")
+
+    with pytest.raises(ValueError, match="finite and greater than zero"):
+        _run_with_timeout(_command())
+
+
 def test_sidecar_provider_override_accepted(tmp_path):
     """Provider name in request.args.provider overrides config."""
     _make_project(tmp_path)

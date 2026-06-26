@@ -10,8 +10,8 @@
 
 <!-- jh:orientation:start -->
 - **Phase:** Phase 3 hardening active (M-03 and M-06 gates cleared). **Next gate:** Phase 3 hardening backlog (C-058-C-068).
-- **Last done:** **C-075** - Code-quality cleanups — plugin-name auth hook + mock keyword word-boundary + OpenRouter env-only (`fed6965`). Prior done: **C-073** - Bounded concurrency + DNS-rebind guard — parallel DDG fetch + parallel score batches (`d6e4085`); **C-072** - Scoring fallback keeps unscored jobs visible on provider failure (`1fff23f`).
-- **Next ready:** **C-074** - IPC & desktop resilience — end-to-end timeout + stdout-leak guard + cross-platform sidecar spawn + CSP (risk-flagged; design sign-off required).
+- **Last done:** **C-075** - Code-quality cleanups — plugin-name auth hook + mock keyword word-boundary + OpenRouter env-only (`fed6965`). Prior done: **C-074** - IPC & desktop resilience — end-to-end timeout + stdout-leak guard + cross-platform sidecar spawn + CSP (merge pending); **C-073** - Bounded concurrency + DNS-rebind guard — parallel DDG fetch + parallel score batches (`d6e4085`).
+- **Next ready:** none.
 - **Blocked:** none.
 - **Notes:** Dev loop runs through short-lived GitHub PR branches; the user reviews and merges. See [ADR-014/015/016](Documents/DECISIONS.md).
 - **Protocol:** each chunk runs design -> test -> impl -> gate -> verify -> land (plan section 3.3); risky chunks pause for Design sign-off.
@@ -98,10 +98,12 @@
 | C-071 | Secret-redaction completeness — sidecar loaded-config auth + CLI longest-match ordering | Phase 3 Hardening | C-062 | done | 347ab96 |
 | C-072 | Scoring fallback keeps unscored jobs visible on provider failure | Phase 3 Hardening | C-063, C-066 | done | 1fff23f |
 | C-073 | Bounded concurrency + DNS-rebind guard — parallel DDG fetch + parallel score batches | Phase 3 Hardening | C-020, C-014 | done | d6e4085 |
-| C-074 | IPC & desktop resilience — end-to-end timeout + stdout-leak guard + cross-platform sidecar spawn + CSP | Phase 3 Desktop Hardening | C-058 | todo | — |
+| C-074 | IPC & desktop resilience — end-to-end timeout + stdout-leak guard + cross-platform sidecar spawn + CSP | Phase 3 Desktop Hardening | C-058 | done | — |
 | C-075 | Code-quality cleanups — plugin-name auth hook + mock keyword word-boundary + OpenRouter env-only | Phase 3 Hardening | C-025, C-018, C-030 | done | fed6965 |
 
 ## Changelog (newest first)
+
+- 2026-06-26 - **C-074** IPC & desktop resilience on `codex/c-074-ipc-desktop-resilience`: makes the Tauri/Python IPC chain time-bounded and leak-resistant. Python async sidecar commands now run under `asyncio.wait_for` with a 15-minute default (`JOBHUNTER_SIDECAR_TIMEOUT_SECONDS` override for tests/diagnostics); Rust uses Tokio process I/O, wraps the sidecar future in `tokio::time::timeout`, and spawns the child with `kill_on_drop`; the Pinia store wraps `run_pipeline`, `generate_criteria`, and `export_results` invokes with a matching `Promise.race` timeout so UI state fails cleanly. Rust JSON parse errors no longer echo malformed raw stdout lines, `.venv` Python resolution supports Windows and Unix layouts, and Tauri CSP is non-null. Added focused coverage for sidecar timeout, invalid timeout values, frontend timeout state, raw-stdout parse-error redaction, Unix venv resolution, and the existing sidecar round trip. Gate green: `jh.py gate C-074` PASS (25 focused sidecar tests, 16 focused store tests, 3 Rust IPC tests, 435 pytest + 5 skipped, Ruff, doctor, import smoke); also verified all 60 Vitest tests, `npm run build`, and Rust `cargo test`.
 
 - 2026-06-26 - **C-075** Code-quality cleanups on `codex/c-075-code-quality-cleanups`: replaces runner-side hardcoded auth branching for Gemini/OpenRouter/Adzuna with plugin class `auth_config_kwargs(auth)` hooks, keeps constructor kwarg filtering intact for user plugins, makes `MockConnector` keyword filtering whole-keyword/case-insensitive so `java` no longer matches `javascript`, and removes OpenRouter's direct `api_key` constructor path so it resolves keys env-var-only at call time. Added hook coverage for base contracts and built-ins plus the mock boundary regression. Gate green: focused C-075 tests, 433 pytest + 5 skipped, Ruff, doctor, and import smoke.
 
